@@ -1,6 +1,7 @@
 // Tests physiques : catalogue, tests perso, résultats datés (docs t:AAAA-MM-JJ) et historique.
 // Résultat : res[idTest] = { v: 30 } ou, avec deux côtés, { 'v.D': 33.3, 'v.G': 38.1 } ; plusieurs mesures : { cf: 20, wp: 1800 }.
-import { get, ids, put, remove } from './store.js';
+import { get, ids, put, remove, profileOf, getSubject, getFor, putFor, SELF } from './store.js';
+import { todayKey } from './dates.js';
 
 export const CATS = [
   ['doigts', 'Doigts'], ['tirage', 'Tirage'], ['poussee', 'Poussée'], ['gainage', 'Gainage'],
@@ -146,6 +147,7 @@ export function bodyWeightAt(k) {
     if (typeof r.bw === 'number') best = r.bw;
     else if (r.res && r.res.poids && typeof r.res.poids.v === 'number') best = r.res.poids.v;
   }
+  if (best === null) { const w = Number(profileOf(getSubject()).weight_kg); if (w > 0) best = w; } // à défaut, le poids du profil
   return best;
 }
 
@@ -161,4 +163,13 @@ export const pct = (a, b) => (typeof a === 'number' && typeof b === 'number' && 
 export function relValue(t, v, bw) {
   if (!t.rel || typeof v !== 'number' || !bw) return null;
   return t.rel === 'lest' ? (bw + v) / bw * 100 : v / bw * 100;
+}
+
+// Poids saisi dans le profil : noté aussi comme mesure du jour (test « Poids de corps ») pour garder l'historique
+export function logWeight(w) {
+  if (!(w > 0)) return;
+  const k = todayKey(), cur = getFor(SELF, 't:' + k) || {}, res = Object.assign({}, cur.res);
+  if (res.poids && res.poids.v === w) return;
+  res.poids = { v: w };
+  putFor(SELF, 't:' + k, Object.assign({}, cur, { res }));
 }

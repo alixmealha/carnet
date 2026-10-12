@@ -1,4 +1,5 @@
-import { get, jget, put, putMany, remove, ids } from './store.js';
+import { get, jget, put, putMany, remove, ids, links, myProfile } from './store.js';
+import { cloud } from './supa.js';
 import { rangeKeys, r05, fmtNum, fmtDay, addDays, mondayOf, todayKey } from './dates.js';
 import { history } from './tests.js';
 
@@ -106,9 +107,11 @@ export function newPlan() {
   for (let i = 0; i < 12; i++) weeks.push({ id: uid('w'), n: i + 1, start: addDays(start, i * 7), end: addDays(start, i * 7 + 6), bloc: 'Cycle 1', phase: 'autre' });
   put('plan', { v: 1, title: 'Mon plan', goal: null, start, end: weeks[weeks.length - 1].end, tests: [], weeks, blocs: [], sections: [] });
 }
+// Trace de modification : qui a touché la séance ou le plan, et quand (affichée à l'athlète et au coach)
+export const stamp = () => (cloud && links.me ? { uid: links.me, name: myProfile().name || '', at: Date.now() } : undefined);
 export function savePlan(m) {
   const ws = m.weeks.slice().sort((a, b) => a.start < b.start ? -1 : 1);
-  put('plan', Object.assign({}, m, { weeks: ws, start: ws.length ? ws[0].start : m.start, end: ws.length ? ws[ws.length - 1].end : m.end }));
+  put('plan', Object.assign({}, m, { weeks: ws, start: ws.length ? ws[0].start : m.start, end: ws.length ? ws[ws.length - 1].end : m.end, edited: stamp() }));
 }
 export function addWeeks(n, phase, bloc) {
   const m = clone(meta()); const last = m.weeks[m.weeks.length - 1];
@@ -122,7 +125,7 @@ export function removeLastWeek() {
   savePlan(m);
 }
 export function setWeek(id, patch) { const m = clone(meta()); const w = m.weeks.find(x => x.id === id); Object.assign(w, patch); savePlan(m); }
-export function saveDay(k, d) { if (!d || ((!d.blocks || !d.blocks.length) && !d.target)) remove('p:' + k); else put('p:' + k, d); }
+export function saveDay(k, d) { if (!d || ((!d.blocks || !d.blocks.length) && !d.target)) remove('p:' + k); else put('p:' + k, Object.assign({}, d, { edited: stamp() })); }
 export function copyDay(from, to) { const d = day(from); saveDay(to, d ? clone(d) : null); }
 export function copyWeek(wFrom, wTo) {
   const a = weekKeys(wFrom), b = weekKeys(wTo);

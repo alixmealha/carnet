@@ -24,7 +24,11 @@ const ICONS = {
   bell: <g {...P}><path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 2h-14z" /><path d="M10 20.5a2 2 0 0 0 4 0" /></g>,
   send: <g {...P}><path d="M4 12 20 4l-6 16-3-7z" /><path d="M11 13 20 4" /></g>,
   flask: <g {...P}><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8a1.3 1.3 0 0 0 1.1-2l-5.5-9.5v-6" /><path d="M7.5 15h9" /></g>,
-  back: <path {...P} d="M19 12H6M11 6l-6 6 6 6" />
+  back: <path {...P} d="M19 12H6M11 6l-6 6 6 6" />,
+  lock: <g {...P}><rect x="5" y="10.5" width="14" height="10" rx="2.2" /><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" /></g>,
+  key: <g {...P}><circle cx="8" cy="14.5" r="4" /><path d="M11 11.5 19.5 3M16 6.5l2.5 2.5M14 8.5l2 2" /></g>,
+  shield: <g {...P}><path d="M12 3.5 19 6v5.5c0 4.3-2.9 7.6-7 9-4.1-1.4-7-4.7-7-9V6z" /><path d="m9 12 2.2 2.2L15.5 10" /></g>,
+  chevd: <path {...P} d="M7 10l5 5 5-5" />
 };
 export function Icon({ name, size }) {
   return <svg viewBox="0 0 24 24" width={size || 24} height={size || 24} aria-hidden="true">{ICONS[name]}</svg>;

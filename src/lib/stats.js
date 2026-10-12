@@ -81,7 +81,7 @@ export function alerts(ws) {
       a.push({ k, c: g !== null && g >= 4 ? 'var(--crit)' : 'var(--warn)', t: lbl + (g !== null ? ' ' + g + '/10' : ' sensible'), d: g !== null && g >= 4 ? 'Gêne marquée : suis la règle du jour et parles-en au kiné si ça dure.' : 'Sensible au réveil : la séance s’adapte ce jour-là.' });
     }
     const p = target(k);
-    if (p && p.fam !== 'test' && typeof e.rpe === 'number' && e.rpe > p.rpe[1]) a.push({ k, c: 'var(--warn)', t: 'Ressenti ' + e.rpe + '/10', d: sessionName(k) + ' : au-dessus de la cible (' + rng(p) + ').' });
+    if (p && p.rpe && p.fam !== 'test' && typeof e.rpe === 'number' && e.rpe > p.rpe[1]) a.push({ k, c: 'var(--warn)', t: 'Ressenti ' + e.rpe + '/10', d: sessionName(k) + ' : au-dessus de la cible (' + rng(p) + ').' });
   }
   const wl = keys.map(k => ({ k, t: score(jget(k)) })).filter(x => x.t !== null);
   for (let i = 3; i < wl.length; i++) {

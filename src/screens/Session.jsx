@@ -255,7 +255,7 @@ function Finish({ k, minutes, onSave, onBack }) {
       <TextSeg value={status} onChange={v => setStatus(v || status)} options={STATUS} label="Statut" />
       <label class="fld">Durée totale (min)<input class="in mono" inputmode="numeric" value={dur} onInput={ev => setDur(ev.target.value)} /></label>
       <div>
-        <Seg value={e.rpe} onChange={v => jset(k, { rpe: v })} from={0} to={10} dense tgt={tg ? i => i >= tg.rpe[0] && i <= tg.rpe[1] : null} label="Ressenti" />
+        <Seg value={e.rpe} onChange={v => jset(k, { rpe: v })} from={0} to={10} dense tgt={tg && tg.rpe ? i => i >= tg.rpe[0] && i <= tg.rpe[1] : null} label="Ressenti" />
         <div class="rpe-lbl">{typeof e.rpe === 'number' ? <>Ressenti <b>{e.rpe}/10 · {RPE[e.rpe]}</b></> : 'Ressenti global de 0 à 10' + (tg ? ' · en bleu, la zone visée' : '')}</div>
         {cmp && <p class={'cmp ' + cmp.cls}>{cmp.text}</p>}
       </div>

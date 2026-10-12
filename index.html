@@ -14,7 +14,8 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <title>Carnet</title>
-  <style>html,body{background:#e8ebe8}@media (prefers-color-scheme:dark){html,body{background:#0f1214}}</style>
+  <style>html,body{background:#e8ebe8}@media (prefers-color-scheme:dark){html:not([data-theme=light]),html:not([data-theme=light]) body{background:#0f1214}}html[data-theme=dark],html[data-theme=dark] body{background:#0f1214}</style>
+  <script>try{var t=localStorage.getItem('carnet-theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('meta[name=theme-color]').forEach(function(m){m.content=t==='dark'?'#0f1214':'#e8ebe8'})}}catch(e){}</script>
 </head>
 <body>
   <div id="app"></div>

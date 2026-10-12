@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { useStore, startAutoSync, syncState, syncNow, jget, links, isSelf, setSubject, getSubject, nameOf, myProfile, putFor, SELF } from './lib/store.js';
+import { useStore, startAutoSync, syncState, syncNow, jget, links, isSelf, setSubject, getSubject, nameOf, SELF, role, myRow, canEditPlan, planLocked } from './lib/store.js';
 import { sb, cloud } from './lib/supa.js';
 import { meta, newPlan } from './lib/plan.js';
 import { setBadge } from './lib/push.js';
@@ -14,6 +14,7 @@ import { Stats } from './screens/Stats.jsx';
 import { PlanScreen, DayEditor } from './screens/Plan.jsx';
 import { More } from './screens/More.jsx';
 import { Athletes, unreadCount, markSeen } from './screens/Athletes.jsx';
+import { ProfileSetup } from './screens/Setup.jsx';
 
 const BASE_TABS = [['today', 'Aujourd’hui', 'today'], ['cal', 'Calendrier', 'cal'], ['stats', 'Suivi', 'stats'], ['plan', 'Plan', 'plan'], ['more', 'Plus', 'more']];
 const ls = {
@@ -56,44 +57,54 @@ function Login() {
   );
 }
 
-function Onboarding({ onAthletes }) {
-  const waiting = cloud && !syncState.last && (syncState.state === 'syncing' || syncState.state === 'idle');
-  if (waiting) return <div class="login"><div class="eyebrow">Carnet</div><h1 class="title">Un instant</h1><p class="lead">Récupération de tes données…</p></div>;
+function Onboarding({ onSettings }) {
   const self = isSelf(), who = nameOf(getSubject());
   if (!self) return (
     <div class="login">
       <div class="eyebrow">Carnet de {who}</div>
       <h1 class="title" style="font-size:44px">Pas encore de plan</h1>
-      <p class="lead" style="margin:0">Importe le plan de {who} (fichier .json) : séances, cycles, repères, et son journal s’il y en a un.</p>
+      <p class="lead" style="margin:0">Importe le plan de {who} (fichier .json) : séances, cycles, repères, tests. Son journal déjà rempli n’est jamais écrasé.</p>
       <ImportPicker label={'Importer le plan de ' + who} />
       <button class="btn ghost" onClick={() => { newPlan(); toast('Plan vide créé'); }}>Créer un plan vide</button>
-      <button class="btn" onClick={() => setSubject(SELF)}>Revenir à mon carnet</button>
     </div>
   );
+  const coached = links.coaches.length > 0, locked = planLocked();
   return (
     <div class="login">
       <div class="eyebrow">Premier lancement</div>
       <h1 class="title" style="font-size:52px">Bienvenue</h1>
-      {links.coaches.length > 0 ? <p class="lead" style="margin:0">Ton coach prépare ton plan : il apparaîtra ici dès qu’il sera prêt. Tu peux aussi importer un fichier.</p>
-        : <p class="lead" style="margin:0">Importe ton plan (fichier .json) : séances, cycles, repères et ton journal déjà rempli.</p>}
-      <ImportPicker label="Importer un plan" />
-      <button class="btn ghost" onClick={() => { newPlan(); toast('Plan vide créé, à remplir dans l’onglet Plan'); }}>Commencer avec un plan vide</button>
-      {links.athletes.length > 0 && <button class="btn" onClick={onAthletes}>Voir mes athlètes</button>}
+      {coached ? <p class="lead" style="margin:0">Ton coach prépare ton plan : il apparaîtra ici dès qu’il sera prêt.{locked ? '' : ' Tu peux aussi importer un fichier.'}</p>
+        : <p class="lead" style="margin:0">Importe ton plan (fichier .json) ou pars d’un plan vide. Si un coach te suit, donne-lui accès à ton carnet : il pourra préparer ton plan.</p>}
+      {!locked && <ImportPicker label="Importer un plan" />}
+      {!locked && <button class="btn ghost" onClick={() => { newPlan(); toast('Plan vide créé, à remplir dans l’onglet Plan'); }}>Commencer avec un plan vide</button>}
+      {cloud && !coached && !links.legacy && <button class="btn" onClick={onSettings}>Donner accès à mon coach</button>}
       {syncState.state === 'error' && <p class="err">Synchronisation impossible : {syncState.error}</p>}
     </div>
   );
 }
 
-function NamePrompt() {
-  const [v, setV] = useState('');
+function Waiting() {
+  const err = syncState.state === 'error' || syncState.state === 'offline';
+  return <div class="login"><div class="eyebrow">Carnet</div><h1 class="title">{err ? 'Hors ligne' : 'Un instant'}</h1>
+    <p class="lead">{err ? 'Impossible de récupérer ton compte pour le moment.' : 'Récupération de ton compte…'}</p>
+    {err && syncState.error && <p class="err">{syncState.error}</p>}
+    {err && <button class="btn primary" onClick={() => syncNow()}>Réessayer</button>}</div>;
+}
+
+// Choix du carnet affiché (coach : ses athlètes ; administrateur : le sien et ceux qu'il suit)
+function SubjectBar({ onSelf }) {
+  const subj = getSubject(), r = role();
+  const opts = (r === 'coach' ? [] : [[SELF, 'Mon carnet']]).concat(links.athletes.map(a => [a, nameOf(a)]));
   return (
-    <Sheet title="Bienvenue" onClose={() => {}}>
-      <div class="stack">
-        <p class="lead" style="margin:0">Comment tu t’appelles ? Ton prénom s’affiche chez ton coach (ou tes athlètes) et dans les notifications.</p>
-        <label class="fld">Prénom<input class="in" value={v} onInput={e => setV(e.target.value)} autofocus /></label>
-        <button class="btn big primary" disabled={!v.trim()} onClick={() => putFor(SELF, 'profile', Object.assign({}, myProfile(), { name: v.trim() }))}>Continuer</button>
-      </div>
-    </Sheet>
+    <div class="subj">
+      <label class="subj-sel">
+        <span class="av sm">{nameOf(subj).slice(0, 1).toUpperCase()}</span>
+        <span class="subj-t"><small>{r === 'coach' ? 'Athlète' : 'Carnet de'}</small><b>{nameOf(subj)}</b></span>
+        {opts.length > 1 && <Icon name="chevd" size={18} />}
+        {opts.length > 1 && <select value={subj} aria-label="Changer de carnet" onChange={e => { const v = e.target.value; setSubject(v); if (v !== SELF) markSeen(v); }}>{opts.map(([v, l]) => <option value={v}>{l}</option>)}</select>}
+      </label>
+      {r !== 'coach' && <button onClick={onSelf}>Mon carnet</button>}
+    </div>
   );
 }
 
@@ -121,7 +132,7 @@ export function App() {
     try {
       const u = new URL(url, location.href), a = u.searchParams.get('a'), d = u.searchParams.get('d');
       if (!d && !a) return;
-      if (a && links.athletes.includes(a)) { setSubject(a); markSeen(a); } else if (!a) setSubject(SELF);
+      if (a && links.athletes.includes(a)) { setSubject(a); markSeen(a); } else if (!a && role() !== 'coach') setSubject(SELF);
       if (d) { setEdit(null); setSes(null); setDay(d); }
       if (location.search) history.replaceState(null, '', location.pathname);
     } catch (_) {}
@@ -135,35 +146,49 @@ export function App() {
   const coach = links.athletes.length > 0;
   const unread = coach ? unreadCount() : 0;
   useEffect(() => { if (coach) setBadge(unread); }, [unread, coach]);
+  const r = role();
+  // Un coach n'a pas de carnet : on affiche toujours celui d'un de ses athlètes
+  useEffect(() => {
+    if (r === 'coach' && isSelf() && links.athletes.length) { const last = ls.get('carnet-subject'); setSubject(links.athletes.includes(last) ? last : links.athletes[0]); }
+    if (!isSelf()) ls.set('carnet-subject', getSubject());
+  });
+  const rej = useRef(syncState.rejectedAt);
+  useEffect(() => {
+    if (syncState.rejectedAt && syncState.rejectedAt !== rej.current) { rej.current = syncState.rejectedAt; toast(links.myLock ? 'Modification refusée : ton plan est verrouillé par ton coach' : 'Modification refusée par le serveur'); }
+  });
 
   if (session === undefined) return null;
   if (cloud && !session) return <Login />;
-  const tabs = coach ? [BASE_TABS[0], ['athletes', 'Athlètes', 'people'], ...BASE_TABS.slice(1)] : BASE_TABS;
-  const cur = tabs.some(t => t[0] === tab) ? tab : 'today';
-  const needName = cloud && syncState.last && !myProfile().name;
-  if (!meta() && cur !== 'athletes') return <>{needName && <NamePrompt />}<Onboarding onAthletes={() => setTab('athletes')} /></>;
+  if (cloud && !links.legacy && !myRow() && !syncState.last) return <Waiting />;
+  if (cloud && !links.legacy && (!myRow() || !myRow().onboarded)) return <ProfileSetup />;
 
+  const athTab = ['athletes', 'Athlètes', 'people'];
+  const tabs = r === 'coach' ? (coach ? [athTab, ...BASE_TABS] : [athTab, BASE_TABS[4]]) : coach ? [BASE_TABS[0], athTab, ...BASE_TABS.slice(1)] : BASE_TABS;
+  const cur = tabs.some(t => t[0] === tab) ? tab : tabs[0][0];
+  const noPlan = !meta() && ['today', 'cal', 'stats', 'plan'].includes(cur);
   const openSession = k => { setDay(null); setSes(k); };
   const openTest = tid => { setDay(null); ls.set('carnet-stats-view', 'tests'); setTestFocus(tid); setTab('stats'); };
-  const self = isSelf(), subj = getSubject();
+  const goSettings = () => { try { sessionStorage.setItem('carnet-more', 'settings'); } catch (_) {} setTab('more'); };
+  const self = isSelf(), subj = getSubject(), bar = !self && cur !== 'athletes';
+  const onEdit = canEditPlan() ? setEdit : null;
   return (
     <>
-      {!self && <div class="subj"><span><Icon name="people" size={18} />Carnet de <b>{nameOf(subj)}</b></span><button onClick={() => { setSubject(SELF); setTab(coach ? 'athletes' : 'today'); }}>Revenir au mien</button></div>}
-      <main class={self ? '' : 'with-subj'} key={subj}>
-        {cur === 'today' && <Today onStart={openSession} onEdit={setEdit} onOpenTest={openTest} />}
-        {cur === 'athletes' && <Athletes onOpenAthlete={uid => { setSubject(uid); markSeen(uid); setTab('today'); }} onOpenDay={(uid, k) => { setSubject(uid); markSeen(uid); setDay(k); }} onGoMore={() => { setSubject(SELF); setTab('more'); }} />}
-        {cur === 'cal' && <Calendar onOpen={setDay} />}
-        {cur === 'stats' && <Stats onOpen={setDay} onOpenTest={openTest} testFocus={testFocus} key={testFocus || 'stats'} />}
-        {cur === 'plan' && <PlanScreen />}
+      {bar && <SubjectBar onSelf={() => { setSubject(SELF); setTab('today'); }} />}
+      <main class={bar ? 'with-subj' : ''} key={subj}>
+        {noPlan && <Onboarding onSettings={goSettings} />}
+        {!noPlan && cur === 'today' && <Today onStart={openSession} onEdit={onEdit} onOpenTest={openTest} />}
+        {cur === 'athletes' && <Athletes onOpenAthlete={uid => { setSubject(uid); markSeen(uid); setTab('today'); }} onOpenDay={(uid, k) => { setSubject(uid); markSeen(uid); setDay(k); }} onOpenPlan={uid => { setSubject(uid); markSeen(uid); setTab('plan'); }} onGoMore={goSettings} />}
+        {!noPlan && cur === 'cal' && <Calendar onOpen={setDay} />}
+        {!noPlan && cur === 'stats' && <Stats onOpen={setDay} onOpenTest={openTest} testFocus={testFocus} key={testFocus || 'stats'} />}
+        {!noPlan && cur === 'plan' && <PlanScreen />}
         {cur === 'more' && <More session={session} />}
       </main>
-      <nav class={'tabbar' + (tabs.length > 5 ? ' six' : '')} role="tablist" aria-label="Navigation">
+      <nav class={'tabbar' + (tabs.length > 5 ? ' six' : '')} style={tabs.length < 5 ? 'grid-template-columns:repeat(' + tabs.length + ',minmax(0,1fr));padding-left:15%;padding-right:15%' : ''} role="tablist" aria-label="Navigation">
         {tabs.map(([id, l, ic]) => <button role="tab" aria-selected={cur === id ? 'true' : 'false'} onClick={() => { if (cur === id) window.scrollTo({ top: 0, behavior: 'smooth' }); setTab(id); if (id !== 'stats') setTestFocus(null); }}><span class="ti"><Icon name={ic} />{id === 'athletes' && unread > 0 && <i class="dotn">{unread > 9 ? '9+' : unread}</i>}</span>{l}</button>)}
       </nav>
-      {day && !edit && <Sheet title={self ? 'Fiche du jour' : 'Fiche de ' + nameOf(subj)} onClose={() => setDay(null)}><DayView k={day} onNav={setDay} onStart={openSession} onEdit={setEdit} onOpenTest={openTest} key={day} /></Sheet>}
+      {day && !edit && <Sheet title={self ? 'Fiche du jour' : 'Fiche de ' + nameOf(subj)} onClose={() => setDay(null)}><DayView k={day} onNav={setDay} onStart={openSession} onEdit={onEdit} onOpenTest={openTest} key={day} /></Sheet>}
       {edit && <DayEditor k={edit} onClose={() => setEdit(null)} />}
       {ses && <SessionMode k={ses} onClose={() => setSes(null)} />}
-      {needName && <NamePrompt />}
     </>
   );
 }

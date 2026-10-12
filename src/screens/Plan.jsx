@@ -1,7 +1,8 @@
 import { useState } from 'preact/hooks';
 import { jget } from '../lib/store.js';
 import { meta, day, blocks, weekKeys, savePlan, addWeeks, removeLastWeek, saveDay, copyDay, copyWeek, clone, uid, KIND, KIND_LIST, PHASE_LABEL, PHASE_Z, sessionName, weekOf, weekLabel } from '../lib/plan.js';
-import { isSelf, getSubject, nameOf } from '../lib/store.js';
+import { isSelf, getSubject, nameOf, canEditPlan, links } from '../lib/store.js';
+import { setLock } from '../lib/account.js';
 import { Rich, Fold } from '../ui/kit.jsx';
 import { CATS, allTests, testById } from '../lib/tests.js';
 import { SIV } from '../lib/rules.js';
@@ -169,8 +170,8 @@ function DayEditor({ k, onClose }) {
           <h3 class="h3">Objectif de la séance <em><label style="display:inline-flex;align-items:center;gap:8px">Actif <input type="checkbox" class="sw" checked={!!tg} onChange={e => up(c => { if (e.target.checked) c.target = { rpe: [5, 6], s: 5, i: 5, v: 5, fam: 'vol', why: '' }; else delete c.target; })} /></label></em></h3>
           {tg ? <div class="stack" style="gap:10px">
             <div class="grid3">
-              <Sel label="Ressenti min" value={String(tg.rpe[0])} options={Array.from({ length: 11 }, (_, i) => [String(i), String(i)])} onChange={v => setTg(t => { t.rpe = [+v, Math.max(+v, t.rpe[1])]; })} />
-              <Sel label="Ressenti max" value={String(tg.rpe[1])} options={Array.from({ length: 11 }, (_, i) => [String(i), String(i)])} onChange={v => setTg(t => { t.rpe = [Math.min(+v, t.rpe[0]), +v]; })} />
+              <Sel label="Ressenti min" value={tg.rpe ? String(tg.rpe[0]) : ''} options={[['', '—']].concat(Array.from({ length: 11 }, (_, i) => [String(i), String(i)]))} onChange={v => setTg(t => { if (v === '') { delete t.rpe; return; } const hi = t.rpe ? t.rpe[1] : +v; t.rpe = [+v, Math.max(+v, hi)]; })} />
+              <Sel label="Ressenti max" value={tg.rpe ? String(tg.rpe[1]) : ''} options={[['', '—']].concat(Array.from({ length: 11 }, (_, i) => [String(i), String(i)]))} onChange={v => setTg(t => { if (v === '') { delete t.rpe; return; } const lo = t.rpe ? t.rpe[0] : +v; t.rpe = [Math.min(+v, lo), +v]; })} />
               <Sel label="Type" value={tg.fam} options={FAMS} onChange={v => setTg(t => { t.fam = v; })} />
             </div>
             {SIV.map(([key, l]) => <div><p class="sub-lbl" style="margin-top:0">{l} visée</p><Seg value={tg[key]} onChange={v => setTg(t => { t[key] = v == null ? 0 : v; })} from={0} to={10} dense label={l} /></div>)}
@@ -354,15 +355,20 @@ export function PlanScreen() {
   const m = meta();
   const [sh, setSh] = useState(null);
   if (!m) return null;
-  const t = todayKey(), cw = weekOf(t);
+  const t = todayKey(), cw = weekOf(t), ed = canEditPlan(), subj = getSubject(), coachView = !isSelf() && links.athletes.includes(subj);
+  const open = x => { if (ed) setSh(x); };
   return (
     <div class="screen">
       <div class="head">
         <div style="min-width:0"><div class="eyebrow">{!isSelf() ? 'Plan de ' + nameOf(getSubject()) : m.goal ? m.goal.label + ' · ' + fmtShort(m.goal.date) : 'Plan'}</div><h1 class="title">{m.title}</h1></div>
-        <button class="icon-btn" aria-label="Réglages du plan" onClick={() => setSh({ t: 'plan' })}><Icon name="edit" /></button>
+        {ed && <button class="icon-btn" aria-label="Réglages du plan" onClick={() => setSh({ t: 'plan' })}><Icon name="edit" /></button>}
       </div>
       <div class="stack">
-        <section class="card"><h3 class="h3">Les {m.weeks.length} semaines <em>{fmtDay(m.start)} → {fmtDay(m.end)}</em></h3><Timeline m={m} onWeek={w => setSh({ t: 'week', w })} /></section>
+        {!ed && <p class="lock-n"><Icon name="lock" size={16} />Plan verrouillé par ton coach : tu le consultes, lui seul le modifie.</p>}
+        {coachView && <label class="card lock-c"><Icon name="lock" size={18} /><span><b>Verrouiller le plan</b><small>{links.locks[subj] ? nameOf(subj) + ' ne peut plus modifier ses séances ni son plan.' : nameOf(subj) + ' peut aussi modifier ses séances.'}</small></span>
+          <input type="checkbox" class="sw" checked={!!links.locks[subj]} onChange={async e => { const v = e.target.checked; try { await setLock(subj, v); toast(v ? 'Plan verrouillé' : 'Plan déverrouillé'); } catch (x) { toast(x.message); } }} /></label>}
+        {m.edited && m.edited.uid && m.edited.uid !== links.me && <p class="edited" style="margin:-4px 0 0">Plan modifié par {m.edited.name || 'ton coach'} · {new Date(m.edited.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</p>}
+        <section class="card"><h3 class="h3">Les {m.weeks.length} semaines <em>{fmtDay(m.start)} → {fmtDay(m.end)}</em></h3><Timeline m={m} onWeek={w => open({ t: 'week', w })} /></section>
         {(m.events || []).length > 0 && <Fold id="plan-events" title="Compétitions" open summary={(() => { const nx = m.events.find(e => (e.end || e.date) >= t); return nx ? 'Prochaine : ' + nx.label + ' · ' + fmtDay(nx.date) : m.events.length + ' compétitions'; })()}><div class="evs">{m.events.map(e => <div class={'ev' + ((e.end || e.date) < t ? ' past' : '')}><span class="d">{fmtDay(e.date)}{e.end && e.end !== e.date ? ' → ' + fmtDay(e.end) : ''}</span><b>{e.label}</b>{e.lvl && <small>{e.lvl}</small>}</div>)}</div></Fold>}
 
         {(m.blocs || []).map((b, i) => {
@@ -370,16 +376,16 @@ export function PlanScreen() {
           return <section class="card">
             <div class="head" style="margin-bottom:6px;align-items:flex-start">
               <div style="min-width:0"><div class="eyebrow">{fmtDay(b.from)} → {fmtDay(b.to)}{now ? ' · en cours' : ''}</div><h2 class="h2" style="margin-top:4px">{b.name}</h2></div>
-              <button class="icon-btn" aria-label={'Modifier ' + b.name} onClick={() => setSh({ t: 'bloc', i })}><Icon name="edit" /></button>
+              {ed && <button class="icon-btn" aria-label={'Modifier ' + b.name} onClick={() => setSh({ t: 'bloc', i })}><Icon name="edit" /></button>}
             </div>
             {b.obj && <p class="lead" style="margin:0"><Rich text={b.obj} /></p>}
             {b.notes && <details class="fold" style="margin-top:10px"><summary><span class="small" style="margin:0;font-weight:600;color:var(--accent)">Détails du bloc</span></summary><div class="mdx" style="margin-top:8px" dangerouslySetInnerHTML={{ __html: md(b.notes) }} /></details>}
           </section>;
         })}
-        <button class="btn" onClick={() => setSh({ t: 'bloc', i: -1 })}><Icon name="plus" size={18} />Ajouter un bloc de texte</button>
+        {ed && <button class="btn" onClick={() => setSh({ t: 'bloc', i: -1 })}><Icon name="plus" size={18} />Ajouter un bloc de texte</button>}
 
         <Fold id="plan-weeks" title="Semaines" summary={m.weeks.length + ' semaines' + (cw ? ' · en cours : ' + weekLabel(cw) + ' (' + (PHASE_LABEL[cw.phase] || cw.bloc) + ')' : '')} cls="flat-b">
-          {m.weeks.map(w => <button class={'li' + (cw && cw.id === w.id ? ' now' : '')} onClick={() => setSh({ t: 'week', w })}>
+          {m.weeks.map(w => <button class={'li' + (cw && cw.id === w.id ? ' now' : '') + (ed ? '' : ' noarrow')} onClick={() => open({ t: 'week', w })}>
             <span style="min-width:0"><b style="font-weight:600">{weekLabel(w)}</b> · {fmtRange(w.start, w.end)}<small>{(PHASE_LABEL[w.phase] || w.bloc) + ' · ' + weekSummary(w)}</small></span><span class="r" />
           </button>)}
         </Fold>
@@ -388,9 +394,9 @@ export function PlanScreen() {
         {(m.sections || []).map((s, i) => <details class="card fold">
           <summary><span style="font-weight:600">{s.title}</span></summary>
           <div class="mdx" style="margin-top:10px" dangerouslySetInnerHTML={{ __html: md(s.body) }} />
-          <button class="btn ghost" style="margin-top:8px" onClick={() => setSh({ t: 'sec', i })}><Icon name="edit" size={18} />Modifier</button>
+          {ed && <button class="btn ghost" style="margin-top:8px" onClick={() => setSh({ t: 'sec', i })}><Icon name="edit" size={18} />Modifier</button>}
         </details>)}
-        <button class="btn" onClick={() => setSh({ t: 'sec', i: -1 })}><Icon name="plus" size={18} />Ajouter une section</button>
+        {ed && <button class="btn" onClick={() => setSh({ t: 'sec', i: -1 })}><Icon name="plus" size={18} />Ajouter une section</button>}
       </div>
 
       {sh && sh.t === 'plan' && <PlanSheet onClose={() => setSh(null)} />}

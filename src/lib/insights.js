@@ -1,6 +1,6 @@
 // Lecture du suivi : interprétation des valeurs du jour et de la semaine, avec un conseil d'adaptation.
 // Les seuils viennent de la littérature (voir sources.js) ; c'est l'écart à sa propre moyenne qui compte le plus.
-import { jget, get, subjectSettings } from './store.js';
+import { jget, get, subjectSettings, profileOf, getSubject } from './store.js';
 import { day, target, kinds, eventOn } from './plan.js';
 import { score, verdict, nightTotal, durLong, nightCompare, FLAGS, rng, WELL } from './rules.js';
 import { addDays, todayKey, fmtNum } from './dates.js';
@@ -10,7 +10,7 @@ const mean = a => a.reduce((s, x) => s + x, 0) / a.length;
 const sd = a => { if (a.length < 2) return 0; const m = mean(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1)); };
 const f1 = x => fmtNum(Math.round(x * 10) / 10);
 const range = (k, from, to) => { const out = []; for (let i = from; i <= to; i++) out.push(addDays(k, i)); return out; };
-export const sleepTarget = () => ((get('profile') || {}).under18 ? 480 : 420);
+export const sleepTarget = () => (profileOf(getSubject()).under18 ? 480 : 420);
 const FL = Object.fromEntries(FLAGS);
 
 export function dayLoad(k) { const e = jget(k); return typeof e.rpe === 'number' && typeof e.duree === 'number' && e.duree > 0 ? e.rpe * e.duree : 0; }

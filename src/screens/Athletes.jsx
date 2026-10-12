@@ -5,6 +5,7 @@ import { KIND } from '../lib/plan.js';
 import { pushState } from '../lib/push.js';
 import { todayKey, addDays, fmtShort, rangeKeys } from '../lib/dates.js';
 import { Icon } from '../ui/kit.jsx';
+import { AddAthlete } from './Settings.jsx';
 
 const FL = Object.fromEntries(FLAGS), ST = Object.fromEntries(STATUS);
 export const seenMap = () => getFor(SELF, 'seen') || {};
@@ -28,6 +29,14 @@ export function activity(uid) {
     if (m.updatedAt - Date.parse(k + 'T23:59:59') > 3 * 864e5) continue;
     if (e && (e.status || typeof e.rpe === 'number' || e.note)) out.push({ uid, k, kind: 'session', at: m.updatedAt, e });
   }
+  // séances ou plan modifiés par l'athlète lui-même
+  const since = Date.now() - 14 * 864e5;
+  for (const id of idsFor(uid, 'p:')) {
+    const d = getFor(uid, id), ed = d && d.edited;
+    if (ed && ed.uid === uid && ed.at > since) out.push({ uid, k: id.slice(2), kind: 'edit', at: ed.at });
+  }
+  const pl = getFor(uid, 'plan');
+  if (pl && pl.edited && pl.edited.uid === uid && pl.edited.at > since) out.push({ uid, k: null, kind: 'planedit', at: pl.edited.at });
   for (const id of idsFor(uid, 'c:')) {
     const k = id.slice(2); if (k < from) continue;
     const c = getFor(uid, id), msgs = (c && c.msgs) || [], last = msgs[msgs.length - 1];
@@ -41,7 +50,7 @@ export function unreadCount() {
   return n;
 }
 
-export function Athletes({ onOpenAthlete, onOpenDay, onGoMore }) {
+export function Athletes({ onOpenAthlete, onOpenDay, onOpenPlan, onGoMore }) {
   const t = todayKey(), seen = seenMap();
   const [ps, setPs] = useState('…');
   useEffect(() => { pushState().then(setPs); }, []);
@@ -52,7 +61,8 @@ export function Athletes({ onOpenAthlete, onOpenDay, onGoMore }) {
       <div class="head"><div><div class="eyebrow">Coach · {links.athletes.length} athlète{links.athletes.length > 1 ? 's' : ''}</div><h1 class="title">Athlètes</h1></div>
         {unread > 0 && <button class="btn ghost" onClick={() => { for (const uid of links.athletes) markSeen(uid); }}>Tout marquer lu</button>}</div>
       <div class="stack">
-        {ps !== 'on' && ps !== '…' && <button class="card notif-cta" onClick={onGoMore}><Icon name="bell" /><span><b>Active les notifications</b><small>Pour être prévenu dès qu’un athlète valide sa séance ou t’écrit. Ça se règle dans Plus.</small></span></button>}
+        {links.athletes.length === 0 && <section class="card"><h3 class="h3">Ajoute ton premier athlète</h3><AddAthlete /></section>}
+        {ps !== 'on' && ps !== '…' && links.athletes.length > 0 && <button class="card notif-cta" onClick={onGoMore}><Icon name="bell" /><span><b>Active les notifications</b><small>Pour être prévenu dès qu’un athlète valide sa séance ou t’écrit. Ça se règle dans Plus → Paramètres.</small></span></button>}
         {links.athletes.map(uid => {
           const e = getFor(uid, 'j:' + t) || {}, sc = score(e), fl = FLAGS.filter(([f]) => e.flags && e.flags[f]);
           const week = rangeKeys(addDays(t, -6), t), done = week.filter(k => { const s = (getFor(uid, 'j:' + k) || {}).status; return s === 'faite' || s === 'adaptee'; }).length;
@@ -65,7 +75,7 @@ export function Athletes({ onOpenAthlete, onOpenDay, onGoMore }) {
             <section class="card ath">
               <button class="ath-h" onClick={() => onOpenAthlete(uid)}>
                 <span class="av">{(nameOf(uid) || '?').slice(0, 1).toUpperCase()}</span>
-                <span style="flex:1;min-width:0"><b>{nameOf(uid)}</b><small>Aujourd’hui : {dayName(uid, t)}{e.status ? ' · ' + ST[e.status].toLowerCase() : ''}</small></span>
+                <span style="flex:1;min-width:0"><b>{nameOf(uid)}{links.locks[uid] && <span class="lk" title="Plan verrouillé"><Icon name="lock" size={14} /></span>}</b><small>Aujourd’hui : {dayName(uid, t)}{e.status ? ' · ' + ST[e.status].toLowerCase() : ''}</small></span>
                 {nUnread > 0 && <span class="badge-n">{nUnread}</span>}
                 <span class="chev r" aria-hidden="true" />
               </button>
@@ -83,23 +93,24 @@ export function Athletes({ onOpenAthlete, onOpenDay, onGoMore }) {
             </section>
           );
         })}
-        <section class="card flat">
+        {links.athletes.length > 0 && <section class="card"><h3 class="h3">Ajouter un athlète</h3><AddAthlete compact /></section>}
+        {links.athletes.length > 0 && <section class="card flat">
           <div style="padding:14px 14px 4px"><h3 class="h3" style="margin:0">Activité récente <em>{unread ? unread + ' non lu' + (unread > 1 ? 's' : '') : ''}</em></h3></div>
           {feed.length === 0 && <p class="small" style="padding:0 14px 14px">Rien sur les 14 derniers jours.</p>}
           {feed.map(a => {
             const isNew = a.at > (seen[a.uid] || 0), sc = a.e ? score(a.e) : null;
-            return <button class={'jrow' + (isNew ? ' new' : '')} onClick={() => onOpenDay(a.uid, a.k)}>
-              <span class="t">{nameOf(a.uid)} · {a.kind === 'msg' ? 'message' : a.e.status ? 'séance ' + ST[a.e.status].toLowerCase() : 'journal'}<span>{fmtShort(a.k)}</span></span>
+            return <button class={'jrow' + (isNew ? ' new' : '')} onClick={() => a.kind === 'planedit' ? onOpenPlan(a.uid) : onOpenDay(a.uid, a.k)}>
+              <span class="t">{nameOf(a.uid)} · {a.kind === 'msg' ? 'message' : a.kind === 'edit' ? 'a modifié sa séance' : a.kind === 'planedit' ? 'a modifié son plan' : a.e.status ? 'séance ' + ST[a.e.status].toLowerCase() : 'journal'}<span>{a.k ? fmtShort(a.k) : new Date(a.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span></span>
               {a.kind === 'session' ? <span class="m">
                 {sc !== null && <span>Forme <b>{sc}</b></span>}
                 {typeof a.e.rpe === 'number' && <span>Ressenti <b>{a.e.rpe}</b></span>}
                 {a.e.siv && typeof a.e.siv.i === 'number' && <span>I <b>{a.e.siv.i}</b> V <b>{a.e.siv.v}</b></span>}
                 {typeof a.e.duree === 'number' && <span><b>{a.e.duree}</b> min</span>}
               </span> : null}
-              {(a.kind === 'msg' ? a.text : a.e.note) && <span class="nt">{a.kind === 'msg' ? a.text : a.e.note}</span>}
+              {(a.kind === 'msg' ? a.text : a.e && a.e.note) && <span class="nt">{a.kind === 'msg' ? a.text : a.e.note}</span>}
             </button>;
           })}
-        </section>
+        </section>}
       </div>
     </div>
   );

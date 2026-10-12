@@ -217,6 +217,7 @@ function SessionCard({ k, onStart, onEdit, ro }) {
             );
           })}
         </fieldset>
+        {d.edited && d.edited.uid && d.edited.uid !== links.me && <p class="edited">Modifiée par {d.edited.name || 'ton coach'} · {new Date(d.edited.at).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>}
         {d.adapt && <details class="fold why-f"><summary><span class="small" style="margin:0;font-weight:600;color:var(--warn)">Si besoin d’adapter</span></summary><p class="small" style="color:var(--ink)"><Rich text={d.adapt} /></p></details>}
         {active && onStart && !ro && <button class="btn big primary" onClick={() => onStart(k)}><Icon name="play" size={20} />{e.startedAt && !e.endedAt ? 'Reprendre la séance' : pr.done ? 'Continuer la séance' : 'Démarrer la séance'}</button>}
       </div>

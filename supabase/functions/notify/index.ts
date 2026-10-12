@@ -94,6 +94,7 @@ async function rest(path, init) {
   return r.status === 204 ? null : r.json();
 }
 const one = async (uid, id) => { const rows = await rest('docs?select=data&user_id=eq.' + uid + '&id=eq.' + encodeURIComponent(id)); return rows && rows[0] ? rows[0].data : null; };
+const nameOf = async uid => { if (!/^[0-9a-f-]{36}$/.test(uid || '')) return null; const rows = await rest('profiles?select=name&id=eq.' + uid); return rows && rows[0] && rows[0].name ? rows[0].name : null; };
 const coachesOf = async uid => (await rest('coach_links?select=coach_id&athlete_id=eq.' + uid)).map(r => r.coach_id);
 
 export async function handle(req) {
@@ -104,8 +105,7 @@ export async function handle(req) {
   const day = id.slice(2);
   const data = await one(uid, id);
   if (!data) return new Response('no doc');
-  const prof = await one(uid, 'profile');
-  const name = (prof && prof.name) || 'Ton athlète';
+  const name = (await nameOf(uid)) || 'Ton athlète';
   let targets = [], msg = null;
   if (kind === 'session') {
     targets = await coachesOf(uid);
@@ -119,7 +119,7 @@ export async function handle(req) {
       msg = { title: name + ' a répondu', body: dayLabel(day) + '\n« ' + cut(last.text, 140) + ' »', url: './?a=' + uid + '&d=' + day, tag: uid + ':c:' + day };
     } else {
       targets = [uid];
-      msg = { title: (last.name || 'Ton coach') + ' a commenté ta séance', body: dayLabel(day) + '\n« ' + cut(last.text, 140) + ' »', url: './?d=' + day, tag: 'c:' + day };
+      msg = { title: ((await nameOf(last.uid)) || last.name || 'Ton coach') + ' a commenté ta séance', body: dayLabel(day) + '\n« ' + cut(last.text, 140) + ' »', url: './?d=' + day, tag: 'c:' + day };
     }
   } else return new Response('bad kind', { status: 400 });
   if (!targets.length) return new Response('no target');

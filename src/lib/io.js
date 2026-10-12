@@ -1,5 +1,6 @@
 // Import / export des données (fichier JSON).
-import { putMany, exportAll } from './store.js';
+import { putMany, exportAll, isSelf, getFor, getSubject, planLocked } from './store.js';
+import { cloud } from './supa.js';
 
 export async function readImport(file) {
   const txt = await file.text();
@@ -11,7 +12,20 @@ export async function readImport(file) {
   const n = { plan: !!docs.plan, days: Object.keys(docs).filter(x => x.startsWith('p:')).length, journal: Object.keys(docs).filter(x => x.startsWith('j:')).length, tests: Object.keys(docs).filter(x => x.startsWith('t:')).length };
   return { docs, n };
 }
-export function applyImport(docs) { putMany(docs); }
+// Ce que le carnet affiché accepte : le coach importe plan, séances, tests et échanges, et un historique de journal
+// sans écraser ce que l'athlète a déjà rempli ; profil et réglages restent ceux du compte.
+export function filterImport(docs) {
+  const self = isSelf(), o = getSubject(), keep = {}, skipped = { journal: 0, plan: 0, other: 0 };
+  for (const [id, v] of Object.entries(docs)) {
+    if (id === 'profile' && cloud) { skipped.other++; continue; }
+    if (!self && (id === 'profile' || id === 'settings')) { skipped.other++; continue; }
+    if (!self && id.startsWith('j:') && getFor(o, id)) { skipped.journal++; continue; }
+    if (self && planLocked() && (id === 'plan' || id.startsWith('p:'))) { skipped.plan++; continue; }
+    keep[id] = v;
+  }
+  return { keep, skipped };
+}
+export function applyImport(docs) { const { keep } = filterImport(docs); putMany(keep); }
 
 export async function downloadExport() {
   const data = exportAll();

@@ -1,21 +1,14 @@
-import { useEffect, useState } from 'preact/hooks';
-import { syncState, syncNow, settings, setSettings, wipeLocal, myProfile, putFor, SELF, isSelf, getSubject, nameOf, links, removeAllMine } from '../lib/store.js';
-import { sb, cloud } from '../lib/supa.js';
+import { useState } from 'preact/hooks';
+import { syncState, myProfile, isSelf, links, role, isAdmin, hasCarnet, canEditPlan } from '../lib/store.js';
+import { cloud } from '../lib/supa.js';
 import { exerciseNames, renameExercise, meta, KIND, KIND_ORDER } from '../lib/plan.js';
 import { WELL, RPE, ZONES, SIV, bands } from '../lib/rules.js';
 import { SOURCES } from '../lib/sources.js';
-import { pushState, enablePush, disablePush } from '../lib/push.js';
-import { downloadExport } from '../lib/io.js';
 import { fmtDay } from '../lib/dates.js';
-import { Sheet, Fold, toast } from '../ui/kit.jsx';
-import { ImportPicker } from '../ui/ImportPicker.jsx';
-
-const SYNC_LBL = { local: 'Sur cet appareil seulement', idle: 'À jour', syncing: 'Synchronisation…', error: 'Erreur de synchronisation', offline: 'Hors ligne : ça repartira tout seul', signedout: 'Déconnecté' };
-const ago = t => { if (!t) return 'jamais'; const s = Math.round((Date.now() - t) / 1000); return s < 60 ? 'à l’instant' : s < 3600 ? 'il y a ' + Math.round(s / 60) + ' min' : 'il y a ' + Math.round(s / 3600) + ' h'; };
-
-function Switch({ label, sub, on, onChange }) {
-  return <label class="set"><span>{label}{sub && <small>{sub}</small>}</span><input type="checkbox" class="sw" checked={on} onChange={e => onChange(e.target.checked)} /></label>;
-}
+import { Icon, Sheet, toast } from '../ui/kit.jsx';
+import { SettingsPage, Switch } from './Settings.jsx';
+import { AdminPage } from './Admin.jsx';
+import { ROLE_LBL } from './Setup.jsx';
 
 function RenameSheet({ ex, onClose }) {
   const [v, setV] = useState(ex.label), [fut, setFut] = useState(true);
@@ -30,73 +23,6 @@ function RenameSheet({ ex, onClose }) {
   );
 }
 
-function Profile() {
-  const p = myProfile(), s = settings();
-  const [name, setName] = useState(p.name || '');
-  useEffect(() => setName(myProfile().name || ''), [p.name]);
-  const saveP = patch => putFor(SELF, 'profile', Object.assign({}, myProfile(), patch));
-  return (
-    <section class="card flat">
-      <div style="padding:14px 14px 4px"><h3 class="h3" style="margin:0">Ton profil</h3></div>
-      <div style="padding:6px 14px 10px"><label class="fld">Prénom<input class="in" value={name} placeholder="Affiché à ton coach et dans les notifications" onInput={e => setName(e.target.value)} onBlur={() => { if (name.trim() !== (p.name || '')) saveP({ name: name.trim() }); }} /></label></div>
-      <Switch label="Moins de 18 ans" sub="Les repères de sommeil passent à 8-10 h par nuit" on={!!p.under18} onChange={v => saveP({ under18: v })} />
-      <Switch label="Suivi du cycle menstruel" sub="Ajoute le jour du cycle à la forme du matin" on={!!s.cycle} onChange={v => setSettings({ cycle: v })} />
-    </section>
-  );
-}
-
-function Notifications() {
-  const [st, setSt] = useState('…'), [busy, setBusy] = useState(false), [err, setErr] = useState('');
-  useEffect(() => { pushState().then(setSt); }, []);
-  if (!cloud) return null;
-  const coach = links.athletes.length > 0;
-  const on = async () => { setBusy(true); setErr(''); try { await enablePush(); setSt('on'); toast('Notifications activées'); } catch (e) { setErr(e.message); } setBusy(false); };
-  const off = async () => { setBusy(true); await disablePush(); setSt('off'); setBusy(false); };
-  return (
-    <section class="card">
-      <h3 class="h3">Notifications <em>{st === 'on' ? 'activées' : st === 'denied' ? 'refusées' : st === 'install' ? 'appli à installer' : st === 'unsupported' ? 'indisponibles' : 'désactivées'}</em></h3>
-      <p class="small" style="margin:0">{coach ? 'Une notification quand un de tes athlètes valide sa séance ou t’écrit.' : links.coaches.length ? 'Une notification quand ton coach commente une de tes séances.' : 'Une notification quand un coach ou un athlète t’écrit.'}</p>
-      {st === 'install' && <p class="small">Sur iPhone, les notifications ne marchent que dans l’appli installée : Safari → Partager → Sur l’écran d’accueil, puis ouvre Carnet depuis son icône.</p>}
-      {err && <p class="err" style="margin-top:8px">{err}</p>}
-      <div class="row-btns" style="margin-top:12px">
-        {st === 'on' ? <button class="btn" disabled={busy} onClick={off}>Désactiver sur cet appareil</button>
-          : <button class="btn primary" disabled={busy || st === 'unsupported'} onClick={on}>Activer les notifications</button>}
-      </div>
-    </section>
-  );
-}
-
-function Account({ session }) {
-  const [pw, setPw] = useState(''), [pw2, setPw2] = useState(''), [open, setOpen] = useState(false), [msg, setMsg] = useState('');
-  const st = syncState.state;
-  const change = async () => {
-    if (pw.length < 8) { setMsg('8 caractères minimum.'); return; }
-    if (pw !== pw2) { setMsg('Les deux mots de passe ne correspondent pas.'); return; }
-    const { error } = await sb.auth.updateUser({ password: pw });
-    if (error) setMsg(error.message); else { setMsg(''); setPw(''); setPw2(''); setOpen(false); toast('Mot de passe changé'); }
-  };
-  return (
-    <section class="card">
-      <h3 class="h3">Compte et synchronisation <em><span class={'sync ' + st}><i />{SYNC_LBL[st] || st}</span></em></h3>
-      {cloud ? <>
-        <p class="small" style="margin:0">Connecté avec {(session && session.user && session.user.email) || links.email || '—'}. Dernière synchro : {ago(syncState.last)}{syncState.pending ? ' · ' + syncState.pending + ' modification' + (syncState.pending > 1 ? 's' : '') + ' en attente' : ''}.</p>
-        {st === 'error' && syncState.error && <p class="err" style="margin-top:6px">{syncState.error}</p>}
-        <div class="row-btns" style="margin-top:12px">
-          <button class="btn" onClick={() => syncNow()}>Synchroniser</button>
-          <button class="btn" onClick={() => setOpen(!open)}>Mot de passe</button>
-          <button class="btn danger" onClick={async () => { if (syncState.pending && !confirm('Des modifications ne sont pas encore envoyées. Se déconnecter quand même ?')) return; await disablePush(); await sb.auth.signOut(); await wipeLocal(); }}>Se déconnecter</button>
-        </div>
-        {open && <div class="stack" style="gap:8px;margin-top:12px">
-          <label class="fld">Nouveau mot de passe<input class="in" type="password" autocomplete="new-password" value={pw} onInput={e => setPw(e.target.value)} /></label>
-          <label class="fld">Confirmer<input class="in" type="password" autocomplete="new-password" value={pw2} onInput={e => setPw2(e.target.value)} /></label>
-          {msg && <p class="err">{msg}</p>}
-          <button class="btn primary" onClick={change}>Changer le mot de passe</button>
-        </div>}
-      </> : <p class="small" style="margin:0">Les données restent sur ce téléphone. Pense à exporter une sauvegarde de temps en temps.</p>}
-    </section>
-  );
-}
-
 function Exercises() {
   const [ren, setRen] = useState(null);
   const exs = exerciseNames();
@@ -107,10 +33,10 @@ function Exercises() {
   return (
     <section class="card">
       <h3 class="h3">Exercices du plan <em>{exs.length}</em></h3>
-      <p class="small" style="margin:0 0 6px">Rangés par type de séance. Touche un exercice pour le renommer partout.</p>
+      <p class="small" style="margin:0 0 6px">{canEditPlan() ? 'Rangés par type de séance. Touche un exercice pour le renommer partout.' : 'Rangés par type de séance. Ton plan est verrouillé par ton coach.'}</p>
       {cats.map(k => <details class="fold ex-cat">
         <summary><span class="kdot" style={'background:var(--k-' + k + ')'} /><span style="flex:1;font-weight:600">{KIND[k]}</span><span class="muted" style="font-size:13px;margin-right:8px">{groups[k].length}</span></summary>
-        <div class="list" style="margin:8px 0 4px">{groups[k].map(x => <button class="li" onClick={() => setRen(x)}><span style="min-width:0">{x.label}<small>{x.n} séance{x.n > 1 ? 's' : ''} · du {fmtDay(x.first)} au {fmtDay(x.last)}</small></span><span class="r" /></button>)}</div>
+        <div class="list" style="margin:8px 0 4px">{groups[k].map(x => <button class="li" disabled={!canEditPlan()} onClick={() => setRen(x)}><span style="min-width:0">{x.label}<small>{x.n} séance{x.n > 1 ? 's' : ''} · du {fmtDay(x.first)} au {fmtDay(x.last)}</small></span><span class="r" /></button>)}</div>
       </details>)}
       {ren && <RenameSheet ex={ren} onClose={() => setRen(null)} />}
     </section>
@@ -150,35 +76,23 @@ function Reperes() {
 }
 
 export function More({ session }) {
-  const s = settings();
-  const [imp, setImp] = useState(false);
-  const self = isSelf(), who = nameOf(getSubject());
+  const [page, setPage] = useState(() => { try { return sessionStorage.getItem('carnet-more') || null; } catch (_) { return null; } });
+  const go = p => { setPage(p); try { if (p) sessionStorage.setItem('carnet-more', p); else sessionStorage.removeItem('carnet-more'); } catch (_) {} window.scrollTo(0, 0); };
+  if (page === 'admin' && isAdmin()) return <AdminPage onBack={() => go('settings')} />;
+  if (page === 'settings' || page === 'admin') return <SettingsPage session={session} onBack={() => go(null)} onAdmin={() => go('admin')} />;
+  const r = role(), p = myProfile(), self = isSelf();
   return (
     <div class="screen">
       <div class="head"><div><div class="eyebrow">Carnet</div><h1 class="title">Plus</h1></div></div>
       <div class="stack">
-        <Profile />
-        <Notifications />
-        <Account session={session} />
-        <section class="card flat">
-          <div style="padding:14px 14px 0"><h3 class="h3" style="margin:0">Pendant la séance</h3></div>
-          <Switch label="Sons" sub="Bips de départ, de fin de repos et décompte 3-2-1" on={s.sound} onChange={v => setSettings({ sound: v })} />
-          <Switch label="Voix" sub="Annonce « Main droite », « Repos »… pendant les minuteurs" on={s.voice} onChange={v => setSettings({ voice: v })} />
-          <Switch label="Écran toujours allumé" sub="En mode séance uniquement" on={s.wake} onChange={v => setSettings({ wake: v })} />
-          <p class="small" style="padding:0 14px 14px">Sur iPhone, une app web ne peut pas vibrer : les signaux passent par le son et l’écran. Le bouton silencieux coupe les bips.</p>
-        </section>
-        <Exercises />
+        <button class="card li-card" onClick={() => go('settings')}>
+          <span class="av">{(p.name || '?').slice(0, 1).toUpperCase()}</span>
+          <span><b>Paramètres</b><small>{[p.name, r && cloud ? ROLE_LBL[r] : null].filter(Boolean).join(' · ') || 'Profil, apparence, compte'}</small></span>
+          <span class="chev r" aria-hidden="true" />
+        </button>
+        {syncState.rejectedAt > 0 && Date.now() - syncState.rejectedAt < 6e4 && <p class="lock-n"><Icon name="lock" size={16} />Une modification a été refusée par le serveur{links.myLock ? ' : ton plan est verrouillé par ton coach' : ''}.</p>}
+        {meta() && (self ? hasCarnet() : true) && <Exercises />}
         <Reperes />
-        <section class="card">
-          <h3 class="h3">Données {!self && <em>carnet de {who}</em>}</h3>
-          <div class="stack" style="gap:8px">
-            <button class="btn" onClick={() => downloadExport()}>Exporter une sauvegarde (.json)</button>
-            {!imp ? <button class="btn" onClick={() => setImp(true)}>Importer un fichier{self ? '' : ' dans le carnet de ' + who}</button> : <ImportPicker onDone={() => setImp(false)} />}
-            {cloud && self && <button class="btn danger" onClick={() => { if (confirm('Supprimer définitivement ton plan, ton journal et tes tests, ici et en ligne ? Exporte une sauvegarde avant.')) { removeAllMine(); toast('Données supprimées'); } }}>Supprimer toutes mes données</button>}
-            {!cloud && <button class="btn danger" onClick={async () => { if (confirm('Effacer toutes les données de cet appareil ? Exporte une sauvegarde avant.')) { await wipeLocal(); location.reload(); } }}>Tout effacer sur cet appareil</button>}
-          </div>
-          <p class="small">La sauvegarde contient le plan, le journal et les tests du carnet affiché. {cloud ? 'Les données sont aussi stockées en ligne, dans un espace privé : seuls toi et ton coach y ont accès.' : ''}</p>
-        </section>
         <section class="card">
           <h3 class="h3">Installer sur l’iPhone</h3>
           <ol class="proto">
@@ -188,7 +102,7 @@ export function More({ session }) {
             <li>Lance Carnet depuis son icône : plein écran, hors ligne, et notifications possibles.</li>
           </ol>
         </section>
-        <p class="small" style="text-align:center">{meta() ? meta().title + ' · ' : ''}Carnet v2</p>
+        <p class="small" style="text-align:center">{meta() ? meta().title + ' · ' : ''}Carnet v3</p>
       </div>
     </div>
   );
