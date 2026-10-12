@@ -4,6 +4,7 @@ function inline(s) {
   let h = esc(s);
   h = h.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
   h = h.replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  h = h.replace(/\[(jaune|vert|bleu|violet|rouge|blanc|noir|rose|orange|gris|marron)\]/g, '<span class="hold h-$1">$1</span>');
   return h;
 }
 export function md(src) {

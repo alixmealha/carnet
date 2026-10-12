@@ -4,7 +4,7 @@ import { blocks, itemKey, doneN, progress, itemLoad, fingerCalc, target, KIND } 
 import { RPE, STATUS, SIV, rpeCmp } from '../lib/rules.js';
 import { mmss, fmtNum, fmtLong } from '../lib/dates.js';
 import { unlockAudio, keepAwake, tick, goSignal, restSignal, doneSignal, say } from '../lib/audio.js';
-import { Icon, Seg, TextSeg } from '../ui/kit.jsx';
+import { Icon, Seg, TextSeg, Rich } from '../ui/kit.jsx';
 import { Goal } from './DayView.jsx';
 
 function useNow(ms) {
@@ -19,6 +19,8 @@ export function buildSteps(k) {
     if (b.kind === 'rest') continue;
     const its = b.items || [];
     if (!its.length) { st.push({ b, items: [] }); continue; }
+    // Bloc fait d'éléments simples (échauffement, consignes) : une seule étape en liste à cocher
+    if (its.length > 1 && its.every(x => x.n === 1 && !x.rest && !x.timer && x.load == null) && !b.timer) { st.push({ b, items: its, list: true }); continue; }
     const grp = b.timer && b.timer.items ? its.filter(x => b.timer.items.includes(x.id)) : null;
     let pushed = false;
     for (const x of its) {
@@ -175,16 +177,28 @@ function StepView({ k, step, startRest, openTimer, onNext, isLast }) {
   const fc = b.kind === 'doigts' ? fingerCalc(b, k) : null;
   const nextBtn = <button class="btn big ink" style="margin-top:18px" onClick={onNext}>{isLast ? 'Terminer la séance' : 'Étape suivante'}<Icon name="right" size={20} /></button>;
   const head = <>
-    <div class="step-k"><i style={'background:' + color} />{b.title}</div>
-    <h2 class="step-t">{step.group ? (b.timer && b.timer.name) || b.title : it ? it.label : b.title}</h2>
-    {!step.group && it && it.det && <p class="step-d">{it.det}</p>}
-    {(step.group || !it) && b.desc && <p class="step-d">{b.desc}</p>}
+    <div class="step-k"><i style={'background:' + color} /><Rich text={b.title} /></div>
+    <h2 class={'step-t' + (String(step.group ? (b.timer && b.timer.name) || b.title : step.list || !it ? b.title : it.label).length > 34 ? ' long' : '')}>{step.group ? (b.timer && b.timer.name) || b.title : step.list || !it ? <Rich text={b.title} /> : <Rich text={it.label} />}</h2>
+    {!step.group && !step.list && it && it.det && <p class="step-d"><Rich text={it.det} /></p>}
+    {(step.group || step.list || !it) && b.desc && <p class="step-d"><Rich text={b.desc} /></p>}
     {fc && <div class="calc" style="margin-top:10px">{fc.text}{fc.hint && <><br /><span class="muted">{fc.hint}</span></>}</div>}
     {fc && fc.guard && <div class="guard">{fc.guard}</div>}
   </>;
   if (!it) {
     const key = b.id + '.*', on = !!(e.done && e.done[key]);
     return <div>{head}{on ? <>{nextBtn}<button class="btn ghost" style="margin-top:6px" onClick={() => setDone(k, key, 0)}>Pas fait finalement</button></> : <button class="btn big primary" style="margin-top:20px" onClick={() => setDone(k, key, 1)}>Marquer comme fait</button>}</div>;
+  }
+  if (step.list) {
+    const all = items.every(x => doneN(e, itemKey(b, x), 1) >= 1);
+    return <div>{head}
+      <div class="items" style="margin-top:16px">{items.map(x => { const on = doneN(e, itemKey(b, x), 1) >= 1; return (
+        <button type="button" class={'it chk-row' + (on ? ' done' : '')} onClick={() => setDone(k, itemKey(b, x), on ? 0 : 1)}>
+          <span class="ck" aria-pressed={on ? 'true' : 'false'}>✓</span>
+          <span class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={x.label} /></i></b>{x.det && <span><Rich text={x.det} /></span>}</span>
+        </button>); })}</div>
+      {all ? nextBtn : <button class="btn big primary" style="margin-top:18px" onClick={() => { const done = Object.assign({}, jget(k).done); for (const x of items) done[itemKey(b, x)] = 1; jset(k, { done }); }}>Tout est fait</button>}
+      {b.sub && <p class="small"><Rich text={b.sub} /></p>}
+    </div>;
   }
   if (step.group) {
     return <div>{head}
@@ -221,6 +235,7 @@ function StepView({ k, step, startRest, openTimer, onNext, isLast }) {
   }
   return <div>{head}<LoadStepper k={k} b={b} it={it} />
     <Pips k={k} b={b} it={it} color={color} onTick={() => { if (it.rest && !T) startRest(it.rest, 'Repos'); }} />
+    {b.sub && <p class="small" style="margin-top:12px"><Rich text={b.sub} /></p>}
     {full ? nextBtn : action}
     {!full && it.rest && !T && <p class="small">{mmss(it.rest)} de repos se lancent tout seuls après chaque {it.unit === 'Bloc' ? 'bloc' : it.unit === 'Essai' ? 'essai' : 'série'}.</p>}
   </div>;
@@ -291,7 +306,7 @@ export function SessionMode({ k, onClose }) {
           <div class="steps-list" aria-label="Étapes">
             {steps.map((s, j) => {
               const d = stepDone(k, s), p = !d && stepPart(k, s);
-              return <button aria-current={j === i ? 'step' : undefined} onClick={() => setI(j)}><span class={'dot' + (d ? ' on' : p ? ' part' : '')}>{d ? '✓' : ''}</span><span style="flex:1;min-width:0">{s.group ? (s.b.timer.name || s.b.title) : s.items[0] ? s.items[0].label : s.b.title}<br /><small class="muted">{KIND[s.b.kind] || s.b.title}</small></span></button>;
+              return <button aria-current={j === i ? 'step' : undefined} onClick={() => setI(j)}><span class={'dot' + (d ? ' on' : p ? ' part' : '')}>{d ? '✓' : ''}</span><span style="flex:1;min-width:0"><Rich text={s.group ? (s.b.timer.name || s.b.title) : s.list ? s.b.title : s.items[0] ? s.items[0].label : s.b.title} /><br /><small class="muted">{s.list ? s.items.length + ' éléments' : (KIND[s.b.kind] || s.b.title)}</small></span></button>;
             })}
           </div>
         </>}

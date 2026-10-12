@@ -1,5 +1,5 @@
 import { jget, ids } from './store.js';
-import { meta, target, blocks, weekKeys, allItems, doneN, itemLoad, sessionName, PHASE_LABEL } from './plan.js';
+import { meta, target, blocks, weekKeys, allItems, doneN, itemLoad, sessionName, PHASE_LABEL, weekLabel } from './plan.js';
 import { score, nightTotal, zoneOf, rng, FLAGS, verdict } from './rules.js';
 import { addDays, todayKey, fmtRange } from './dates.js';
 
@@ -11,7 +11,7 @@ export function dayReal(k) {
   if (e.status === 'sautee') return 0;
   return null;
 }
-const climbing = k => blocks(k).some(b => b.kind === 'grimpe' || b.kind === 'doigts' || b.kind === 'test');
+const climbing = k => blocks(k).some(b => ['grimpe', 'doigts', 'test', 'compet', 'affut'].includes(b.kind));
 
 export function weeksStats() {
   const m = meta(); if (!m) return [];
@@ -30,7 +30,7 @@ export function weeksStats() {
       const nt = nightTotal(e); if (nt !== null) { ssum += nt; sn++; }
       if (k <= todayKey()) for (const { it, key } of allItems(k)) { items++; if (doneN(e, key, it.n) >= it.n) itemsDone++; }
     }
-    return { wi, w, ks, label: 'S' + w.n, range: fmtRange(w.start, w.end), phase: PHASE_LABEL[w.phase] || w.bloc, plan, real: rh ? real : null, ua: uh ? ua : null, tz,
+    return { wi, w, ks, label: weekLabel(w), range: fmtRange(w.start, w.end), phase: PHASE_LABEL[w.phase] || w.bloc, plan, real: rh ? real : null, ua: uh ? ua : null, tz,
       well: wn ? wsum / wn : null, sleep: sn ? Math.round(ssum / sn) : null, adherence: items ? itemsDone / items : null };
   });
 }
@@ -55,7 +55,7 @@ export function loadSeries() {
   for (const id of ids('j:')) {
     const k = id.slice(2), e = jget(k);
     for (const { b, it, key } of allItems(k)) {
-      if (b.kind !== 'muscu' && b.kind !== 'doigts' && b.kind !== 'epaule') continue;
+      if (!['muscu', 'doigts', 'epaule', 'renfo'].includes(b.kind)) continue;
       if (doneN(e, key, it.n) <= 0) continue;
       const ld = itemLoad(b, it, e);
       if (!ld) continue;

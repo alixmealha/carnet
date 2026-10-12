@@ -7,8 +7,8 @@ export async function readImport(file) {
   try { data = JSON.parse(txt); } catch (_) { throw new Error('Ce fichier n’est pas un fichier JSON lisible.'); }
   if (!data || data.app !== 'carnet' || !data.docs || typeof data.docs !== 'object') throw new Error('Ce fichier ne vient pas du Carnet.');
   const docs = {};
-  for (const [id, v] of Object.entries(data.docs)) if (id === 'plan' || id === 'settings' || /^[pj]:\d{4}-\d{2}-\d{2}$/.test(id)) docs[id] = v;
-  const n = { plan: !!docs.plan, days: Object.keys(docs).filter(x => x.startsWith('p:')).length, journal: Object.keys(docs).filter(x => x.startsWith('j:')).length };
+  for (const [id, v] of Object.entries(data.docs)) if (['plan', 'settings', 'profile', 'tests'].includes(id) || /^[pjct]:\d{4}-\d{2}-\d{2}$/.test(id)) docs[id] = v;
+  const n = { plan: !!docs.plan, days: Object.keys(docs).filter(x => x.startsWith('p:')).length, journal: Object.keys(docs).filter(x => x.startsWith('j:')).length, tests: Object.keys(docs).filter(x => x.startsWith('t:')).length };
   return { docs, n };
 }
 export function applyImport(docs) { putMany(docs); }

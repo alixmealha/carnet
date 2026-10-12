@@ -1,6 +1,9 @@
 import { useState } from 'preact/hooks';
 import { jget } from '../lib/store.js';
-import { meta, day, blocks, weekKeys, savePlan, addWeeks, removeLastWeek, saveDay, copyDay, copyWeek, clone, uid, KIND, KIND_LIST, PHASE_LABEL, PHASE_Z, sessionName, weekOf } from '../lib/plan.js';
+import { meta, day, blocks, weekKeys, savePlan, addWeeks, removeLastWeek, saveDay, copyDay, copyWeek, clone, uid, KIND, KIND_LIST, PHASE_LABEL, PHASE_Z, sessionName, weekOf, weekLabel } from '../lib/plan.js';
+import { isSelf, getSubject, nameOf } from '../lib/store.js';
+import { Rich, Fold } from '../ui/kit.jsx';
+import { CATS, allTests, testById } from '../lib/tests.js';
 import { SIV } from '../lib/rules.js';
 import { md } from '../lib/md.js';
 import { todayKey, fmtRange, fmtShort, fmtDay, fmtNum, addDays, mondayOf } from '../lib/dates.js';
@@ -8,8 +11,8 @@ import { Icon, Sheet, Seg, toast } from '../ui/kit.jsx';
 import { tapesOf } from './Today.jsx';
 import { Goal } from './DayView.jsx';
 
-const PHASES = ['volume', 'force', 'puissance', 'deload', 'transition', 'autre'];
-const SHORT = { volume: 'Vol.', force: 'Force', puissance: 'Puiss.', deload: 'Déch.', transition: 'Trans.', autre: 'Cycle' };
+const PHASES = ['volume', 'reprise', 'force', 'puissance', 'specifique', 'affutage', 'recup', 'deload', 'transition', 'coupure', 'autre'];
+const SHORT = { volume: 'Vol.', reprise: 'Rep.', force: 'Force', puissance: 'Puiss.', specifique: 'Spéc.', affutage: 'Affût.', recup: 'Récup.', deload: 'Déch.', transition: 'Trans.', coupure: 'Coup.', autre: 'Cycle' };
 const FAMS = [['vol', 'Volume (modéré)'], ['easy', 'Facile'], ['hard', 'Dur'], ['light', 'Léger / récup'], ['muscu', 'Muscu'], ['test', 'Test']];
 const UNITS = ['Série', 'Bloc', 'Essai'];
 const TIMERS = [['', 'Aucun'], ['cluster', 'Clusters'], ['contrast', 'Contraste'], ['interval', 'Intervalles']];
@@ -124,6 +127,10 @@ function BlockEd({ b, set, i, n, onMove, onDel }) {
         <div class="grid2" style="margin-top:8px"><Num label="Entre séries (s)" int value={BT.setRest} onCommit={v => set(x => { x.timer.setRest = v || 0; })} />
           <div class="fld" style="justify-content:flex-end"><button type="button" class="btn danger" onClick={() => set(x => { delete x.timer; })}>Retirer le minuteur</button></div></div>
       </div>}
+      {b.kind === 'test' && <details class="fold">
+        <summary><span class="sub-lbl" style="margin:0">Tests à saisir ce jour-là <small>{(b.tests || []).length ? (b.tests || []).map(id => (testById(id) || { name: id }).name).join(' · ') : 'aucun'}</small></span></summary>
+        <div class="stack" style="gap:8px;margin-top:8px">{CATS.filter(([c]) => allTests().some(t => t.cat === c)).map(([c, l]) => <div><p class="small" style="margin:0 0 4px">{l}</p><div class="chips">{allTests().filter(t => t.cat === c).map(t => { const on = (b.tests || []).includes(t.id); return <button type="button" class="chip sel" aria-pressed={on ? 'true' : 'false'} onClick={() => set(x => { const l2 = x.tests || []; x.tests = on ? l2.filter(y => y !== t.id) : l2.concat([t.id]); })}>{t.name}</button>; })}</div></div>)}</div>
+      </details>}
       {b.kind !== 'rest' && <>
         {items.map((it, j) => <ItemEd key={it.id} it={it} i={j} n={items.length} set={fn => setItem(j, fn)} onMove={d => set(x => move(x.items, j, d))} onDel={() => set(x => { x.items.splice(j, 1); })} />)}
         <button type="button" class="btn" onClick={() => set(x => { x.items = x.items || []; x.items.push({ id: uid('i'), label: 'Nouvel exercice', n: 3, unit: b.kind === 'grimpe' ? 'Bloc' : 'Série' }); })}><Icon name="plus" size={18} />Ajouter un exercice</button>
@@ -193,7 +200,7 @@ function WeekSheet({ w, onClose, onDay }) {
   const [to, setTo] = useState('');
   const set = patch => { const mm = clone(meta()); Object.assign(mm.weeks.find(x => x.id === w.id), patch); savePlan(mm); };
   return (
-    <Sheet title={'S' + cur.n + ' · ' + fmtRange(cur.start, cur.end)} onClose={onClose}>
+    <Sheet title={weekLabel(cur) + ' · ' + fmtRange(cur.start, cur.end)} onClose={onClose}>
       <div class="stack">
         <div class="grid2">
           <Sel label="Phase" value={cur.phase || 'autre'} options={PHASES.map(p => [p, PHASE_LABEL[p]])} onChange={v => set({ phase: v })} />
@@ -211,11 +218,11 @@ function WeekSheet({ w, onClose, onDay }) {
         <section class="card">
           <h3 class="h3">Copier toute la semaine</h3>
           <div style="display:flex;gap:8px;align-items:flex-end">
-            <div style="flex:1"><Sel label="Vers" value={to} options={[['', 'Choisir une semaine']].concat(m.weeks.filter(x => x.id !== cur.id).map(x => [x.id, 'S' + x.n + ' · ' + fmtRange(x.start, x.end)]))} onChange={setTo} /></div>
+            <div style="flex:1"><Sel label="Vers" value={to} options={[['', 'Choisir une semaine']].concat(m.weeks.filter(x => x.id !== cur.id).map(x => [x.id, weekLabel(x) + ' · ' + fmtRange(x.start, x.end)]))} onChange={setTo} /></div>
             <button class="btn" disabled={!to} onClick={() => {
               const tw = m.weeks.find(x => x.id === to);
-              if (!ask('Remplacer toutes les séances de S' + tw.n + ' par celles de S' + cur.n + ' ?')) return;
-              copyWeek(cur, tw); toast('S' + cur.n + ' copiée vers S' + tw.n);
+              if (!ask('Remplacer toutes les séances de ' + weekLabel(tw) + ' par celles de ' + weekLabel(cur) + ' ?')) return;
+              copyWeek(cur, tw); toast(weekLabel(cur) + ' copiée vers ' + weekLabel(tw));
             }}>Copier</button>
           </div>
           <p class="small">Chaque jour va sur le même jour de la semaine choisie. Le journal n’est pas touché.</p>
@@ -259,9 +266,9 @@ function PlanSheet({ onClose }) {
             <Sel label="Phase" value={ph} options={PHASES.map(p => [p, PHASE_LABEL[p]])} onChange={setPh} />
             <label class="fld">Bloc<input class="in" value={bn} onInput={e => setBn(e.target.value)} /></label>
           </div>
-          <button class="btn primary" onClick={() => { addWeeks(+n, ph, bn); toast(n + ' semaine' + (+n > 1 ? 's' : '') + ' ajoutée' + (+n > 1 ? 's' : '')); }}>Ajouter après S{last ? last.n : 0}</button>
+          <button class="btn primary" onClick={() => { addWeeks(+n, ph, bn); toast(n + ' semaine' + (+n > 1 ? 's' : '') + ' ajoutée' + (+n > 1 ? 's' : '')); }}>Ajouter après {last ? weekLabel(last) : 'le début'}</button>
           <p class="small" style="margin:0">Les nouvelles semaines sont vides : remplis-les jour par jour, ou copie une semaine existante.</p>
-          {last && <button class="btn danger" onClick={() => { if (ask('Retirer S' + last.n + ' et ses séances ? Le journal est conservé.')) removeLastWeek(); }}>Retirer la dernière semaine (S{last.n})</button>}
+          {last && <button class="btn danger" onClick={() => { if (ask('Retirer ' + weekLabel(last) + ' et ses séances ? Le journal est conservé.')) removeLastWeek(); }}>Retirer la dernière semaine ({weekLabel(last)})</button>}
         </section>
       </div>
     </Sheet>
@@ -323,14 +330,15 @@ function Timeline({ m, onWeek }) {
       <div class="tl-names" style={'grid-template-columns:' + cols}>{groups.map(g => <span style={'grid-column:span ' + g.n} title={g.bloc}>{g.n >= 4 ? (PHASE_LABEL[g.phase] || g.bloc) : g.n >= 2 ? (SHORT[g.phase] || g.bloc) : ''}</span>)}</div>
       <div class="tl" style={'grid-template-columns:' + cols}>
         {ws.map(w => {
-          const now = t >= w.start && t <= w.end, test = (m.tests || []).some(x => x >= w.start && x <= w.end);
-          return <button class={'tl-w' + (now ? ' now' : '')} onClick={() => onWeek(w)} aria-label={'Semaine ' + w.n}>
-            <span class={'tl-bar ' + (PHASE_Z[w.phase] || 'z2')} />{test && <span class="tl-test" />}<b>{w.n}</b>
+          const now = t >= w.start && t <= w.end, test = (m.tests || []).some(x => x >= w.start && x <= w.end), comp = (m.events || []).some(e => e.date >= w.start && e.date <= w.end);
+          return <button class={'tl-w' + (now ? ' now' : '')} onClick={() => onWeek(w)} aria-label={'Semaine ' + weekLabel(w)}>
+            <span class={'tl-bar ' + (PHASE_Z[w.phase] || 'z2')} />{test && <span class="tl-test" />}{comp && <span class="tl-comp" />}<b>{w.label ? '' : w.n}</b>
           </button>;
         })}
       </div>
       <div class="leg" style="margin-top:10px">
-        <span><i class="z1" />Volume</span><span><i class="z2" />Force</span><span><i class="z3" />Puissance</span><span><i class="zr" />Décharge</span><span><i class="tl-test" />Test</span>
+        {[...new Set(ws.map(w => w.phase))].map(p => <span><i class={PHASE_Z[p] || 'z2'} />{PHASE_LABEL[p] || p}</span>)}
+        {(m.tests || []).length > 0 && <span><i class="tl-test" />Test</span>}{(m.events || []).length > 0 && <span><i class="tl-comp" />Compétition</span>}
       </div>
     </div>
   );
@@ -350,11 +358,12 @@ export function PlanScreen() {
   return (
     <div class="screen">
       <div class="head">
-        <div style="min-width:0"><div class="eyebrow">{m.goal ? m.goal.label + ' · ' + fmtShort(m.goal.date) : 'Plan'}</div><h1 class="title">{m.title}</h1></div>
+        <div style="min-width:0"><div class="eyebrow">{!isSelf() ? 'Plan de ' + nameOf(getSubject()) : m.goal ? m.goal.label + ' · ' + fmtShort(m.goal.date) : 'Plan'}</div><h1 class="title">{m.title}</h1></div>
         <button class="icon-btn" aria-label="Réglages du plan" onClick={() => setSh({ t: 'plan' })}><Icon name="edit" /></button>
       </div>
       <div class="stack">
         <section class="card"><h3 class="h3">Les {m.weeks.length} semaines <em>{fmtDay(m.start)} → {fmtDay(m.end)}</em></h3><Timeline m={m} onWeek={w => setSh({ t: 'week', w })} /></section>
+        {(m.events || []).length > 0 && <Fold id="plan-events" title="Compétitions" open summary={(() => { const nx = m.events.find(e => (e.end || e.date) >= t); return nx ? 'Prochaine : ' + nx.label + ' · ' + fmtDay(nx.date) : m.events.length + ' compétitions'; })()}><div class="evs">{m.events.map(e => <div class={'ev' + ((e.end || e.date) < t ? ' past' : '')}><span class="d">{fmtDay(e.date)}{e.end && e.end !== e.date ? ' → ' + fmtDay(e.end) : ''}</span><b>{e.label}</b>{e.lvl && <small>{e.lvl}</small>}</div>)}</div></Fold>}
 
         {(m.blocs || []).map((b, i) => {
           const now = t >= b.from && t <= b.to;
@@ -363,18 +372,17 @@ export function PlanScreen() {
               <div style="min-width:0"><div class="eyebrow">{fmtDay(b.from)} → {fmtDay(b.to)}{now ? ' · en cours' : ''}</div><h2 class="h2" style="margin-top:4px">{b.name}</h2></div>
               <button class="icon-btn" aria-label={'Modifier ' + b.name} onClick={() => setSh({ t: 'bloc', i })}><Icon name="edit" /></button>
             </div>
-            {b.obj && <p class="lead" style="margin:0">{b.obj}</p>}
+            {b.obj && <p class="lead" style="margin:0"><Rich text={b.obj} /></p>}
             {b.notes && <details class="fold" style="margin-top:10px"><summary><span class="small" style="margin:0;font-weight:600;color:var(--accent)">Détails du bloc</span></summary><div class="mdx" style="margin-top:8px" dangerouslySetInnerHTML={{ __html: md(b.notes) }} /></details>}
           </section>;
         })}
         <button class="btn" onClick={() => setSh({ t: 'bloc', i: -1 })}><Icon name="plus" size={18} />Ajouter un bloc de texte</button>
 
-        <h3 class="h3" style="margin:8px 0 -4px">Semaines</h3>
-        <div class="list">
+        <Fold id="plan-weeks" title="Semaines" summary={m.weeks.length + ' semaines' + (cw ? ' · en cours : ' + weekLabel(cw) + ' (' + (PHASE_LABEL[cw.phase] || cw.bloc) + ')' : '')} cls="flat-b">
           {m.weeks.map(w => <button class={'li' + (cw && cw.id === w.id ? ' now' : '')} onClick={() => setSh({ t: 'week', w })}>
-            <span style="min-width:0"><b style="font-weight:600">S{w.n}</b> · {fmtRange(w.start, w.end)}<small>{(PHASE_LABEL[w.phase] || w.bloc) + ' · ' + weekSummary(w)}</small></span><span class="r" />
+            <span style="min-width:0"><b style="font-weight:600">{weekLabel(w)}</b> · {fmtRange(w.start, w.end)}<small>{(PHASE_LABEL[w.phase] || w.bloc) + ' · ' + weekSummary(w)}</small></span><span class="r" />
           </button>)}
-        </div>
+        </Fold>
 
         <h3 class="h3" style="margin:8px 0 -4px">Repères du plan</h3>
         {(m.sections || []).map((s, i) => <details class="card fold">

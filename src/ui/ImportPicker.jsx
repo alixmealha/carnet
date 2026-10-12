@@ -16,7 +16,7 @@ export function ImportPicker({ onDone, label }) {
       {!pending && <button class="btn big primary" onClick={() => ref.current.click()}>{label || 'Choisir le fichier'}</button>}
       {err && <p class="err" role="alert">{err}</p>}
       {pending && <div class="card">
-        <p style="margin:0">{pending.n.plan ? 'Plan, ' : ''}{pending.n.days} jours de séances et {pending.n.journal} jours de journal.</p>
+        <p style="margin:0">{pending.n.plan ? 'Plan, ' : ''}{pending.n.days} jours de séances, {pending.n.journal} jours de journal{pending.n.tests ? ', ' + pending.n.tests + ' passations de tests' : ''}.</p>
         <p class="small">Les jours déjà présents ici sont remplacés par ceux du fichier.</p>
         <div class="row-btns" style="margin-top:12px">
           <button class="btn" style="flex:1" onClick={() => setPending(null)}>Annuler</button>

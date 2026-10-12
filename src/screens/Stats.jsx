@@ -5,13 +5,16 @@ import { weeksStats, currentWeekIndex, loadSeries, alerts, tiles } from '../lib/
 import { score, verdict, nightTotal, durLong, durShort, ZONES, RPE, STATUS } from '../lib/rules.js';
 import { todayKey, addDays, rangeKeys, fmtShort, fmtDay, dom, MON_S, fmtNum, dow } from '../lib/dates.js';
 import { Chart, niceMax, linePath } from '../ui/charts.jsx';
-import { TextSeg } from '../ui/kit.jsx';
+import { TextSeg, Fold, Src } from '../ui/kit.jsx';
+import { weekInsights, dayLoad } from '../lib/insights.js';
+import { TestsView } from './Tests.jsx';
 
 const fmtInt = n => Math.round(n).toLocaleString('fr-FR');
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+const avg7 = a => { const x = a.slice(-7); return x.length ? x.reduce((s, v) => s + v, 0) / x.length : 0; };
 
-function Card({ title, sub, right, children }) {
-  return <section class="card ch-card"><div class="ch-h"><div><h3 class="ch-t">{title}</h3>{sub && <p class="ch-s">{sub}</p>}</div>{right}</div>{children}</section>;
+function Card({ id, title, sub, right, summary, open, children }) {
+  return <Fold id={'stats-' + id} title={title} summary={summary} open={open} cls="ch-card">{sub && <p class="ch-s" style="margin:0 0 8px">{sub}</p>}{right && <div style="margin-bottom:8px">{right}</div>}{children}</Fold>;
 }
 const Empty = ({ children }) => <div class="empty">{children}</div>;
 
@@ -35,7 +38,7 @@ function Alerts({ ws, onOpen }) {
   if (!a.length) return null;
   const shown = all ? a : a.slice(0, 4);
   return (
-    <Card title="Signaux" sub="Ce qui mérite ton attention, du plus récent au plus ancien.">
+    <Card id="alerts" title="Signaux" summary={a.length + (a.length > 1 ? ' signaux' : ' signal') + ' · le plus récent : ' + fmtShort(a[0].k)} sub="Ce qui mérite ton attention, du plus récent au plus ancien.">
       <div class="stack" style="gap:6px">
         {shown.map(x => <button class="alert" style={'--zc:' + x.c + ';text-align:left;border-top:0;border-right:0;border-bottom:0;width:100%'} onClick={() => onOpen(x.k)}><span class="ad">{fmtShort(x.k)}</span><b>{x.t}</b><span style="flex-basis:100%;color:var(--muted);font-size:13px">{x.d}</span></button>)}
       </div>
@@ -47,9 +50,11 @@ function Alerts({ ws, onOpen }) {
 /* ---------- Semaines : prévu / réalisé ---------- */
 function PlanVsReal({ ws, ci }) {
   const mx = niceMax(Math.max(10, ...ws.map(x => Math.max(x.plan, x.real || 0))));
-  if (!ws.some(x => x.real !== null)) return <Card title="Prévu ou réalisé" sub="Intensité + volume de chaque séance, cumulés sur la semaine."><Empty>Note le profil réalisé (intensité, volume) après tes séances pour voir la comparaison.</Empty></Card>;
+  const cw = ws[ci];
+  const sumPR = cw ? 'Cette semaine : prévu ' + cw.plan + (cw.real !== null ? ' · réalisé ' + cw.real : '') : '';
+  if (!ws.some(x => x.real !== null)) return <Card id="pvr" title="Prévu ou réalisé" summary="Pas encore de données" sub="Intensité + volume de chaque séance, cumulés sur la semaine."><Empty>Note le profil réalisé (intensité, volume) après tes séances pour voir la comparaison.</Empty></Card>;
   return (
-    <Card title="Prévu ou réalisé" sub="Intensité + volume de chaque séance (sur 10), cumulés sur la semaine." right={<div class="leg"><span><i style="background:var(--plan)" />Prévu</span><span><i style="background:var(--accent)" />Réalisé</span></div>}>
+    <Card id="pvr" title="Prévu ou réalisé" summary={sumPR} sub="Intensité + volume de chaque séance (sur 10), cumulés sur la semaine." right={<div class="leg"><span><i style="background:var(--plan)" />Prévu</span><span><i style="background:var(--accent)" />Réalisé</span></div>}>
       <Chart n={ws.length} yMax={mx.max} ticks={mx.ticks} xLabels={ws.map(x => x.label)} hl={ci}
         tip={i => { const x = ws[i]; return x.label + ' · ' + x.range + '\nPrévu ' + x.plan + (x.real !== null ? ' · réalisé ' + x.real : '') + (x.adherence !== null ? '\nExercices cochés ' + Math.round(x.adherence * 100) + ' %' : ''); }}
         draw={c => ws.map((x, i) => {
@@ -65,10 +70,12 @@ function PlanVsReal({ ws, ci }) {
 
 /* ---------- Charge interne ---------- */
 function Load({ ws, ci }) {
-  if (!ws.some(x => x.ua)) return <Card title="Charge interne" sub="Ressenti × durée de chaque séance (UA), par semaine."><Empty>Note le ressenti et la durée de tes séances pour suivre ta charge.</Empty></Card>;
+  const cw = ws[ci], pw = ws[ci - 1];
+  const sumL = cw && cw.ua ? 'Cette semaine : ' + fmtInt(cw.ua) + ' UA' + (pw && pw.ua ? ' (' + (cw.ua >= pw.ua ? '+' : '') + Math.round((cw.ua / pw.ua - 1) * 100) + ' %)' : '') : 'Rien cette semaine pour l’instant';
+  if (!ws.some(x => x.ua)) return <Card id="load" title="Charge interne" summary="Pas encore de données" sub="Ressenti × durée de chaque séance (UA), par semaine."><Empty>Note le ressenti et la durée de tes séances pour suivre ta charge.</Empty></Card>;
   const mx = niceMax(Math.max(...ws.map(x => x.ua || 0)) * 1.12);
   return (
-    <Card title="Charge interne" sub="Ressenti × durée de chaque séance (UA), par semaine. En orange : plus de 30 % de hausse d’un coup." >
+    <Card id="load" title="Charge interne" summary={sumL} sub="Ressenti × durée de chaque séance (UA), par semaine. En orange : plus de 30 % de hausse d’un coup.">
       <Chart n={ws.length} yMax={mx.max} ticks={mx.ticks} fmtY={v => v >= 1000 ? fmtNum(v / 1000) + 'k' : v} xLabels={ws.map(x => x.label)} hl={ci}
         tip={i => { const x = ws[i], p = ws[i - 1]; return x.label + ' · ' + x.range + '\n' + (x.ua ? fmtInt(x.ua) + ' UA' + (p && p.ua ? ' (' + (x.ua >= p.ua ? '+' : '') + Math.round((x.ua / p.ua - 1) * 100) + ' %)' : '') : 'Pas de données'); }}
         draw={c => ws.map((x, i) => {
@@ -85,9 +92,11 @@ function Load({ ws, ci }) {
 
 /* ---------- Répartition de l'intensité ---------- */
 function Zones({ ws, ci }) {
-  if (!ws.some(x => x.tz[0] + x.tz[1] + x.tz[2] > 0)) return <Card title="Répartition de l’intensité" sub="Minutes d’escalade et de doigts selon le ressenti de la séance."><Empty>Ressenti et durée des séances de grimpe : la répartition apparaîtra ici.</Empty></Card>;
+  const cz = ws[ci], czt = cz ? cz.tz[0] + cz.tz[1] + cz.tz[2] : 0;
+  const sumZ = czt ? 'Cette semaine : ' + ZONES.map(([l], j) => pct(cz.tz[j], czt) + ' % ' + l.toLowerCase()).join(' · ') : 'Rien cette semaine pour l’instant';
+  if (!ws.some(x => x.tz[0] + x.tz[1] + x.tz[2] > 0)) return <Card id="zones" title="Répartition de l’intensité" summary="Pas encore de données" sub="Minutes d’escalade et de doigts selon le ressenti de la séance."><Empty>Ressenti et durée des séances de grimpe : la répartition apparaîtra ici.</Empty></Card>;
   return (
-    <Card title="Répartition de l’intensité" sub="Minutes d’escalade et de doigts selon le ressenti. Le trait marque 80 % de facile, en repère seulement pour la force et la puissance."
+    <Card id="zones" title="Répartition de l’intensité" summary={sumZ} sub="Minutes d’escalade et de doigts selon le ressenti. Le trait marque 80 % de facile, en repère seulement pour la force et la puissance."
       right={<div class="leg">{ZONES.map(([l, z, r]) => <span><i class={z} />{l} {r}</span>)}</div>}>
       <Chart n={ws.length} yMax={100} ticks={[0, 50, 100]} fmtY={v => v + '%'} xLabels={ws.map(x => x.label)} hl={ci}
         tip={i => { const x = ws[i], t = x.tz[0] + x.tz[1] + x.tz[2]; if (!t) return x.label + '\nPas de données'; return x.label + ' · ' + x.phase + '\n' + ZONES.map(([l], j) => l + ' ' + x.tz[j] + ' min (' + pct(x.tz[j], t) + ' %)').join('\n'); }}
@@ -119,7 +128,7 @@ function Wellness() {
   const [r, setR, ks] = useRange();
   const pts = ks.map((k, i) => ({ i, k, v: score(jget(k)) })).filter(p => p.v !== null);
   return (
-    <Card title="Forme du matin" sub="Sommeil, fatigue, courbatures, stress, humeur : total sur 25." right={<RangeSeg r={r} setR={setR} />}>
+    <Card id="well" title="Forme du matin" summary={pts.length ? 'Moyenne 7 j : ' + fmtNum(Math.round(avg7(pts.map(p => p.v)) * 10) / 10) + '/25 · dernier ' + pts[pts.length - 1].v + '/25' : 'Pas encore de données'} sub="Sommeil, fatigue, courbatures, stress, humeur : total sur 25." right={<RangeSeg r={r} setR={setR} />}>
       {pts.length === 0 ? <Empty>Remplis la forme du matin pour voir ta courbe.</Empty> :
         <Chart n={ks.length} yMin={5} yMax={25} ticks={[5, 10, 15, 20, 25]} xLabels={ks.map(dayLabel)} hl={ks.indexOf(todayKey())}
           tip={i => { const v = score(jget(ks[i])); return fmtShort(ks[i]) + '\n' + (v !== null ? v + '/25 · ' + verdict(v).lbl : 'Non renseigné'); }}
@@ -142,15 +151,16 @@ function Sleep() {
   const mx = Math.max(540, ...ks.map(k => nightTotal(jget(k)) || 0));
   const top = Math.ceil(mx / 60) * 60;
   return (
-    <Card title="Sommeil" sub="Nuits mesurées par phase. Le trait marque 7 h." right={<RangeSeg r={r} setR={setR} />}>
+    <Card id="sleep" title="Sommeil" summary={has ? 'Moyenne 7 j : ' + durLong(Math.round(avg7(ks.map(k => nightTotal(jget(k))).filter(x => x !== null)))) : 'Pas encore de données'} sub="Durée de chaque nuit, par phase quand ta montre les donne. Le trait marque 7 h." right={<RangeSeg r={r} setR={setR} />}>
       {!has ? <Empty>Renseigne ta nuit mesurée (Garmin, WHOOP) dans la fiche du jour.</Empty> : <>
         <div class="leg" style="margin-bottom:6px">{ST.map(([s, l]) => <span><i style={'background:var(--s-' + s + ')'} />{l}</span>)}</div>
         <Chart n={ks.length} yMax={top} ticks={[0, 180, 360, 540].filter(t => t <= top)} fmtY={v => v / 60 + 'h'} xLabels={ks.map(dayLabel)} hl={ks.indexOf(todayKey())}
           tip={i => { const e = jget(ks[i]), t = nightTotal(e); if (t === null) return fmtShort(ks[i]) + '\nPas de mesure'; const n = e.nuit; return fmtShort(ks[i]) + ' · ' + durLong(t) + '\n' + ST.filter(([s]) => typeof n[s] === 'number').map(([s, l]) => l + ' ' + durShort(n[s])).join(' · ') + (typeof n.vfc === 'number' ? '\nVFC ' + n.vfc + ' ms' : '') + (typeof n.fcr === 'number' ? ' · FC ' + n.fcr : ''); }}
           draw={c => <g>
             {ks.map((k, i) => {
-              const n = jget(k).nuit; if (!n || nightTotal(jget(k)) === null) return null;
+              const n = jget(k).nuit, tt = nightTotal(jget(k)); if (!n || tt === null) return null;
               const bw = Math.max(2, Math.min(16, c.slot * 0.66)); let acc = 0;
+              if (ST.filter(([s]) => typeof n[s] === 'number').length < 2) return <rect x={c.cx(i) - bw / 2} y={c.y(tt)} width={bw} height={c.y(0) - c.y(tt)} fill="var(--s-leger)" opacity=".75" />;
               return <g>{ST.map(([s]) => { const v = n[s]; if (typeof v !== 'number' || !v) return null; const y1 = c.y(acc), y2 = c.y(acc + v); acc += v; return <rect x={c.cx(i) - bw / 2} y={y2} width={bw} height={y1 - y2} fill={'var(--s-' + s + ')'} />; })}</g>;
             })}
             <line x1={c.pl} x2={c.W - c.pr} y1={c.y(420)} y2={c.y(420)} stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="4 3" />
@@ -180,7 +190,7 @@ function VfcChart({ ks, vf }) {
 function Loads() {
   const series = loadSeries();
   const [sel, setSel] = useState(null);
-  if (!series.length) return <Card title="Charges" sub="Progression des charges de muscu, de finger lift et d’épaule."><Empty>Coche tes séries de muscu : les charges utilisées s’afficheront ici, séance après séance.</Empty></Card>;
+  if (!series.length) return <Card id="loads" title="Charges" summary="Pas encore de données" sub="Progression des charges de muscu, de finger lift et d’épaule."><Empty>Coche tes séries de muscu : les charges utilisées s’afficheront ici, séance après séance.</Empty></Card>;
   const s = series.find(x => x.name === sel) || series[0];
   const vals = s.pts.map(p => p.v), lo0 = Math.min(...vals), hi0 = Math.max(...vals);
   const st = hi0 - lo0 > 20 ? 10 : hi0 - lo0 > 8 ? 5 : 2.5;
@@ -189,7 +199,7 @@ function Loads() {
   const unit = s.unit === '+kg' ? '+' : '';
   const first = s.pts[0], last = s.pts[s.pts.length - 1];
   return (
-    <Card title="Charges" sub="Charge utilisée à chaque séance où l’exercice est coché.">
+    <Card id="loads" title="Charges" summary={series.length + ' exercice' + (series.length > 1 ? 's' : '') + ' suivi' + (series.length > 1 ? 's' : '')} sub="Charge utilisée à chaque séance où l’exercice est coché.">
       <div class="chipsel" role="group" aria-label="Exercice">{series.map(x => <button class="chip sel" aria-pressed={x.name === s.name ? 'true' : 'false'} onClick={() => setSel(x.name)} style="flex:none">{x.name}</button>)}</div>
       <div class="ch-h" style="margin:10px 0 2px"><div class="num" style="font-size:22px">{unit}{fmtNum(last.v)} kg</div><div class="small" style="margin:0">{s.pts.length > 1 ? (last.v - first.v >= 0 ? '+' : '−') + fmtNum(Math.abs(last.v - first.v)) + ' kg depuis le ' + fmtDay(first.k) : 'Première séance le ' + fmtDay(first.k)}</div></div>
       <Chart n={s.pts.length} height={150} yMin={lo} yMax={hi} ticks={ticks} fmtY={v => unit + fmtNum(v)} xLabels={s.pts.map(p => dom(p.k) + ' ' + MON_S[+p.k.slice(5, 7) - 1].replace('.', ''))} padL={38} minLabelGap={44}
@@ -203,33 +213,14 @@ function Loads() {
   );
 }
 
-/* ---------- Tests ---------- */
-function Tests({ onOpen }) {
-  const m = meta(); const ts = (m && m.tests) || [];
-  if (!ts.length) return null;
-  const rows = ts.map(k => ({ k, te: jget(k).tests || {} }));
-  return (
-    <Card title="Tests doigts" sub="Charge maximale par préhension (kg ajoutés ou total, comme tu le notes).">
-      <div class="tw" style="margin-top:0"><table class="t">
-        <thead><tr><th>Date</th><th>Semi-arqué</th><th>Tendu</th></tr></thead>
-        <tbody>{rows.map((r, i) => {
-          const p = rows[i - 1] && rows[i - 1].te;
-          const d = key => r.te[key] != null && p && p[key] != null ? ' (' + (r.te[key] >= p[key] ? '+' : '−') + fmtNum(Math.abs(Math.round((r.te[key] - p[key]) * 10) / 10)) + ')' : '';
-          return <tr onClick={() => onOpen(r.k)} style="cursor:pointer"><td>{fmtShort(r.k)}</td><td class="num">{r.te.semi != null ? fmtNum(r.te.semi) + ' kg' + d('semi') : '—'}</td><td class="num">{r.te.tendu != null ? fmtNum(r.te.tendu) + ' kg' + d('tendu') : '—'}</td></tr>;
-        })}</tbody>
-      </table></div>
-    </Card>
-  );
-}
-
 /* ---------- Journal ---------- */
 function Journal({ onOpen }) {
   const [n, setN] = useState(10);
   const keys = ids('j:').map(id => id.slice(2)).filter(k => { const e = jget(k); return Object.keys(e).length > 0; }).reverse();
   if (!keys.length) return null;
   return (
-    <section class="card flat">
-      <div style="padding:14px 14px 4px"><h3 class="ch-t">Journal</h3><p class="ch-s">Tous les jours renseignés. Touche une ligne pour ouvrir la fiche.</p></div>
+    <Fold id="stats-journal" title="Journal" summary={keys.length + ' jour' + (keys.length > 1 ? 's' : '') + ' renseigné' + (keys.length > 1 ? 's' : '')} cls="flat-b">
+      <p class="ch-s" style="margin:0 0 4px">Touche une ligne pour ouvrir la fiche.</p>
       {keys.slice(0, n).map(k => {
         const e = jget(k), sc = score(e), nt = nightTotal(e), st = STATUS.find(s => s[0] === e.status);
         return (
@@ -247,28 +238,46 @@ function Journal({ onOpen }) {
           </button>
         );
       })}
-      {keys.length > n && <div style="padding:8px 14px 12px"><button class="btn ghost" onClick={() => setN(n + 20)}>Afficher plus</button></div>}
-    </section>
+      {keys.length > n && <div style="padding:8px 0 0"><button class="btn ghost" onClick={() => setN(n + 20)}>Afficher plus</button></div>}
+    </Fold>
   );
 }
 
-export function Stats({ onOpen }) {
+/* ---------- Bilan des 7 derniers jours ---------- */
+const LVC = { crit: 'var(--crit)', warn: 'var(--warn)', info: 'var(--accent)', good: 'var(--good)' };
+function Bilan() {
+  const items = weekInsights();
+  const worst = items.find(x => x.lvl === 'crit') ? 'crit' : items.find(x => x.lvl === 'warn') ? 'warn' : 'good';
+  return (
+    <Fold id="stats-bilan" title="Bilan des 7 derniers jours" open summary={items.length ? (worst === 'crit' ? 'À surveiller de près' : worst === 'warn' ? 'Quelques points d’attention' : 'Tout va dans le bon sens') : 'Pas encore assez de données'}
+      right={items.length ? <span class={'dotlvl ' + worst} /> : null}>
+      {items.length ? <div class="ins">{items.map(x => <div class="in-it" style={'--c:' + LVC[x.lvl]}><b>{x.t}</b><span>{x.d}</span><Src ids={x.src} /></div>)}</div>
+        : <p class="small" style="margin:0">Remplis ta forme du matin, ton sommeil et le ressenti de tes séances quelques jours : le bilan apparaîtra ici.</p>}
+    </Fold>
+  );
+}
+
+export function Stats({ onOpen, onOpenTest, testFocus }) {
   const ws = weeksStats(), ci = currentWeekIndex(ws), m = meta();
+  const [view, setView] = useState(() => { try { return localStorage.getItem('carnet-stats-view') || 'dash'; } catch (_) { return 'dash'; } });
+  const pick = v => { if (!v) return; setView(v); try { localStorage.setItem('carnet-stats-view', v); } catch (_) {} };
   return (
     <div class="screen">
       <div class="head"><div><div class="eyebrow">{m ? m.title : ''}</div><h1 class="title">Suivi</h1></div></div>
-      <div class="stack">
-        <Tiles ws={ws} />
-        <Alerts ws={ws} onOpen={onOpen} />
-        <PlanVsReal ws={ws} ci={ci} />
-        <Load ws={ws} ci={ci} />
-        <Zones ws={ws} ci={ci} />
-        <Wellness />
-        <Sleep />
-        <Loads />
-        <Tests onOpen={onOpen} />
-        <Journal onOpen={onOpen} />
-      </div>
+      <div style="margin-bottom:14px"><TextSeg value={view} onChange={pick} options={[['dash', 'Tableau de bord'], ['tests', 'Tests']]} label="Vue" /></div>
+      {view === 'tests' ? <TestsView onOpenDay={onOpen} focus={testFocus} /> :
+        <div class="stack">
+          <Tiles ws={ws} />
+          <Bilan />
+          <Alerts ws={ws} onOpen={onOpen} />
+          <PlanVsReal ws={ws} ci={ci} />
+          <Load ws={ws} ci={ci} />
+          <Zones ws={ws} ci={ci} />
+          <Wellness />
+          <Sleep />
+          <Loads />
+          <Journal onOpen={onOpen} />
+        </div>}
     </div>
   );
 }

@@ -11,7 +11,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['apple-touch-icon.png', 'favicon.svg'],
+      includeAssets: ['apple-touch-icon.png', 'favicon.svg', 'push-sw.js'],
       manifest: {
         name: 'Carnet',
         short_name: 'Carnet',
@@ -32,6 +32,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: base + 'index.html',
+        importScripts: ['push-sw.js'],
         cleanupOutdatedCaches: true
       }
     })

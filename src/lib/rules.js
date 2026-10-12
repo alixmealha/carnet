@@ -1,6 +1,5 @@
-import { jget } from './store.js';
+import { jget, get } from './store.js';
 import { addDays, pad } from './dates.js';
-import { kinds } from './plan.js';
 
 export const WELL = [
   ['sommeil', 'Sommeil', 'très mauvais', 'excellent'],
@@ -9,7 +8,8 @@ export const WELL = [
   ['stress', 'Stress', 'très stressé', 'détendu'],
   ['humeur', 'Humeur', 'très basse', 'excellente']
 ];
-export const FLAGS = [['doigts', 'Doigts'], ['coude', 'Coude'], ['epaule', 'Épaule'], ['genou', 'Genou']];
+export const FLAGS = [['doigts', 'Doigts'], ['poignet', 'Poignet'], ['coude', 'Coude'], ['epaule', 'Épaule'], ['dos', 'Dos'], ['hanche', 'Hanche / aine'], ['genou', 'Genou'], ['cheville', 'Cheville'], ['autre', 'Autre']];
+export const REPAS = [['oui', 'Oui'], ['partiel', 'En partie'], ['non', 'Non']];
 export const RPE = ['Repos', 'Très très facile', 'Facile', 'Modéré', 'Un peu dur', 'Dur', 'Dur', 'Très dur', 'Très dur', 'Presque maximal', 'Maximal'];
 export const STATUS = [['faite', 'Faite'], ['adaptee', 'Adaptée'], ['sautee', 'Sautée']];
 export const SIV = [['s', 'Spécificité', 'proche de grimper en bloc à ton niveau ?'], ['i', 'Intensité', 'proche de ton max ?'], ['v', 'Volume', 'proche de ta plus grosse séance ?']];
@@ -20,11 +20,17 @@ export function score(e) {
   for (const [k] of WELL) { const v = e.well[k]; if (typeof v !== 'number') return null; t += v; }
   return t;
 }
+// Paliers de la forme du matin : ceux du plan s'il en définit (wellBands), sinon les paliers par défaut.
+export const DEFAULT_BANDS = [
+  [20, 'En forme', 'good', 'Séance telle que prévue. Bon jour pour un effort intense ou un test.'],
+  [15, 'Correct', 'ok', 'Séance telle que prévue.'],
+  [11, 'Fatigué', 'warn', 'Garde la séance mais allège : environ un tiers de volume en moins, pas de nouveau record ni de palier de charge.'],
+  [0, 'Très fatigué', 'crit', 'Version décharge : moitié du volume, rien au maximum, ou repos actif. Si ça dure plus de 2 jours, parles-en.']
+];
+export const bands = () => { const m = get('plan'); return m && Array.isArray(m.wellBands) && m.wellBands.length ? m.wellBands : DEFAULT_BANDS; };
 export function verdict(t) {
-  if (t >= 20) return { lbl: 'En forme', cls: 'good' };
-  if (t >= 15) return { lbl: 'Correct', cls: 'ok' };
-  if (t >= 11) return { lbl: 'Fatigué', cls: 'warn' };
-  return { lbl: 'Très fatigué', cls: 'crit' };
+  const b = bands().find(x => t >= x[0]) || bands()[bands().length - 1];
+  return { lbl: b[1], cls: b[2], txt: b[3], min: b[0] };
 }
 export const verdictColor = cls => cls === 'good' ? 'var(--good)' : cls === 'warn' ? 'var(--warn)' : cls === 'crit' ? 'var(--crit)' : 'var(--muted)';
 
@@ -42,10 +48,12 @@ export function parseDur(raw) {
 }
 export const durShort = min => { const h = Math.floor(min / 60), m = min % 60; return h ? h + 'h' + pad(m) : m + 'min'; };
 export const durLong = min => { const h = Math.floor(min / 60), m = min % 60; return h ? h + ' h ' + pad(m) : m + ' min'; };
+// Durée de sommeil : somme des phases si la montre les donne, sinon la durée notée à la main.
 export function nightTotal(e) {
   const n = e && e.nuit; if (!n) return null;
   const v = ['profond', 'leger', 'rem'].map(k => n[k]).filter(x => typeof x === 'number');
-  return v.length ? v.reduce((a, b) => a + b, 0) : null;
+  if (v.length >= 2) return v.reduce((a, b) => a + b, 0);
+  return typeof n.total === 'number' ? n.total : v.length ? v[0] : null;
 }
 export function nightShort(k) {
   const e = jget(k), tot = nightTotal(e);
@@ -65,23 +73,6 @@ export function nightCompare(e) {
   return 'Ressenti ' + s + '/5 et mesure vont dans le même sens.';
 }
 
-/* ---------- Adaptation du jour ---------- */
-export function advice(k) {
-  const e = jget(k), ks = kinds(k), t = score(e), f = e.flags || {}, out = [];
-  if (t !== null) {
-    if (t <= 10) out.push(['crit', 'Version décharge : moitié du volume, rien au max. Si c’est la séance la plus lourde de la semaine, décale-la.']);
-    else if (t <= 14) out.push(['warn', 'Séance allégée : un tiers de séries en moins, RIR +1, et pas de nouveau palier aujourd’hui.']);
-  }
-  if (nightShort(k) === true && nightShort(addDays(k, -1)) === true) out.push(['warn', 'Deuxième nuit courte d’affilée (moins de 7 h, ou mal dormi) : la séance la plus lourde de la semaine passe en version décharge.']);
-  if (f.doigts) out.push(['crit', (ks.has('doigts') || ks.has('grimpe') || ks.has('test')) ? 'Doigts sensibles : ni finger lift ni réglettes arquées aujourd’hui. Grimpe sur pinces et plats, ou en technique.' : 'Doigts sensibles : rien de prévu pour eux aujourd’hui. Revérifie demain matin.']);
-  if (f.coude) out.push(['warn', ks.has('muscu') ? 'Coude interne : 2 séries de tractions et de pendlay en moins.' : 'Coude interne : à surveiller avant la prochaine séance de tirage.']);
-  if (f.epaule) out.push(['warn', ks.has('muscu') ? 'Épaule : ni presse épaule ni bench aujourd’hui, garde les tirages.' : 'Épaule : si ça persiste, ni presse ni bench à la prochaine muscu.']);
-  if (f.genou) out.push(['warn', ks.has('velo') ? 'Genou : pas de vélo aujourd’hui, et signale-le au kiné.' : 'Genou : signale-le au kiné, c’est lui qui décide pour la séance genou.']);
-  if (t !== null && t >= 15 && out.length === 0) out.push(['good', 'Séance telle que prévue.']);
-  if (t === null && out.length === 0) return null;
-  return out;
-}
-
 /* ---------- Ressenti visé ---------- */
 export const ADJ = {
   vol: ['Plus facile que prévu. Si ça se répète à la prochaine séance volume, passe un tiers des blocs une cotation au-dessus.', 'Plus dur que prévu. Regarde ta nuit et ta forme du matin ; si ça se répète, n’ajoute pas de blocs la semaine suivante.'],
@@ -91,9 +82,9 @@ export const ADJ = {
   muscu: ['Plus facile que prévu : vérifie le RIR des dernières séries. S’il te restait plus de 2 répétitions, la charge est trop légère.', 'Plus dur que prévu : si le RIR visé n’est pas tenu, garde la même charge la prochaine fois.'],
   test: ['', '']
 };
-export const rng = tg => tg.rpe[0] === tg.rpe[1] ? String(tg.rpe[0]) : tg.rpe[0] + '–' + tg.rpe[1];
+export const rng = tg => !tg || !tg.rpe ? '' : tg.rpe[0] === tg.rpe[1] ? String(tg.rpe[0]) : tg.rpe[0] + '–' + tg.rpe[1];
 export function rpeCmp(tg, rpe) {
-  if (!tg || tg.fam === 'test' || typeof rpe !== 'number') return null;
+  if (!tg || !tg.rpe || tg.fam === 'test' || typeof rpe !== 'number') return null;
   const adj = ADJ[tg.fam] || ADJ.easy;
   if (rpe < tg.rpe[0]) return { cls: 'warn', text: 'Sous la cible (' + rng(tg) + '). ' + adj[0] };
   if (rpe > tg.rpe[1]) return { cls: 'warn', text: 'Au-dessus de la cible (' + rng(tg) + '). ' + adj[1] };

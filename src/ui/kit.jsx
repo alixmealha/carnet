@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { SOURCES } from '../lib/sources.js';
 
 const P = { fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
 const ICONS = {
@@ -18,7 +19,12 @@ const ICONS = {
   plus: <path {...P} d="M12 5v14M5 12h14" />,
   up: <path {...P} d="M6 14.5 12 8.5l6 6" />,
   down: <path {...P} d="M6 9.5 12 15.5l6-6" />,
-  trash: <g {...P}><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" /></g>
+  trash: <g {...P}><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" /></g>,
+  people: <g {...P}><circle cx="9" cy="8.5" r="3.2" /><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" /><circle cx="16.8" cy="9.5" r="2.5" /><path d="M15.5 14.2c2.6-.3 4.6 1.3 5 4.3" /></g>,
+  bell: <g {...P}><path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 2h-14z" /><path d="M10 20.5a2 2 0 0 0 4 0" /></g>,
+  send: <g {...P}><path d="M4 12 20 4l-6 16-3-7z" /><path d="M11 13 20 4" /></g>,
+  flask: <g {...P}><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8a1.3 1.3 0 0 0 1.1-2l-5.5-9.5v-6" /><path d="M7.5 15h9" /></g>,
+  back: <path {...P} d="M19 12H6M11 6l-6 6 6 6" />
 };
 export function Icon({ name, size }) {
   return <svg viewBox="0 0 24 24" width={size || 24} height={size || 24} aria-hidden="true">{ICONS[name]}</svg>;
@@ -94,4 +100,43 @@ export function NumberInput({ value, onCommit, step, placeholder, label, suffix 
   return <label class="fld">{label}<input class="in mono" inputmode="decimal" value={v} placeholder={placeholder}
     onInput={e => setV(e.target.value)}
     onBlur={() => { const n = parseFloat(String(v).replace(',', '.')); onCommit(isNaN(n) ? null : n); }} />{suffix}</label>;
+}
+
+/* ---------- Texte avec couleurs de prises : « 4 blocs [violet] » ---------- */
+const HOLD = /\[(jaune|vert|bleu|violet|rouge|blanc|noir|rose|orange|gris|marron)\]/g;
+export function Rich({ text }) {
+  if (!text) return null;
+  const s = String(text), out = []; let last = 0, m; HOLD.lastIndex = 0;
+  while ((m = HOLD.exec(s))) { if (m.index > last) out.push(s.slice(last, m.index)); out.push(<span class={'hold h-' + m[1]}>{m[1]}</span>); last = m.index + m[0].length; }
+  if (last < s.length) out.push(s.slice(last));
+  return <>{out}</>;
+}
+
+/* ---------- Carte dépliable (état retenu sur l'appareil) ---------- */
+export function Fold({ id, title, summary, right, children, open: dflt, cls }) {
+  const key = 'fold:' + id;
+  const [open, setOpen] = useState(() => { try { const v = localStorage.getItem(key); return v === null ? !!dflt : v === '1'; } catch (_) { return !!dflt; } });
+  const toggle = () => { const v = !open; setOpen(v); try { localStorage.setItem(key, v ? '1' : '0'); } catch (_) {} };
+  return (
+    <section class={'card fold-card' + (open ? ' open' : '') + (cls ? ' ' + cls : '')}>
+      <button type="button" class="fold-h" aria-expanded={open ? 'true' : 'false'} onClick={toggle}>
+        <span class="fold-t"><span class="ch-t">{title}</span>{summary && <span class="fold-s">{summary}</span>}</span>
+        {right}<span class="chev" aria-hidden="true" />
+      </button>
+      {open && <div class="fold-b">{children}</div>}
+    </section>
+  );
+}
+
+/* ---------- Sources scientifiques ---------- */
+export function Src({ ids }) {
+  const [open, setOpen] = useState(false);
+  const list = (ids || []).filter(id => SOURCES[id]);
+  if (!list.length) return null;
+  return <>
+    <button type="button" class="src" onClick={e => { e.stopPropagation(); setOpen(true); }}>{list.map(id => SOURCES[id].s).join(' · ')}</button>
+    {open && <Sheet title="Sources" onClose={() => setOpen(false)}>
+      <div class="stack">{list.map(id => <div class="card"><b>{SOURCES[id].s}</b><p class="small" style="color:var(--ink)">{SOURCES[id].n}</p><p class="small">{SOURCES[id].r}</p></div>)}</div>
+    </Sheet>}
+  </>;
 }

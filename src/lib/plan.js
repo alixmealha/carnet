@@ -1,8 +1,9 @@
 import { get, jget, put, putMany, remove, ids } from './store.js';
 import { rangeKeys, r05, fmtNum, fmtDay, addDays, mondayOf, todayKey } from './dates.js';
+import { history } from './tests.js';
 
-export const KIND = { grimpe: 'Escalade', doigts: 'Finger lift', muscu: 'Muscu', kine: 'Kiné genou', epaule: 'Épaule', velo: 'Vélo', test: 'Test doigts', rest: 'Repos', autre: 'Autre' };
-export const KIND_ORDER = ['grimpe', 'doigts', 'muscu', 'epaule', 'kine', 'velo', 'test', 'autre', 'rest'];
+export const KIND = { grimpe: 'Escalade', doigts: 'Doigts', muscu: 'Muscu', renfo: 'Renfo', epaule: 'Épaule', kine: 'Kiné', velo: 'Cardio', test: 'Test', compet: 'Compétition', affut: 'Affûtage', recup: 'Récupération', autre: 'Autre', rest: 'Repos' };
+export const KIND_ORDER = ['grimpe', 'doigts', 'muscu', 'renfo', 'epaule', 'kine', 'velo', 'test', 'compet', 'affut', 'recup', 'autre', 'rest'];
 
 export const meta = () => get('plan');
 export const day = k => get('p:' + k) || null;
@@ -14,7 +15,7 @@ export function weekOf(k) { const m = meta(); return m ? m.weeks.find(w => k >= 
 export function allKeys() { const m = meta(); return m ? rangeKeys(m.start, m.end) : []; }
 export function weekKeys(w) { return rangeKeys(w.start, w.end); }
 export const itemKey = (b, it) => b.id + '.' + it.id;
-export function allItems(k) { const out = []; for (const b of blocks(k)) for (const it of (b.items || [])) out.push({ b, it, key: itemKey(b, it) }); return out; }
+export function allItems(k) { const out = []; for (const b of blocks(k)) if (b.kind !== 'rest') for (const it of (b.items || [])) out.push({ b, it, key: itemKey(b, it) }); return out; }
 export function doneN(e, key, n) { const v = e && e.done && e.done[key]; return typeof v === 'number' ? Math.min(n, Math.max(0, v)) : 0; }
 export function progress(k) {
   const e = jget(k); let total = 0, done = 0;
@@ -22,16 +23,40 @@ export function progress(k) {
   return { total, done };
 }
 export function phaseOf(w) { return w.phase || 'volume'; }
-export const PHASE_LABEL = { volume: 'Volume', force: 'Force', puissance: 'Puissance', deload: 'Décharge', transition: 'Transition', autre: 'Cycle' };
-export const PHASE_Z = { volume: 'z1', force: 'z2', puissance: 'z3', deload: 'zr', transition: 'zr', autre: 'z2' };
+export const PHASE_LABEL = { volume: 'Volume', reprise: 'Reprise', force: 'Force', puissance: 'Puissance', specifique: 'Spécifique', affutage: 'Affûtage', recup: 'Récupération', deload: 'Décharge', transition: 'Transition', coupure: 'Coupure', autre: 'Cycle' };
+export const PHASE_Z = { volume: 'z1', reprise: 'z1', force: 'z2', puissance: 'z3', specifique: 'z3', affutage: 'za', recup: 'zr', deload: 'zr', transition: 'zr', coupure: 'zr', autre: 'z2' };
+export const weekLabel = w => w ? (w.label || 'S' + w.n) : '';
+// Prochaine échéance : compétition à venir (events) ou objectif du plan
+export function nextEvent(from) {
+  const m = meta(); if (!m) return null; const t = from || todayKey();
+  const ev = (m.events || []).filter(e => (e.end || e.date) >= t).sort((a, b) => a.date < b.date ? -1 : 1)[0];
+  if (ev) return { date: ev.date, end: ev.end || ev.date, label: ev.label, lvl: ev.lvl };
+  return m.goal && m.goal.date >= t ? { date: m.goal.date, end: m.goal.date, label: m.goal.label } : null;
+}
+export const eventOn = k => { const m = meta(); return m && (m.events || []).find(e => k >= e.date && k <= (e.end || e.date)) || null; };
 
+// Dernier test de finger lift avant ce jour (module Tests, ou ancien format du journal)
 export function latestTest(k) {
+  let best = null;
+  for (const [tid, key] of [['fl-semi', 'semi'], ['fl-tendu', 'tendu']]) {
+    const h = history(tid).filter(x => x.k < k && typeof x.vals.v === 'number');
+    if (h.length) { const x = h[h.length - 1]; if (!best || x.k > best.key) best = { te: {}, key: x.k }; }
+  }
+  if (best) { for (const [tid, key] of [['fl-semi', 'semi'], ['fl-tendu', 'tendu']]) { const x = history(tid).find(y => y.k === best.key); if (x) best.te[key] = x.vals.v; } return best; }
   const m = meta(); if (!m) return null;
   const ts = (m.tests || []).filter(t => t < k).sort();
   for (let i = ts.length - 1; i >= 0; i--) { const te = jget(ts[i]).tests; if (te && (te.semi || te.tendu)) return { te, key: ts[i] }; }
   return null;
 }
-export function isTestDay(k) { const m = meta(); return !!(m && (m.tests || []).includes(k)); }
+// Tests prévus ce jour-là (blocs « test » qui listent des tests, ou anciens jours de test du plan)
+export function testIdsOf(k) {
+  const out = [];
+  for (const b of blocks(k)) for (const t of (b.tests || [])) if (!out.includes(t)) out.push(t);
+  const m = meta();
+  if (!out.length && m && (m.tests || []).includes(k)) out.push('fl-semi', 'fl-tendu');
+  return out;
+}
+export const isTestDay = k => testIdsOf(k).length > 0;
 
 // Charge affichée d'un exercice (prévue, ou modifiée dans le journal du jour)
 export function itemLoad(b, it, e) {
@@ -59,6 +84,7 @@ export function fingerCalc(b, k) {
 }
 
 export function sessionName(k) {
+  const d = day(k); if (d && d.short) return d.short;
   const n = [];
   for (const b of blocks(k)) {
     if (b.kind === 'rest') continue;
@@ -70,7 +96,7 @@ export function sessionName(k) {
 
 /* ---------- Modifier le plan ---------- */
 
-export const KIND_LIST = ['grimpe', 'doigts', 'muscu', 'epaule', 'kine', 'velo', 'test', 'autre', 'rest'];
+export const KIND_LIST = KIND_ORDER;
 export const clone = x => JSON.parse(JSON.stringify(x));
 export const uid = p => (p || 'x') + Math.random().toString(36).slice(2, 7);
 
