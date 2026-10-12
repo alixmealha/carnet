@@ -59,9 +59,9 @@ function Reperes() {
         <p class="small">{WELL.map(w => w[1]).join(', ')} : chacun de 1 à 5. L’écart à ta propre moyenne compte plus que le chiffre seul.</p>
       </details>
       <hr class="sep" />
-      <details class="fold"><summary><span style="font-weight:600">Profil de séance</span></summary>
+      <details class="fold"><summary><span style="font-weight:600">Notation de la séance</span></summary>
         <div class="tw"><table class="t"><tbody>{SIV.map(([, l, q]) => <tr><td>{l}</td><td class="muted">{q}</td></tr>)}</tbody></table></div>
-        <p class="small">Chacun sur 10. Charge de séance = intensité + volume. Méthode de Marie Akrich ; l’étalonnage sur 10 est propre au carnet.</p>
+        <p class="small">Pour les séances d’escalade, chacun sur 10. Charge de séance = intensité + volume. Méthode de Marie Akrich ; l’étalonnage sur 10 est propre au carnet. Pour la muscu, le renfo et la kiné, on note les exercices réalisés (séries × répétitions × charge), la douleur en kiné ; pour le cardio, la distance et la fréquence cardiaque. Le ressenti × la durée reste la charge commune à toutes les activités.</p>
       </details>
       <hr class="sep" />
       <details class="fold"><summary><span style="font-weight:600">Gênes et douleurs</span></summary>

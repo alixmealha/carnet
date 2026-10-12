@@ -6,6 +6,7 @@ import { pushState } from '../lib/push.js';
 import { todayKey, addDays, fmtShort, rangeKeys } from '../lib/dates.js';
 import { Icon } from '../ui/kit.jsx';
 import { AddAthlete } from './Settings.jsx';
+import { logSummary } from '../lib/activity.js';
 
 const FL = Object.fromEntries(FLAGS), ST = Object.fromEntries(STATUS);
 export const seenMap = () => getFor(SELF, 'seen') || {};
@@ -105,6 +106,7 @@ export function Athletes({ onOpenAthlete, onOpenDay, onOpenPlan, onGoMore }) {
                 {sc !== null && <span>Forme <b>{sc}</b></span>}
                 {typeof a.e.rpe === 'number' && <span>Ressenti <b>{a.e.rpe}</b></span>}
                 {a.e.siv && typeof a.e.siv.i === 'number' && <span>I <b>{a.e.siv.i}</b> V <b>{a.e.siv.v}</b></span>}
+                {logSummary(a.e) && <span>{logSummary(a.e)}</span>}
                 {typeof a.e.duree === 'number' && <span><b>{a.e.duree}</b> min</span>}
               </span> : null}
               {(a.kind === 'msg' ? a.text : a.e && a.e.note) && <span class="nt">{a.kind === 'msg' ? a.text : a.e.note}</span>}

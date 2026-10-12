@@ -528,3 +528,10 @@ html,body{overflow-x:clip}
 .ath-set:last-child{border-bottom:0}
 .ath-set .set{border-bottom:0;padding-top:0}
 .lk{display:inline-flex;vertical-align:-1px;margin-left:6px;color:var(--warn)}
+/* ---------- Notation par activité ---------- */
+.exlog .exl-row{border:1px solid var(--rule);border-radius:12px;padding:10px;margin-bottom:8px;background:var(--bg);display:flex;flex-direction:column;gap:8px}
+.exl-top{display:flex;gap:8px;align-items:center}
+.exl-top .in{flex:1;font-weight:600}
+.exl-top .icon-btn{width:36px;height:36px}
+.exlog .row-btns{margin-top:4px}
+.act-f .chip.sel[aria-pressed="false"]{color:var(--ink)}

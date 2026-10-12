@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset } from '../lib/store.js';
 import { blocks, itemKey, doneN, progress, itemLoad, fingerCalc, target, KIND } from '../lib/plan.js';
-import { RPE, STATUS, SIV, rpeCmp } from '../lib/rules.js';
+import { RPE, STATUS, rpeCmp } from '../lib/rules.js';
+import { ActFields } from '../ui/ActFields.jsx';
 import { mmss, fmtNum, fmtLong } from '../lib/dates.js';
 import { unlockAudio, keepAwake, tick, goSignal, restSignal, doneSignal, say } from '../lib/audio.js';
 import { Icon, Seg, TextSeg, Rich } from '../ui/kit.jsx';
@@ -247,7 +248,6 @@ function Finish({ k, minutes, onSave, onBack }) {
   const [dur, setDur] = useState(String(minutes));
   const [status, setStatus] = useState(e.status || (pr.total && pr.done === pr.total ? 'faite' : 'adaptee'));
   const cmp = rpeCmp(tg, e.rpe);
-  const setSiv = (key, v) => { const s = Object.assign({}, jget(k).siv); if (v == null) delete s[key]; else s[key] = v; jset(k, { siv: s }); };
   return (
     <div class="stack">
       <h2 class="h2" style="font-size:30px">Fin de séance</h2>
@@ -259,7 +259,7 @@ function Finish({ k, minutes, onSave, onBack }) {
         <div class="rpe-lbl">{typeof e.rpe === 'number' ? <>Ressenti <b>{e.rpe}/10 · {RPE[e.rpe]}</b></> : 'Ressenti global de 0 à 10' + (tg ? ' · en bleu, la zone visée' : '')}</div>
         {cmp && <p class={'cmp ' + cmp.cls}>{cmp.text}</p>}
       </div>
-      {SIV.map(([key, l, q]) => <div><p class="sub-lbl">{l}<small>{q}</small></p><Seg value={e.siv && e.siv[key]} onChange={v => setSiv(key, v)} from={0} to={10} dense tgt={tg ? i => tg[key] === i : null} label={l} /></div>)}
+      <ActFields k={k} />
       <div class="row-btns" style="margin-top:6px">
         <button class="btn big" style="flex:1" onClick={onBack}>Retour</button>
         <button class="btn big primary" style="flex:2" onClick={() => onSave(Math.max(0, parseInt(dur, 10) || 0), status)}>Enregistrer</button>

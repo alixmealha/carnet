@@ -6,6 +6,7 @@ Carnet d’entraînement (escalade, muscu, renfo) en application web installable
 - **Mode séance** : étapes, repos automatiques, minuteurs (intervalles, clusters, contrastes), sons et voix.
 - **Suivi** : bilan de la semaine, charge, intensité, forme, sommeil, VFC, charges ; **Tests** avec catalogue, protocoles, historique et évolution.
 - **Plan** modifiable (verrouillable par le coach) ; **Athlètes** pour le coach ; notifications push.
+- **Notation selon l’activité** : profil spécificité / intensité / volume pour l’escalade ; exercices réalisés (séries × répétitions × charge) pour la muscu, le renfo et la kiné, avec la douleur en kiné ; distance et fréquence cardiaque pour le cardio ; ressenti × durée pour toutes.
 - **Comptes** : profil rempli à la première connexion ; rôle athlète, coach ou administrateur ; un athlète ouvre son carnet à un coach avec un code ; **Paramètres** (apparence claire / sombre, séance, suivi, notifications, coach et athlètes, compte, données) ; **Administration** pour créer les comptes.
 
 ## Rôles
@@ -27,7 +28,9 @@ Ce dépôt ne contient aucune donnée personnelle. Le plan, le journal et les te
 - `supabase/01-docs.sql` : table des données.
 - `supabase/02-comptes.sql` : profils et rôles, liens coach → athlètes par code, verrou du plan, droits du coach, fonctions d’administration, abonnements et déclencheur des notifications. Relançable sans risque. Les valeurs entre `__…__` sont à renseigner.
 - `supabase/functions/notify` : envoi des notifications (Web Push chiffré, sans dépendance).
-- `supabase/functions/admin` : création, réinitialisation et suppression de comptes, réservées à l’administrateur (clé service côté serveur uniquement).
+- `supabase/functions/admin` : création (invitation par e-mail ou mot de passe provisoire), e-mail de réinitialisation, mot de passe provisoire et suppression de comptes, réservés à l’administrateur (clé service côté serveur uniquement). À déployer sans « Verify JWT » : la fonction vérifie elle-même la session et le rôle.
+
+Les e-mails (invitation, mot de passe oublié) passent par l’envoi d’e-mails de Supabase : un SMTP personnalisé est nécessaire pour écrire à d’autres adresses que celles de l’équipe du projet.
 
 ```bash
 npm install

@@ -1,5 +1,7 @@
 // Carnet · fonction « admin » (Supabase Edge Function).
-// Réservée au compte administrateur : créer un compte, redéfinir un mot de passe, supprimer un compte.
+// Réservée au compte administrateur : créer un compte (invitation par e-mail ou mot de passe provisoire),
+// envoyer un e-mail de réinitialisation, redéfinir un mot de passe, supprimer un compte.
+// Les e-mails partent par l'envoi d'e-mails de Supabase (SMTP à configurer dans Authentication → Emails).
 // La clé service (SUPABASE_SERVICE_ROLE_KEY) est fournie automatiquement par Supabase et ne quitte jamais le serveur.
 
 const env = k => Deno.env.get(k) || '';
@@ -22,6 +24,7 @@ async function api(path, init, token) {
   return b;
 }
 function frMessage(m) {
+  if (/sending|smtp|not authorized|rate limit/i.test(m)) return 'L’e-mail n’a pas pu partir : l’envoi d’e-mails (SMTP) n’est pas encore configuré dans Supabase, ou la limite d’envoi est atteinte. Utilise un mot de passe provisoire en attendant.';
   if (/already.*(registered|exists)/i.test(m)) return 'Un compte existe déjà avec cet email.';
   if (/password/i.test(m) && /(weak|short|least|characters)/i.test(m)) return 'Mot de passe trop faible (8 caractères minimum).';
   if (/email/i.test(m) && /invalid/i.test(m)) return 'Adresse email invalide.';
@@ -44,9 +47,16 @@ export async function handle(req) {
   try {
     if (body.action === 'create') {
       const email = String(body.email || '').trim().toLowerCase(), password = String(body.password || '');
+      const redirect = /^https:\/\//.test(body.redirectTo || '') ? body.redirectTo : '';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'Adresse email invalide.' }, 400);
-      if (password.length < 8) return json({ error: 'Mot de passe trop court (8 caractères minimum).' }, 400);
-      const u = await api('/auth/v1/admin/users', { method: 'POST', body: JSON.stringify({ email, password, email_confirm: true }) });
+      let u;
+      if (body.invite) {
+        // invitation : la personne reçoit un e-mail et choisit elle-même son mot de passe
+        u = await api('/auth/v1/invite' + (redirect ? '?redirect_to=' + encodeURIComponent(redirect) : ''), { method: 'POST', body: JSON.stringify({ email }) });
+      } else {
+        if (password.length < 8) return json({ error: 'Mot de passe trop court (8 caractères minimum).' }, 400);
+        u = await api('/auth/v1/admin/users', { method: 'POST', body: JSON.stringify({ email, password, email_confirm: true }) });
+      }
       const id = u.id || (u.user && u.user.id);
       if (body.role === 'athlete' || body.role === 'coach') {
         await api('/rest/v1/profiles', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ id, role: body.role, name: String(body.name || '').trim().slice(0, 40) }) });
@@ -54,7 +64,16 @@ export async function handle(req) {
       if (body.linkMe && body.role !== 'coach') {
         await api('/rest/v1/coach_links', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates' }, body: JSON.stringify({ coach_id: me.id, athlete_id: id }) });
       }
-      return json({ id, email });
+      return json({ id, email, invited: !!body.invite });
+    }
+    if (body.action === 'recover') {
+      // e-mail de réinitialisation du mot de passe
+      if (!UUID.test(body.id || '')) return json({ error: 'Compte inconnu.' }, 400);
+      const redirect = /^https:\/\//.test(body.redirectTo || '') ? body.redirectTo : '';
+      const u = await api('/auth/v1/admin/users/' + body.id, { method: 'GET' });
+      if (!u || !u.email) return json({ error: 'Compte introuvable.' }, 400);
+      await api('/auth/v1/recover' + (redirect ? '?redirect_to=' + encodeURIComponent(redirect) : ''), { method: 'POST', body: JSON.stringify({ email: u.email }) });
+      return json({ ok: true, email: u.email });
     }
     if (body.action === 'password') {
       if (!UUID.test(body.id || '')) return json({ error: 'Compte inconnu.' }, 400);

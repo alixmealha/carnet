@@ -6,6 +6,8 @@ import { dayInsights } from '../lib/insights.js';
 import { testById, valueKeys, resultsOn, saveResults, lastResult, pct } from '../lib/tests.js';
 import { fmtLong, addDays, todayKey, fmtNum, fmtShort } from '../lib/dates.js';
 import { Seg, TextSeg, Icon, Rich, Src, toast } from '../ui/kit.jsx';
+import { ActFields } from '../ui/ActFields.jsx';
+import { plannedActs } from '../lib/activity.js';
 
 export function DayHeader({ k, onNav, compact }) {
   const w = weekOf(k), m = meta(), ev = eventOn(k);
@@ -151,7 +153,13 @@ function Reading({ k }) {
 export function Goal({ k }) {
   const tg = target(k);
   if (!tg) return blocks(k).some(b => b.kind === 'kine') ? <div class="goal"><p class="goal-why" style="margin:0">Objectif fixé par le kiné.</p></div> : null;
-  const charge = (tg.i || 0) + (tg.v || 0);
+  const charge = (tg.i || 0) + (tg.v || 0), climb = plannedActs(k).includes('grimpe');
+  if (!climb) return tg.rpe || tg.why ? (
+    <div class="goal">
+      {tg.rpe && <div class="goal-top"><div class="goal-rpe"><small>Ressenti<br />visé</small><b>{rng(tg)}<i>/10</i></b></div></div>}
+      {tg.why && <p class="goal-why">{tg.why}</p>}
+    </div>
+  ) : null;
   return (
     <div class="goal">
       <div class="goal-top">
@@ -296,7 +304,6 @@ export function After({ k, ro }) {
   useEffect(() => () => clearTimeout(timer.current), []);
   const onNote = v => { setNote(v); clearTimeout(timer.current); timer.current = setTimeout(() => jset(k, { note: v || null }), 500); };
   const commitDur = () => { const n = dur === '' ? null : Math.max(0, Math.round(+dur)); jset(k, { duree: n === null || isNaN(n) ? null : n }); };
-  const setSiv = (key, v) => { const s = Object.assign({}, jget(k).siv); if (v == null) delete s[key]; else s[key] = v; jset(k, { siv: s }); };
   const d = parseInt(dur, 10);
   return (
     <section class="card">
@@ -308,11 +315,7 @@ export function After({ k, ro }) {
           <div class="rpe-lbl">{typeof e.rpe === 'number' ? <>Ressenti <b>{e.rpe}/10 · {RPE[e.rpe]}</b></> : 'Ressenti global de 0 à 10, environ 30 min après' + (tg && tg.rpe ? ' · en bleu, la zone visée' : '')}</div>
           {cmp && <p class={'cmp ' + cmp.cls}>{cmp.text}</p>}
         </div>
-        <div>
-          <p class="small" style="margin:0">Profil réalisé, sur 10{tg ? ' · en bleu, le profil visé' : ''}</p>
-          {SIV.map(([key, l, q]) => <div><p class="sub-lbl">{l}<small>{q}</small></p>
-            <Seg value={e.siv && e.siv[key]} onChange={v => setSiv(key, v)} from={0} to={10} dense tgt={tg ? i => tg[key] === i : null} label={l} /></div>)}
-        </div>
+        <ActFields k={k} />
         <div class="grid2" style="align-items:end">
           <label class="fld">Durée totale (min)<input class="in mono" inputmode="numeric" value={dur} onInput={ev => setDur(ev.target.value)} onBlur={commitDur} /></label>
           <div class="loadbox">{typeof e.rpe === 'number' && d > 0 ? (e.rpe * d).toLocaleString('fr-FR') + ' UA' : '—'}<small>Charge = ressenti × durée</small></div>

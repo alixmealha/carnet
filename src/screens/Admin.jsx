@@ -2,12 +2,11 @@
 // L'administrateur ne lit pas le carnet des autres : seulement celui des athlètes dont il est le coach.
 import { useEffect, useState } from 'preact/hooks';
 import { links, syncNow } from '../lib/store.js';
-import { adminUsers, adminSetRole, adminLink, adminFn, tempPassword } from '../lib/account.js';
+import { adminUsers, adminSetRole, adminLink, adminFn, tempPassword, appUrl } from '../lib/account.js';
 import { Icon, Sheet, TextSeg, toast } from '../ui/kit.jsx';
 import { ROLE_LBL } from './Setup.jsx';
 import { Switch } from './Settings.jsx';
 
-const appUrl = () => location.origin + location.pathname.replace(/index\.html$/, '');
 const when = t => t ? new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'jamais';
 async function shareText(txt) {
   try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
@@ -17,12 +16,14 @@ const welcome = (email, pw) => 'Ton compte Carnet est prêt.\nAdresse : ' + appU
 
 function Create({ onDone }) {
   const [email, setEmail] = useState(''), [pw, setPw] = useState(tempPassword()), [role, setRole] = useState('athlete'), [name, setName] = useState(''), [mine, setMine] = useState(true);
+  const [mode, setMode] = useState('invite');
   const [busy, setBusy] = useState(false), [err, setErr] = useState(''), [made, setMade] = useState(null);
   const go = async () => {
     setBusy(true); setErr('');
     try {
-      const r = await adminFn({ action: 'create', email: email.trim(), password: pw, role: role === 'free' ? null : role, name: name.trim(), linkMe: mine && role !== 'coach' });
-      setMade({ email: r.email || email.trim(), pw }); setEmail(''); setName(''); setPw(tempPassword()); onDone();
+      const invite = mode === 'invite';
+      const r = await adminFn({ action: 'create', email: email.trim(), password: invite ? undefined : pw, invite, role: role === 'free' ? null : role, name: name.trim(), linkMe: mine && role !== 'coach' });
+      setMade({ email: r.email || email.trim(), pw: invite ? null : pw }); setEmail(''); setName(''); setPw(tempPassword()); onDone();
       if (mine && role !== 'coach') syncNow();
     } catch (e) { setErr(e.message); }
     setBusy(false);
@@ -31,21 +32,29 @@ function Create({ onDone }) {
     <section class="card">
       <h3 class="h3">Créer un compte</h3>
       {made ? <div class="stack" style="gap:10px">
-        <div class="code-box left"><small>Compte créé</small><span>Email : <b>{made.email}</b></span><span>Mot de passe provisoire : <b class="num">{made.pw}</b></span></div>
-        <p class="small" style="margin:0">Envoie ces infos à la personne (message privé). À la première connexion, elle remplit son profil.</p>
-        <div class="row-btns"><button class="btn primary" style="flex:1" onClick={() => shareText(welcome(made.email, made.pw))}>Partager les accès</button><button class="btn" onClick={() => setMade(null)}>Nouveau</button></div>
+        {made.pw ? <>
+          <div class="code-box left"><small>Compte créé</small><span>Email : <b>{made.email}</b></span><span>Mot de passe provisoire : <b class="num">{made.pw}</b></span></div>
+          <p class="small" style="margin:0">Envoie ces infos à la personne (message privé). À la première connexion, elle remplit son profil.</p>
+          <div class="row-btns"><button class="btn primary" style="flex:1" onClick={() => shareText(welcome(made.email, made.pw))}>Partager les accès</button><button class="btn" onClick={() => setMade(null)}>Nouveau</button></div>
+        </> : <>
+          <div class="code-box left"><small>Invitation envoyée</small><span>à <b>{made.email}</b></span></div>
+          <p class="small" style="margin:0">La personne reçoit un e-mail avec un lien pour choisir son mot de passe, puis remplit son profil. Pense à vérifier ses spams si elle ne le voit pas.</p>
+          <div class="row-btns"><button class="btn" onClick={() => setMade(null)}>Nouveau</button></div>
+        </>}
       </div> : <div class="stack" style="gap:10px">
         <label class="fld">Email<input class="in" type="email" inputmode="email" autocapitalize="off" autocomplete="off" value={email} onInput={e => setEmail(e.target.value)} /></label>
         <label class="fld">Prénom (facultatif)<input class="in" value={name} onInput={e => setName(e.target.value)} /></label>
-        <div style="display:flex;gap:8px;align-items:flex-end">
+        <div><p class="sub-lbl" style="margin-top:0">Accès</p><TextSeg value={mode} onChange={v => setMode(v || mode)} options={[['invite', 'Invitation par e-mail'], ['pw', 'Mot de passe provisoire']]} label="Accès" />
+          <p class="small" style="margin:6px 0 0">{mode === 'invite' ? 'Un e-mail part tout de suite : la personne choisit elle-même son mot de passe. Nécessite l’envoi d’e-mails configuré dans Supabase.' : 'Tu envoies toi-même l’email et le mot de passe provisoire (message privé).'}</p></div>
+        {mode === 'pw' && <div style="display:flex;gap:8px;align-items:flex-end">
           <label class="fld" style="flex:1">Mot de passe provisoire<input class="in mono" value={pw} onInput={e => setPw(e.target.value)} autocomplete="off" /></label>
           <button class="btn" type="button" onClick={() => setPw(tempPassword())}>Autre</button>
-        </div>
+        </div>}
         <div><p class="sub-lbl" style="margin-top:0">Rôle</p><TextSeg value={role} onChange={v => setRole(v || 'free')} options={[['athlete', 'Athlète'], ['coach', 'Coach'], ['free', 'Au choix']]} label="Rôle" />
           <p class="small" style="margin:6px 0 0">{role === 'free' ? 'La personne choisira athlète ou coach à sa première connexion.' : role === 'coach' ? 'Un coach n’a pas de carnet : il suit des athlètes avec leur code.' : 'Un athlète a son carnet et peut l’ouvrir à un coach.'}</p></div>
         {role !== 'coach' && <div class="list"><Switch label="Je suis son coach" sub="Tu auras accès à son carnet tout de suite, sans code" on={mine} onChange={setMine} /></div>}
         {err && <p class="err">{err}</p>}
-        <button class="btn primary" disabled={busy || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || pw.length < 8} onClick={go}>{busy ? 'Création…' : 'Créer le compte'}</button>
+        <button class="btn primary" disabled={busy || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || (mode === 'pw' && pw.length < 8)} onClick={go}>{busy ? 'Création…' : mode === 'invite' ? 'Créer et envoyer l’invitation' : 'Créer le compte'}</button>
       </div>}
     </section>
   );
@@ -73,8 +82,9 @@ function UserSheet({ u, onClose, onChange }) {
           <h3 class="h3">Mot de passe</h3>
           {pw ? <><div class="code-box left"><small>Nouveau mot de passe provisoire</small><b class="num" style="font-size:22px">{pw}</b></div>
             <button class="btn primary" style="margin-top:10px" onClick={() => shareText('Nouveau mot de passe Carnet pour ' + u.email + ' : ' + pw + '\nChange-le dans Plus → Paramètres → Compte.')}>Partager</button></>
-            : <><p class="small" style="margin:0 0 10px">En cas d’oubli : un mot de passe provisoire remplace l’ancien.</p>
-              <button class="btn" disabled={busy} onClick={() => { const p = tempPassword(); act(() => adminFn({ action: 'password', id: u.id, password: p }).then(() => setPw(p)), 'Mot de passe redéfini'); }}>Redéfinir le mot de passe</button></>}
+            : <><p class="small" style="margin:0 0 10px">En cas d’oubli : un e-mail avec un lien pour choisir un nouveau mot de passe, ou un mot de passe provisoire que tu lui transmets.</p>
+              <div class="row-btns"><button class="btn" disabled={busy} onClick={() => act(() => adminFn({ action: 'recover', id: u.id }), 'E-mail de réinitialisation envoyé')}>Envoyer un e-mail</button>
+              <button class="btn" disabled={busy} onClick={() => { const p = tempPassword(); act(() => adminFn({ action: 'password', id: u.id, password: p }).then(() => setPw(p)), 'Mot de passe redéfini'); }}>Mot de passe provisoire</button></div></>}
         </section>}
         {!me && <section class="card">
           <h3 class="h3">Supprimer le compte</h3>

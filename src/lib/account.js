@@ -43,13 +43,16 @@ export async function setLock(athlete, locked) {
 export const adminUsers = () => run(sb.rpc('admin_users'));
 export const adminSetRole = (uid, r) => run(sb.rpc('admin_set_role', { uid, r }));
 export const adminLink = (coach, athlete, linked) => run(sb.rpc('admin_link', { coach, athlete, linked }));
+// Adresse de l'appli, pour les liens des e-mails (invitation, mot de passe oublié)
+export const appUrl = () => location.origin + location.pathname.replace(/index\.html$/, '');
 export async function adminFn(body) {
-  const { data, error } = await sb.functions.invoke('admin', { body });
+  const { data, error } = await sb.functions.invoke('admin', { body: Object.assign({ redirectTo: appUrl() }, body) });
   if (error) {
-    let msg = error.message || 'Erreur';
+    let msg = error.message || 'Erreur', status = error.context && error.context.status;
     try { const j = await error.context.json(); if (j && j.error) msg = j.error; } catch (_) {}
-    if (/not.?found|404/i.test(msg)) msg = 'La fonction « admin » n’est pas encore déployée dans Supabase (voir le guide).';
-    else if (/Failed to send|fetch/i.test(msg)) msg = 'Fonction « admin » injoignable : vérifie qu’elle est déployée et ta connexion.';
+    if (status === 404 || /not.?found/i.test(msg)) msg = 'La fonction « admin » n’est pas déployée dans Supabase (Edge Functions → nom exact : admin).';
+    else if (status === 401 && !/Session/.test(msg)) msg = 'Supabase refuse l’appel : désactive « Verify JWT » sur la fonction admin (Edge Functions → admin → Details).';
+    else if (/Failed to send|fetch|Load failed|NetworkError/i.test(msg)) msg = navigator.onLine === false ? 'Pas de connexion internet.' : 'Fonction « admin » injoignable. Dans Supabase → Edge Functions, vérifie qu’elle s’appelle exactement « admin » et que « Verify JWT » est désactivé, puis réessaie.';
     throw new Error(msg);
   }
   if (data && data.error) throw new Error(data.error);
@@ -59,4 +62,16 @@ export function tempPassword() {
   const b = new Uint8Array(10); crypto.getRandomValues(b);
   const s = Array.from(b, x => 'abcdefghjkmnpqrstuvwxyz23456789'[x % 31]).join('');
   return s.slice(0, 5) + '-' + s.slice(5);
+}
+
+// Mot de passe oublié : e-mail avec un lien qui rouvre l'appli sur « Nouveau mot de passe »
+export async function forgotPassword(email) {
+  const { error } = await sb.auth.resetPasswordForEmail(String(email || '').trim().toLowerCase(), { redirectTo: appUrl() });
+  if (error) {
+    const m = error.message || '';
+    if (/after \d+ seconds|rate limit|too many/i.test(m)) throw new Error('Un e-mail vient déjà de partir : attends une minute avant d’en redemander un.');
+    if (/sending|smtp|not authorized/i.test(m)) throw new Error('L’e-mail n’a pas pu partir. Demande à ton coach ou à l’administrateur de te redéfinir un mot de passe.');
+    if (/Failed to fetch|NetworkError|Load failed/i.test(m)) throw new Error('Impossible de joindre le serveur. Vérifie ta connexion.');
+    throw new Error(m);
+  }
 }

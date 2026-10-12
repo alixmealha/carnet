@@ -118,6 +118,7 @@ export function dayInsights(k) {
   const mo = monotony(k);
   if (mo && mo.mono > 2) add('info', 'Semaine monotone · ' + f1(mo.mono), 'Les jours se ressemblent trop en charge : alterne jours durs et jours faciles.', ['foster1998']);
   const y = addDays(k, -1), ye = jget(y), yt = target(y);
+  if (typeof ye.pain === 'number' && ye.pain > 5) add('warn', 'Douleur élevée pendant la kiné d’hier · ' + ye.pain + '/10', 'Au-dessus de 5/10, on allège ou on modifie les exercices qui la provoquent. Vérifie ce matin qu’elle est redescendue ; sinon, parles-en à ton kiné.', ['silbernagel2007']);
   if (yt && yt.rpe && typeof ye.rpe === 'number' && ye.rpe >= yt.rpe[1] + 2) add('info', 'Séance d’hier plus dure que prévu', 'Ressenti ' + ye.rpe + '/10 pour une cible de ' + rng(yt) + '. Si tu te sens entamé ce matin, commence prudemment.', ['foster2001']);
   // 6. Cycle
   if (st.cycle && typeof e.cycle === 'number') {

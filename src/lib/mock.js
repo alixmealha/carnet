@@ -147,14 +147,17 @@ export function createMock() {
     if (body.action === 'create') {
       const email = String(body.email || '').trim().toLowerCase();
       if (db.users.some(u => u.email === email)) return fail(400, 'Un compte existe déjà avec cet email.');
-      if (String(body.password || '').length < 8) return fail(400, 'Mot de passe trop court (8 caractères minimum).');
+      if (!body.invite && String(body.password || '').length < 8) return fail(400, 'Mot de passe trop court (8 caractères minimum).');
+      if (body.invite && /nosmtp/.test(email)) return fail(400, 'L’e-mail n’a pas pu partir : l’envoi d’e-mails (SMTP) n’est pas encore configuré dans Supabase, ou la limite d’envoi est atteinte. Utilise un mot de passe provisoire en attendant.');
       const id = 'bbbbbbbb-0000-4000-8000-' + String(Date.now()).slice(-12).padStart(12, '0');
-      db.users.push({ id, email, password: body.password, created_at: new Date().toISOString() });
+      db.users.push({ id, email, password: body.invite ? null : body.password, created_at: new Date().toISOString() });
+      if (body.invite) { db.mails = (db.mails || []).concat([{ to: email, type: 'invite', link: (body.redirectTo || '') + '#access_token=mock-' + id + '&refresh_token=r&type=invite' }]); }
       if (body.role === 'athlete' || body.role === 'coach') db.profiles.push({ id, name: body.name || '', role: body.role, onboarded: false });
       if (body.linkMe && body.role !== 'coach') db.coach_links.push({ coach_id: m, athlete_id: id, plan_locked: false });
-      save(db); return { data: { id, email }, error: null };
+      save(db); return { data: { id, email, invited: !!body.invite }, error: null };
     }
     const u = db.users.find(x => x.id === body.id);
+    if (body.action === 'recover') { db.mails = (db.mails || []).concat([{ to: u.email, type: 'recovery', link: (body.redirectTo || '') + '#access_token=mock-' + u.id + '&refresh_token=r&type=recovery' }]); save(db); return { data: { ok: true, email: u.email }, error: null }; }
     if (!u) return fail(400, 'Compte introuvable.');
     if (body.action === 'password') { if (u.id === m) return fail(400, 'Change ton propre mot de passe depuis Paramètres → Compte.'); u.password = body.password; save(db); return { data: { ok: true }, error: null }; }
     if (body.action === 'delete') {
@@ -181,6 +184,17 @@ export function createMock() {
         emit('SIGNED_IN', db.session); return { data: { session: db.session }, error: null };
       },
       async signOut() { const db = load(); db.session = null; save(db); emit('SIGNED_OUT', null); return { error: null }; },
+      async resetPasswordForEmail(email, opts) {
+        const db = load(), u = db.users.find(x => x.email === email);
+        if (u) { db.mails = (db.mails || []).concat([{ to: email, type: 'recovery', link: ((opts && opts.redirectTo) || '') + '#access_token=mock-' + u.id + '&refresh_token=r&type=recovery' }]); save(db); }
+        return { data: {}, error: null };
+      },
+      async setSession({ access_token }) {
+        const db = load(), id = String(access_token).replace(/^mock-/, ''), u = db.users.find(x => x.id === id);
+        if (!u) return { data: null, error: { message: 'Invalid JWT' } };
+        db.session = { access_token, user: { id: u.id, email: u.email } }; save(db); emit('SIGNED_IN', db.session);
+        return { data: { session: db.session }, error: null };
+      },
       async updateUser({ password }) { const db = load(), u = db.users.find(x => x.id === me()); if (u && password) u.password = password; save(db); return { data: {}, error: null }; }
     }
   };
