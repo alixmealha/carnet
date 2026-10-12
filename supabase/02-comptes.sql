@@ -161,9 +161,14 @@ end $$;
 revoke all on function public.admin_users(), public.admin_set_role(uuid, text), public.admin_link(uuid, uuid, boolean) from public, anon;
 grant execute on function public.admin_users(), public.admin_set_role(uuid, text), public.admin_link(uuid, uuid, boolean) to authenticated;
 
--- Ton compte devient administrateur
+-- Ton compte devient administrateur : celui dont l'email est indiqué ici ; à défaut (email non trouvé),
+-- le premier compte créé, s'il n'y a pas encore d'administrateur.
 insert into public.profiles (id, role)
-select id, 'admin' from auth.users where email = '__ADMIN_EMAIL__'
+select id, 'admin' from auth.users
+where lower(email) = lower('__ADMIN_EMAIL__')
+   or (not exists (select 1 from public.profiles where role = 'admin')
+       and not exists (select 1 from auth.users where lower(email) = lower('__ADMIN_EMAIL__'))
+       and id = (select id from auth.users order by created_at limit 1))
 on conflict (id) do update set role = 'admin';
 
 /* ---------- 9. Abonnements aux notifications ---------- */
@@ -226,3 +231,6 @@ create trigger docs_notify after insert or update on public.docs
 
 -- Recharger le schéma de l'API
 notify pgrst, 'reload schema';
+
+-- Vérification : le compte administrateur (doit afficher ton email)
+select u.email, p.role from public.profiles p join auth.users u on u.id = p.id where p.role = 'admin';
