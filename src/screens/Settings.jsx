@@ -55,8 +55,8 @@ function Notifications() {
   return (
     <Sec title="Notifications" right={st === 'on' ? 'activées' : st === 'denied' ? 'refusées' : st === 'install' ? 'appli à installer' : st === 'unsupported' ? 'indisponibles' : 'désactivées'}>
       <p class="small" style="margin:0">{coachSide ? 'Une notification quand un de tes athlètes valide sa séance ou t’écrit.' : 'Une notification quand ton coach commente une de tes séances.'}</p>
-      {st === 'install' && <p class="small">Sur iPhone, les notifications ne marchent que dans l’appli installée : Safari → Partager → Sur l’écran d’accueil, puis ouvre Carnet depuis son icône.</p>}
-      {st === 'denied' && <p class="small">Refusées pour Carnet : Réglages de l’iPhone → Notifications → Carnet.</p>}
+      {st === 'install' && <p class="small">Sur iPhone, les notifications ne marchent que dans l’appli installée : Safari → Partager → Sur l’écran d’accueil, puis ouvre Alipto depuis son icône.</p>}
+      {st === 'denied' && <p class="small">Refusées pour Alipto : Réglages de l’iPhone → Notifications → Alipto.</p>}
       {err && <p class="err" style="margin-top:8px">{err}</p>}
       <div class="row-btns" style="margin-top:12px">
         {st === 'on' ? <button class="btn" disabled={busy} onClick={off}>Désactiver sur cet appareil</button>
@@ -73,7 +73,7 @@ function MyCoach() {
   useEffect(() => { load(); }, []);
   const gen = async () => { setBusy(true); setErr(''); try { const c = await newCode(); setFresh(c); load(); } catch (e) { setErr(e.message); } setBusy(false); };
   const share = async c => {
-    const txt = 'Mon code Carnet : ' + fmtCode(c.code) + '\nÀ saisir dans Plus → Paramètres → Mes athlètes (valable 7 jours, une seule fois).';
+    const txt = 'Mon code Alipto : ' + fmtCode(c.code) + '\nÀ saisir dans Plus → Paramètres → Mes athlètes (valable 7 jours, une seule fois).';
     try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
     try { await navigator.clipboard.writeText(txt); toast('Code copié'); } catch (_) { toast(fmtCode(c.code)); }
   };
@@ -199,7 +199,7 @@ export function SettingsPage({ session, onBack, onAdmin }) {
         <Data />
         {isAdmin() && <button class="card li-card" onClick={onAdmin}><Icon name="shield" /><span><b>Administration</b><small>Comptes, rôles, accès</small></span><span class="chev r" aria-hidden="true" /></button>}
         {links.legacy && <p class="err">La base n’est pas encore à jour : lance le script de l’étape 2 dans Supabase (profils, codes, notifications).</p>}
-        <p class="small" style="text-align:center">Carnet v3</p>
+        <p class="small" style="text-align:center">Alipto v3.1</p>
       </div>
     </div>
   );

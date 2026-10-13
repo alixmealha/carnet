@@ -72,7 +72,7 @@ function Login() {
   return (
     <form class="login" onSubmit={submit}>
       <div class="eyebrow">Carnet d’entraînement</div>
-      <h1 class="title" style="font-size:56px">{forgot ? 'Mot de passe' : 'Carnet'}</h1>
+      <h1 class="title" style="font-size:56px">{forgot ? 'Mot de passe' : 'Alipto'}</h1>
       {forgot ? (sent ? <p class="lead" style="margin:0">Si un compte existe pour <b>{email.trim()}</b>, un e-mail vient de partir. Ouvre le lien qu’il contient : tu choisiras un nouveau mot de passe.</p>
         : <p class="lead" style="margin:0 0 6px">Indique l’email de ton compte : tu recevras un lien pour choisir un nouveau mot de passe.</p>)
         : <p class="lead" style="margin:0 0 6px">Connecte-toi pour retrouver ton plan, ton journal et tes tests.</p>}
@@ -140,7 +140,7 @@ function Onboarding({ onSettings }) {
 
 function Waiting() {
   const err = syncState.state === 'error' || syncState.state === 'offline';
-  return <div class="login"><div class="eyebrow">Carnet</div><h1 class="title">{err ? 'Hors ligne' : 'Un instant'}</h1>
+  return <div class="login"><div class="eyebrow">Alipto</div><h1 class="title">{err ? 'Hors ligne' : 'Un instant'}</h1>
     <p class="lead">{err ? 'Impossible de récupérer ton compte pour le moment.' : 'Récupération de ton compte…'}</p>
     {err && syncState.error && <p class="err">{syncState.error}</p>}
     {err && <button class="btn primary" onClick={() => syncNow()}>Réessayer</button>}</div>;

@@ -42,7 +42,7 @@ export function Today({ onStart, onEdit, onOpenTest }) {
   return (
     <div class="screen">
       <div class="head">
-        <div><div class="eyebrow">{m ? m.title : 'Carnet'}</div><h1 class="title">Aujourd’hui</h1></div>
+        <div><div class="eyebrow">{m ? m.title : 'Alipto'}</div><h1 class="title">Aujourd’hui</h1></div>
         {left !== null && left > 0 && <div class="count" aria-label={'J moins ' + left + ' avant ' + goal.label}><b>J−{left}</b><span>avant<br />{goal.label}</span></div>}
         {left !== null && left <= 0 && <div class="count"><b style="font-size:24px">Jour J</b><span>{goal.label}</span></div>}
       </div>

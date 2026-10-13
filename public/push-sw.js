@@ -1,8 +1,8 @@
 // Réception des notifications et ouverture de la bonne fiche au toucher.
 self.addEventListener('push', event => {
   let d = {};
-  try { d = event.data ? event.data.json() : {}; } catch (_) { d = { title: 'Carnet', body: event.data ? event.data.text() : '' }; }
-  event.waitUntil(self.registration.showNotification(d.title || 'Carnet', {
+  try { d = event.data ? event.data.json() : {}; } catch (_) { d = { title: 'Alipto', body: event.data ? event.data.text() : '' }; }
+  event.waitUntil(self.registration.showNotification(d.title || 'Alipto', {
     body: d.body || '', tag: d.tag, renotify: !!d.tag, icon: 'icon-192.png', badge: 'icon-192.png', data: { url: d.url || './' }
   }));
 });

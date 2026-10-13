@@ -12,7 +12,7 @@ async function shareText(txt) {
   try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(txt); toast('Copié'); } catch (_) { toast('Copie impossible : recopie le texte à la main'); }
 }
-const welcome = (email, pw) => 'Ton compte Carnet est prêt.\nAdresse : ' + appUrl() + '\nEmail : ' + email + '\nMot de passe provisoire : ' + pw + '\nSur iPhone : ouvre l’adresse dans Safari, Partager → Sur l’écran d’accueil. Change ton mot de passe dans Plus → Paramètres.';
+const welcome = (email, pw) => 'Ton compte Alipto est prêt.\nAdresse : ' + appUrl() + '\nEmail : ' + email + '\nMot de passe provisoire : ' + pw + '\nSur iPhone : ouvre l’adresse dans Safari, Partager → Sur l’écran d’accueil. Change ton mot de passe dans Plus → Paramètres.';
 
 function Create({ onDone }) {
   const [email, setEmail] = useState(''), [pw, setPw] = useState(tempPassword()), [role, setRole] = useState('athlete'), [name, setName] = useState(''), [mine, setMine] = useState(true);
@@ -81,7 +81,7 @@ function UserSheet({ u, onClose, onChange }) {
         {!me && <section class="card">
           <h3 class="h3">Mot de passe</h3>
           {pw ? <><div class="code-box left"><small>Nouveau mot de passe provisoire</small><b class="num" style="font-size:22px">{pw}</b></div>
-            <button class="btn primary" style="margin-top:10px" onClick={() => shareText('Nouveau mot de passe Carnet pour ' + u.email + ' : ' + pw + '\nChange-le dans Plus → Paramètres → Compte.')}>Partager</button></>
+            <button class="btn primary" style="margin-top:10px" onClick={() => shareText('Nouveau mot de passe Alipto pour ' + u.email + ' : ' + pw + '\nChange-le dans Plus → Paramètres → Compte.')}>Partager</button></>
             : <><p class="small" style="margin:0 0 10px">En cas d’oubli : un e-mail avec un lien pour choisir un nouveau mot de passe, ou un mot de passe provisoire que tu lui transmets.</p>
               <div class="row-btns"><button class="btn" disabled={busy} onClick={() => act(() => adminFn({ action: 'recover', id: u.id }), 'E-mail de réinitialisation envoyé')}>Envoyer un e-mail</button>
               <button class="btn" disabled={busy} onClick={() => { const p = tempPassword(); act(() => adminFn({ action: 'password', id: u.id, password: p }).then(() => setPw(p)), 'Mot de passe redéfini'); }}>Mot de passe provisoire</button></div></>}

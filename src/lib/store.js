@@ -83,7 +83,7 @@ export function removeAllMine() {
 export function exportAll(owner) {
   const o = owner || subject, out = {};
   for (const [k, r] of docs) { const [ko, id] = split(k); if (ko === o && !r.deleted && r.data != null) out[id] = r.data; }
-  return { app: 'carnet', v: 1, exportedAt: new Date().toISOString(), docs: out };
+  return { app: 'alipto', v: 1, exportedAt: new Date().toISOString(), docs: out };
 }
 function purgeOwner(o) {
   for (const k of [...docs.keys()]) if (k.startsWith(o + '|')) { docs.delete(k); idbDel(k, DS).catch(() => {}); }

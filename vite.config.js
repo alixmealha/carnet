@@ -13,9 +13,9 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['apple-touch-icon.png', 'favicon.svg', 'push-sw.js'],
       manifest: {
-        name: 'Carnet',
-        short_name: 'Carnet',
-        description: 'Carnet d’entraînement escalade et muscu',
+        name: 'Alipto',
+        short_name: 'Alipto',
+        description: 'Carnet d’entraînement et de coaching',
         lang: 'fr',
         display: 'standalone',
         orientation: 'portrait',

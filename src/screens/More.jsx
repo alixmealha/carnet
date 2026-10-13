@@ -83,7 +83,7 @@ export function More({ session }) {
   const r = role(), p = myProfile(), self = isSelf();
   return (
     <div class="screen">
-      <div class="head"><div><div class="eyebrow">Carnet</div><h1 class="title">Plus</h1></div></div>
+      <div class="head"><div><div class="eyebrow">Alipto</div><h1 class="title">Plus</h1></div></div>
       <div class="stack">
         <button class="card li-card" onClick={() => go('settings')}>
           <span class="av">{(p.name || '?').slice(0, 1).toUpperCase()}</span>
@@ -99,10 +99,10 @@ export function More({ session }) {
             <li>Ouvre l’adresse de l’appli dans <b>Safari</b>.</li>
             <li>Touche le bouton <b>Partager</b> (le carré avec la flèche).</li>
             <li>Choisis <b>Sur l’écran d’accueil</b>, puis <b>Ajouter</b>.</li>
-            <li>Lance Carnet depuis son icône : plein écran, hors ligne, et notifications possibles.</li>
+            <li>Lance Alipto depuis son icône : plein écran, hors ligne, et notifications possibles.</li>
           </ol>
         </section>
-        <p class="small" style="text-align:center">{meta() ? meta().title + ' · ' : ''}Carnet v3</p>
+        <p class="small" style="text-align:center">{meta() ? meta().title + ' · ' : ''}Alipto v3.1</p>
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ export async function pushState() {
 export async function enablePush() {
   if (!supported()) throw new Error(isIOS() && !standalone() ? 'Installe d’abord l’appli sur l’écran d’accueil (Safari → Partager → Sur l’écran d’accueil), puis ouvre-la depuis son icône.' : 'Les notifications ne sont pas disponibles sur cet appareil.');
   const perm = await Notification.requestPermission();
-  if (perm !== 'granted') throw new Error('Notifications refusées. Tu peux les réautoriser dans Réglages → Notifications → Carnet.');
+  if (perm !== 'granted') throw new Error('Notifications refusées. Tu peux les réautoriser dans Réglages → Notifications → Alipto.');
   const r = await reg();
   let s = await r.pushManager.getSubscription();
   if (!s) s = await r.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(vapidKey) });

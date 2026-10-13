@@ -1,6 +1,6 @@
-# Carnet
+# Alipto
 
-Carnet d’entraînement (escalade, muscu, renfo) en application web installable (PWA), pour un athlète seul ou un coach et ses athlètes.
+Carnet d’entraînement et de coaching (escalade, muscu, renfo) en application web installable (PWA), pour un athlète seul ou un coach et ses athlètes.
 
 - **Aujourd’hui** : forme du matin, sommeil (montre facultative), lecture du jour avec conseils sourcés, séance du jour, échanges avec le coach, ressenti.
 - **Mode séance** : étapes, repos automatiques, minuteurs (intervalles, clusters, contrastes), sons et voix.
