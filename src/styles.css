@@ -577,3 +577,49 @@ html,body{overflow-x:clip}
 .wk-d i{flex:1;height:6px;border-radius:3px;background:var(--sunk)}
 .wk-d i.ok{background:var(--good)}.wk-d i.todo{background:color-mix(in srgb,var(--accent) 35%,var(--sunk))}
 .wk-d i.miss,.wk-d i.ko{background:color-mix(in srgb,var(--crit) 45%,var(--sunk))}.wk-d i.rest{background:transparent;border:1px dashed var(--rule)}
+
+/* ---------- Grand écran (ordinateur, iPad à l'horizontale) ---------- */
+.nav-brand{display:none}
+@media (min-width:1000px){
+  :root{--side:236px}
+  .tabbar{top:0;bottom:0;right:auto;width:var(--side);display:flex!important;flex-direction:column;align-items:stretch;gap:4px;padding:24px 14px!important;border-top:0;border-right:1px solid var(--rule);background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none}
+  .tabbar .nav-brand{display:flex;align-items:center;gap:10px;padding:0 8px 26px}
+  .tabbar button{flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 12px;border-radius:12px;font-size:15px;font-weight:600;color:var(--muted);transition:background .15s}
+  .tabbar button:hover{background:var(--sunk);color:var(--ink)}
+  .tabbar button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent)}
+  .tabbar.six button{font-size:15px}
+  .tabbar button svg{width:22px;height:22px}
+  main,.subj{margin-left:var(--side)}
+  .subj{padding:12px 40px}
+  .screen{max-width:1200px;padding:34px 40px 64px}
+  .screen.narrow{max-width:960px}
+  .head{margin-bottom:20px}
+  .toast{bottom:32px;left:calc(50% + var(--side) / 2)}
+  /* Aujourd'hui : séance à gauche, état du jour à droite */
+  .day-cols{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-items:start}
+  .day-cols>.stack>.card:first-child.hero{position:static}
+  /* Suivi : chiffres clés sur une ligne, cartes sur deux colonnes */
+  .tiles{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .dash-cols,.cols2{display:block;columns:2;column-gap:18px}
+  .dash-cols>*,.cols2>*{break-inside:avoid;margin:0 0 18px;width:100%}
+  .cols2>p{column-span:all}
+  /* Athlètes : cartes en grille */
+  .ath-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:16px}
+  /* Feuilles : fenêtre centrée */
+  .sheet-wrap{align-items:center;padding:24px}
+  .sheet{max-width:760px;max-height:88vh;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.25);animation:pop .2s cubic-bezier(.2,.8,.2,1)}
+  .sheet-h::before{display:none}
+  .sheet-h .t,.sheet-h .btn{margin-top:0}
+  .sheet-h{padding:12px 16px}
+  /* Mode séance : contenu centré */
+  .ses-body>*{max-width:760px;margin-left:auto;margin-right:auto}
+  .ses-foot{justify-content:center}
+  .ses-foot .btn{max-width:340px}
+  .rest{left:calc(50% - 280px);right:auto;width:560px;bottom:32px}
+  /* Connexion et premier lancement : un peu d'air */
+  .login{padding-top:40px;padding-bottom:40px}
+}
+@keyframes pop{from{transform:translateY(12px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+@media (min-width:1000px) and (hover:hover){
+  .card.li-card:hover,.ath-h:hover,.jrow:hover,.li:hover{background:color-mix(in srgb,var(--sunk) 55%,var(--surface))}
+}

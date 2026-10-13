@@ -326,18 +326,33 @@ export function After({ k, ro }) {
   );
 }
 
-export function DayView({ k, onNav, onStart, onEdit, onOpenTest, noHeader }) {
+// split : sur grand écran, la séance d'un côté, l'état du jour (forme, sommeil, lecture, échanges) de l'autre
+export function DayView({ k, onNav, onStart, onEdit, onOpenTest, noHeader, hero, split }) {
   const ro = !isSelf();
+  const header = !noHeader && <DayHeader k={k} onNav={onNav} />;
+  const morning = <Morning k={k} ro={ro} key={'m' + k} />, night = <Night k={k} ro={ro} key={'n' + k} />, reading = <Reading k={k} />;
+  const session = <SessionCard k={k} onStart={onStart} onEdit={onEdit} ro={ro} />, tests = <TestsCard k={k} onOpenTest={onOpenTest} />;
+  const exchanges = <Exchanges k={k} key={'c' + k} />, after = <After k={k} ro={ro} />;
+  if (split) return (
+    <div class="stack">
+      {header}
+      <div class="day-cols">
+        <div class="stack">{hero}{session}{tests}{after}</div>
+        <div class="stack">{morning}{night}{reading}{exchanges}</div>
+      </div>
+    </div>
+  );
   return (
     <div class="stack">
-      {!noHeader && <DayHeader k={k} onNav={onNav} />}
-      <Morning k={k} ro={ro} key={'m' + k} />
-      <Night k={k} ro={ro} key={'n' + k} />
-      <Reading k={k} />
-      <SessionCard k={k} onStart={onStart} onEdit={onEdit} ro={ro} />
-      <TestsCard k={k} onOpenTest={onOpenTest} />
-      <Exchanges k={k} key={'c' + k} />
-      <After k={k} ro={ro} />
+      {header}
+      {hero}
+      {morning}
+      {night}
+      {reading}
+      {session}
+      {tests}
+      {exchanges}
+      {after}
     </div>
   );
 }

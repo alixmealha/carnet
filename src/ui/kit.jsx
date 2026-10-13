@@ -80,6 +80,19 @@ export function Sheet({ title, onClose, right, children }) {
   );
 }
 
+// Écran large (ordinateur, iPad à l'horizontale) : mise en page sur deux colonnes et menu latéral
+export const WIDE = '(min-width: 1000px)';
+export function useWide() {
+  const mq = typeof matchMedia === 'function' ? matchMedia(WIDE) : null;
+  const [w, setW] = useState(mq ? mq.matches : false);
+  useEffect(() => {
+    if (!mq) return;
+    const f = () => setW(mq.matches);
+    if (mq.addEventListener) mq.addEventListener('change', f); else mq.addListener(f);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', f); else mq.removeListener(f); };
+  }, []);
+  return w;
+}
 export function useWidth(ref) {
   const [w, setW] = useState(0);
   useEffect(() => {

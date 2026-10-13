@@ -268,6 +268,7 @@ export function Stats({ onOpen, onOpenTest, testFocus }) {
       {view === 'tests' ? <TestsView onOpenDay={onOpen} focus={testFocus} /> :
         <div class="stack">
           <Tiles ws={ws} />
+          <div class="stack dash-cols">
           <Bilan />
           <Alerts ws={ws} onOpen={onOpen} />
           <PlanVsReal ws={ws} ci={ci} />
@@ -277,6 +278,7 @@ export function Stats({ onOpen, onOpenTest, testFocus }) {
           <Sleep />
           <Loads />
           <Journal onOpen={onOpen} />
+          </div>
         </div>}
     </div>
   );

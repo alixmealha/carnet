@@ -4,7 +4,7 @@ import { blocks, weekOf, weekLabel, meta, progress, PHASE_LABEL, nextEvent, even
 import { score, verdict } from '../lib/rules.js';
 import { dayInsights } from '../lib/insights.js';
 import { todayKey, mondayOf, addDays, DOW_1, dom, fmtRange, diffDays, fmtLong } from '../lib/dates.js';
-import { Icon, Rich } from '../ui/kit.jsx';
+import { Icon, Rich, useWide } from '../ui/kit.jsx';
 import { DayView } from './DayView.jsx';
 
 export function tapesOf(k) {
@@ -95,7 +95,7 @@ function Hero({ k, onStart }) {
 export function Today({ onStart, onEdit, onOpenTest }) {
   const t = todayKey();
   const [sel, setSel] = useState(t);
-  const m = meta(), goal = nextEvent(), left = goal ? diffDays(t, goal.date) : null, isToday = sel === t;
+  const m = meta(), goal = nextEvent(), left = goal ? diffDays(t, goal.date) : null, isToday = sel === t, wide = useWide();
   return (
     <div class="screen">
       <div class="head">
@@ -106,8 +106,7 @@ export function Today({ onStart, onEdit, onOpenTest }) {
       <div class="stack">
         <WeekStrip sel={sel} onSel={setSel} />
         {!isToday && <button class="btn ghost" style="align-self:center" onClick={() => setSel(t)}>Revenir à aujourd’hui</button>}
-        {isToday && m && <Hero k={sel} onStart={onStart} />}
-        <DayView k={sel} onStart={onStart} onEdit={onEdit} onOpenTest={onOpenTest} noHeader={isToday} />
+        <DayView k={sel} onStart={onStart} onEdit={onEdit} onOpenTest={onOpenTest} noHeader={isToday} split={wide} hero={isToday && m ? <Hero k={sel} onStart={onStart} /> : null} />
       </div>
     </div>
   );

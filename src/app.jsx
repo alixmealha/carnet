@@ -5,7 +5,7 @@ import { meta, newPlan } from './lib/plan.js';
 import { setBadge } from './lib/push.js';
 import { forgotPassword } from './lib/account.js';
 import { applyUpdateIfIdle } from './lib/update.js';
-import { Brand, Mark } from './ui/Logo.jsx';
+import { Brand, Mark, Wordmark } from './ui/Logo.jsx';
 import { ImportPicker } from './ui/ImportPicker.jsx';
 import { todayKey } from './lib/dates.js';
 import { Icon, Sheet, toast } from './ui/kit.jsx';
@@ -245,6 +245,7 @@ export function App() {
         {cur === 'more' && <More session={session} />}
       </main>
       <nav class={'tabbar' + (tabs.length > 5 ? ' six' : '')} style={tabs.length < 5 ? 'grid-template-columns:repeat(' + tabs.length + ',minmax(0,1fr))' + (tabs.length < 4 ? ';padding-left:15%;padding-right:15%' : '') : ''} role="tablist" aria-label="Navigation">
+        <div class="nav-brand" aria-hidden="true"><Mark size={34} /><Wordmark size={30} /></div>
         {tabs.map(([id, l, ic]) => <button role="tab" aria-selected={cur === id ? 'true' : 'false'} onClick={() => { if (cur === id) window.scrollTo({ top: 0, behavior: 'smooth' }); setTab(id); if (id !== 'stats') setTestFocus(null); }}><span class="ti"><Icon name={ic} />{id === 'athletes' && unread > 0 && <i class="dotn">{unread > 9 ? '9+' : unread}</i>}</span>{l}</button>)}
       </nav>
       {day && !edit && <Sheet title={self ? 'Fiche du jour' : 'Fiche de ' + nameOf(subj)} onClose={() => setDay(null)}><DayView k={day} onNav={setDay} onStart={openSession} onEdit={onEdit} onOpenTest={openTest} key={day} /></Sheet>}

@@ -85,7 +85,7 @@ export function More({ session }) {
   return (
     <div class="screen">
       <div class="head"><div><div class="eyebrow">Alipto</div><h1 class="title">Plus</h1></div></div>
-      <div class="stack">
+      <div class="stack cols2">
         <button class="card li-card" onClick={() => go('settings')}>
           <span class="av">{(p.name || '?').slice(0, 1).toUpperCase()}</span>
           <span><b>Paramètres</b><small>{[p.name, r && cloud ? ROLE_LBL[r] : null].filter(Boolean).join(' · ') || 'Profil, apparence, compte'}</small></span>
@@ -107,7 +107,7 @@ export function More({ session }) {
           <Mark size={52} />
           <div><Wordmark size={30} />
             <p>Du grec <i>aleiptès</i> : celui qui préparait les athlètes, à la fois entraîneur et soigneur. Ton plan, ta forme, tes tests et ton coach au même endroit.</p>
-            <p class="small" style="margin-top:6px">Version 3.2{meta() ? ' · ' + meta().title : ''}</p></div>
+            <p class="small" style="margin-top:6px">Version 3.3{meta() ? ' · ' + meta().title : ''}</p></div>
         </section>
       </div>
     </div>

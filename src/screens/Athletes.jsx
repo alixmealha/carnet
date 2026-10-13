@@ -64,6 +64,7 @@ export function Athletes({ onOpenAthlete, onOpenDay, onOpenPlan, onGoMore }) {
       <div class="stack">
         {links.athletes.length === 0 && <section class="card"><h3 class="h3">Ajoute ton premier athlète</h3><AddAthlete /></section>}
         {ps !== 'on' && ps !== '…' && links.athletes.length > 0 && <button class="card notif-cta" onClick={onGoMore}><Icon name="bell" /><span><b>Active les notifications</b><small>Pour être prévenu dès qu’un athlète valide sa séance ou t’écrit. Ça se règle dans Plus → Paramètres.</small></span></button>}
+        {links.athletes.length > 0 && <div class="stack ath-list">
         {links.athletes.map(uid => {
           const e = getFor(uid, 'j:' + t) || {}, sc = score(e), fl = FLAGS.filter(([f]) => e.flags && e.flags[f]);
           const week = rangeKeys(addDays(t, -6), t), done = week.filter(k => { const s = (getFor(uid, 'j:' + k) || {}).status; return s === 'faite' || s === 'adaptee'; }).length;
@@ -94,6 +95,7 @@ export function Athletes({ onOpenAthlete, onOpenDay, onOpenPlan, onGoMore }) {
             </section>
           );
         })}
+        </div>}
         {links.athletes.length > 0 && <section class="card"><h3 class="h3">Ajouter un athlète</h3><AddAthlete compact /></section>}
         {links.athletes.length > 0 && <section class="card flat">
           <div style="padding:14px 14px 4px"><h3 class="h3" style="margin:0">Activité récente <em>{unread ? unread + ' non lu' + (unread > 1 ? 's' : '') : ''}</em></h3></div>

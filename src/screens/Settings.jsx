@@ -187,7 +187,7 @@ export function SettingsPage({ session, onBack, onAdmin }) {
   return (
     <div class="screen">
       <div class="page-h"><button class="icon-btn" aria-label="Retour" onClick={onBack}><Icon name="back" /></button><h1 class="title">Paramètres</h1></div>
-      <div class="stack">
+      <div class="stack cols2">
         <Sec title="Profil" right={r ? ROLE_LBL[r] : ''}><ProfileForm key={myProfile().name} /></Sec>
         <Appearance />
         {athleteSide && <SessionPrefs />}
@@ -199,7 +199,7 @@ export function SettingsPage({ session, onBack, onAdmin }) {
         <Data />
         {isAdmin() && <button class="card li-card" onClick={onAdmin}><Icon name="shield" /><span><b>Administration</b><small>Comptes, rôles, accès</small></span><span class="chev r" aria-hidden="true" /></button>}
         {links.legacy && <p class="err">La base n’est pas encore à jour : lance le script de l’étape 2 dans Supabase (profils, codes, notifications).</p>}
-        <p class="small" style="text-align:center">Alipto v3.2</p>
+        <p class="small" style="text-align:center">Alipto v3.3</p>
       </div>
     </div>
   );

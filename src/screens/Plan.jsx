@@ -358,7 +358,7 @@ export function PlanScreen({ seg }) {
   const t = todayKey(), cw = weekOf(t), ed = canEditPlan(), subj = getSubject(), coachView = !isSelf() && links.athletes.includes(subj);
   const open = x => { if (ed) setSh(x); };
   return (
-    <div class="screen">
+    <div class="screen narrow">
       <div class="head">
         <div style="min-width:0"><div class="eyebrow">{!isSelf() ? 'Plan de ' + nameOf(getSubject()) : m.goal ? m.goal.label + ' · ' + fmtShort(m.goal.date) : 'Plan'}</div><h1 class="title">{m.title}</h1></div>
         {ed && <button class="icon-btn" aria-label="Réglages du plan" onClick={() => setSh({ t: 'plan' })}><Icon name="edit" /></button>}
