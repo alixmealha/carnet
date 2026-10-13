@@ -5,7 +5,7 @@
 // - Cardio : distance et fréquence cardiaque moyenne.
 // Pour toutes : ressenti 0-10 × durée = charge de séance (Foster).
 import { jget, ids } from './store.js';
-import { blocks, itemKey, doneN, itemLoad, uid } from './plan.js';
+import { blocks, itemKey, doneN, itemLoad, uid, setLoadsOf, setsText } from './plan.js';
 import { climber } from './sports.js';
 
 export const ACTS = [['grimpe', 'Escalade'], ['force', 'Muscu / renfo'], ['kine', 'Kiné'], ['cardio', 'Cardio'], ['sport', 'Autre sport'], ['mobi', 'Récup / mobilité']];
@@ -41,7 +41,8 @@ export function plannedLog(k) {
       if (it.id === 'ech' || !it.label) continue;
       const key = itemKey(b, it), ld = itemLoad(b, it, e), dn = doneN(e, key, it.n);
       const rir = e.rir && typeof e.rir[key] === 'number' ? e.rir[key] : null;
-      out.push(Object.assign({ id: uid('l'), label: it.label.replace(/\[[a-z]+\]\s*/gi, ''), sets: dn || it.n || null, reps: repsOf(it.det), load: ld ? ld.text : '', src: key }, rir != null ? { rir } : {}));
+      const sl = setLoadsOf(e, key);
+      out.push(Object.assign({ id: uid('l'), label: it.label.replace(/\[[a-z]+\]\s*/gi, ''), sets: dn || it.n || null, reps: repsOf(it.det), load: sl ? setsText(sl, ld ? ld.u : it.unit_load) : ld ? ld.text : '', src: key }, rir != null ? { rir } : {}));
     }
   }
   return out;

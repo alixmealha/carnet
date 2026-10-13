@@ -1,4 +1,4 @@
-import { get, jget, put, putMany, remove, ids, links, myProfile } from './store.js';
+import { get, jget, jset, put, putMany, remove, ids, links, myProfile } from './store.js';
 import { cloud } from './supa.js';
 import { rangeKeys, r05, fmtNum, fmtDay, addDays, mondayOf, todayKey } from './dates.js';
 import { history } from './tests.js';
@@ -20,7 +20,8 @@ export function allItems(k) { const out = []; for (const b of blocks(k)) if (b.k
 export function doneN(e, key, n) { const v = e && e.done && e.done[key]; return typeof v === 'number' ? Math.min(n, Math.max(0, v)) : 0; }
 export function progress(k) {
   const e = jget(k); let total = 0, done = 0;
-  for (const { it, key } of allItems(k)) { total++; if (doneN(e, key, it.n) >= it.n) done++; }
+  // un exercice facultatif ne compte que s'il a été commencé
+  for (const { it, key } of allItems(k)) { const v = doneN(e, key, it.n); if (it.opt && !v) continue; total++; if (v >= it.n) done++; }
   return { total, done };
 }
 export function phaseOf(w) { return w.phase || 'volume'; }
@@ -66,6 +67,33 @@ export function itemLoad(b, it, e) {
   const v = own != null ? own : it.load, u = it.unit_load || 'kg';
   return { v, u, changed: it.load != null && own != null && own !== it.load, chosen: it.load == null && own != null, text: (u === '+kg' && v >= 0 ? '+' : '') + fmtNum(v) + ' kg' };
 }
+// Charge de chaque série faite : si on baisse la charge en cours d'exercice, seules les séries suivantes changent
+export function setLoadsOf(e, key) { const a = e && e.setLoads && e.setLoads[key]; return Array.isArray(a) && a.length ? a : null; }
+export function setDoneCount(k, b, it, val) {
+  const e = jget(k), key = itemKey(b, it), cur = doneN(e, key, it.n);
+  val = Math.max(0, Math.min(it.n, val));
+  const done = Object.assign({}, e.done); if (val > 0) done[key] = val; else delete done[key];
+  const patch = { done }, ld = itemLoad(b, it, e);
+  if (ld || setLoadsOf(e, key)) {
+    const sl = Object.assign({}, e.setLoads), arr = (sl[key] || []).slice(0, Math.min(cur, val));
+    for (let i = arr.length; i < val; i++) arr[i] = ld ? ld.v : arr[arr.length - 1];
+    if (arr.length && arr.every(x => typeof x === 'number')) sl[key] = arr; else delete sl[key];
+    patch.setLoads = Object.keys(sl).length ? sl : null;
+  }
+  jset(k, patch);
+}
+// « 17,5 kg × 6 · 15 kg × 1 » (séries consécutives à la même charge regroupées)
+export function setsText(arr, u) {
+  const g = []; for (const v of arr) { const l = g[g.length - 1]; if (l && l.v === v) l.n++; else g.push({ v, n: 1 }); }
+  const f = v => ((u === '+kg' && v >= 0) ? '+' : '') + fmtNum(v) + ' kg';
+  return g.length === 1 ? f(g[0].v) : g.map(x => f(x.v) + (x.n > 1 ? ' × ' + x.n : '')).join(' · ');
+}
+// Charge de travail d'un exercice fait : la plus fréquente (à égalité, la plus lourde)
+export function workLoad(arr) {
+  const c = new Map(); for (const v of arr) c.set(v, (c.get(v) || 0) + 1);
+  return [...c.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0][0];
+}
+
 // Finger lift en % du test : charges calculées
 export function fingerCalc(b, k) {
   const f = b.finger; if (!f) return null;

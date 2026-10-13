@@ -19,7 +19,7 @@ const PHASES = ['volume', 'reprise', 'force', 'puissance', 'specifique', 'affuta
 const SHORT = { volume: 'Vol.', reprise: 'Rep.', force: 'Force', puissance: 'Puiss.', specifique: 'Spéc.', affutage: 'Affût.', recup: 'Récup.', deload: 'Déch.', transition: 'Trans.', coupure: 'Coup.', autre: 'Cycle' };
 const FAMS = [['vol', 'Volume (modéré)'], ['easy', 'Facile'], ['hard', 'Dur'], ['light', 'Léger / récup'], ['muscu', 'Muscu'], ['test', 'Test']];
 const UNITS = ['Série', 'Bloc', 'Essai'];
-const TIMERS = [['', 'Aucun'], ['cluster', 'Clusters'], ['contrast', 'Contraste'], ['interval', 'Intervalles']];
+const TIMERS = [['', 'Aucun'], ['cluster', 'Clusters'], ['contrast', 'Contraste'], ['interval', 'Intervalles'], ['tempo', 'Tempo']];
 const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
 const ask = q => window.confirm(q);
 
@@ -47,17 +47,19 @@ function Bar({ onUp, onDown, onDel, first, last }) {
 const move = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; const t = arr[i]; arr[i] = arr[j]; arr[j] = t; };
 
 /* ---------- Éditeur d'un exercice ---------- */
-function ItemEd({ it, set, i, n, onMove, onDel }) {
+function ItemEd({ it, set, i, n, onMove, onDel, prev, setPrev }) {
   const T = it.timer || null, tk = T ? T.kind : '';
   const setT = patch => set(x => { x.timer = Object.assign({}, x.timer, patch); });
   const setKind = kd => set(x => {
     if (!kd) delete x.timer;
     else if (kd === 'cluster') x.timer = { kind: 'cluster', reps: 3, intra: 25, setRest: 180 };
     else if (kd === 'contrast') x.timer = { kind: 'contrast', heavyRest: 300, lightRest: 180 };
+    else if (kd === 'tempo') x.timer = { kind: 'tempo', prep: 5, ecc: 6, ret: 4, reps: x.reps || 8, sides: null, sideRest: 10, setRest: x.rest || 60 };
     else x.timer = { kind: 'interval', name: x.label, work: 60, rest: 60, reps: x.n || 4, sets: 1, setRest: 0, prep: 10, workLabel: 'Effort', restLabel: 'Repos' };
   });
   const [open, setOpen] = useState(it.label === 'Nouvel exercice');
-  const summary = [it.n + ' × ' + (it.unit || 'Série').toLowerCase(), it.load != null ? (it.unit_load === '+kg' ? '+' : '') + fmtNum(it.load) + ' kg' : null, it.rest ? it.rest + ' s de repos' : null, tk ? TIMERS.find(t => t[0] === tk)[1].toLowerCase() : null].filter(Boolean).join(' · ');
+  const summary = [it.n + ' × ' + (it.unit || 'Série').toLowerCase(), it.load != null ? (it.unit_load === '+kg' ? '+' : '') + fmtNum(it.load) + ' kg' : null, it.rest ? it.rest + ' s de repos' : null, tk ? TIMERS.find(t => t[0] === tk)[1].toLowerCase() : null, it.superset && prev && it.superset === prev.id ? 'en alternance' : null].filter(Boolean).join(' · ');
+  const paired = !!(prev && it.superset === prev.id);
   if (!open) return (
     <div class="ed-item row">
       <button type="button" class="ed-sum" onClick={() => setOpen(true)}><b>{it.label || 'Sans nom'}</b><span>{summary}</span></button>
@@ -94,6 +96,26 @@ function ItemEd({ it, set, i, n, onMove, onDel }) {
         <Num label="Répétitions" int value={T.reps} onCommit={v => setT({ reps: v || 1 })} />
         <Num label="Séries" int value={T.sets} onCommit={v => setT({ sets: v || 1 })} />
       </div>}
+      {tk === 'tempo' && <>
+        <div class="grid4">
+          <Num label="Mise en place (s)" int value={T.prep} onCommit={v => setT({ prep: v || 0 })} />
+          <Num label="Excentrique (s)" int value={T.ecc} onCommit={v => setT({ ecc: v || 1 })} />
+          <Num label="Retour (s)" int value={T.ret} onCommit={v => setT({ ret: v || 0 })} />
+          <Num label={T.sides ? 'Rép. par bras' : 'Rép. par série'} int value={T.reps} placeholder={String(it.reps || 8)} onCommit={v => setT({ reps: v || undefined })} />
+        </div>
+        <div class="grid3">
+          <Sel label="Bras" value={T.sides ? 'uni' : 'bi'} options={[['bi', 'Ensemble'], ['uni', 'Un à un']]} onChange={v => setT({ sides: v === 'uni' ? ['Bras droit', 'Bras gauche'] : null })} />
+          {T.sides ? <Num label="Changement (s)" int value={T.sideRest} onCommit={v => setT({ sideRest: v || 0 })} /> : <span />}
+          <Num label="Entre séries (s)" int value={T.setRest} onCommit={v => setT({ setRest: v || 0 })} />
+        </div>
+      </>}
+      {prev && <label class="fld-chk"><input type="checkbox" checked={paired} onChange={ev => set(x => { if (ev.target.checked) { x.superset = prev.id; if (!x.rest) x.rest = 90; } else delete x.superset; })} />En alternance avec « {prev.label} » (entre ses séries)</label>}
+      {paired && <div class="grid3">
+        <Num label="Repos avant (s)" int value={prev.pairRest} placeholder="60" onCommit={v => setPrev(x => { if (v) x.pairRest = v; else delete x.pairRest; })} />
+        <Num label="Tenue (s)" int value={it.hold} placeholder="—" onCommit={v => set(x => { if (v) x.hold = v; else delete x.hold; })} />
+        <span />
+      </div>}
+      {paired && <p class="small" style="margin:0">« Repos avant » : entre une série de « {prev.label} » et cet exercice. « Tenue » : durée chronométrée, si c’est un maintien. Le « Repos » plus haut : avant la série suivante de « {prev.label} ».</p>}
       <button type="button" class="btn ghost" style="align-self:flex-start" onClick={() => setOpen(false)}>Replier</button>
     </div>
   );
@@ -136,7 +158,7 @@ function BlockEd({ b, set, i, n, onMove, onDel }) {
         <div class="stack" style="gap:8px;margin-top:8px">{CATS.filter(([c]) => allTests().some(t => t.cat === c)).map(([c, l]) => <div><p class="small" style="margin:0 0 4px">{l}</p><div class="chips">{allTests().filter(t => t.cat === c).map(t => { const on = (b.tests || []).includes(t.id); return <button type="button" class="chip sel" aria-pressed={on ? 'true' : 'false'} onClick={() => set(x => { const l2 = x.tests || []; x.tests = on ? l2.filter(y => y !== t.id) : l2.concat([t.id]); })}>{t.name}</button>; })}</div></div>)}</div>
       </details>}
       {b.kind !== 'rest' && <>
-        {items.map((it, j) => <ItemEd key={it.id} it={it} i={j} n={items.length} set={fn => setItem(j, fn)} onMove={d => set(x => move(x.items, j, d))} onDel={() => set(x => { x.items.splice(j, 1); })} />)}
+        {items.map((it, j) => <ItemEd key={it.id} it={it} i={j} n={items.length} prev={j > 0 ? items[j - 1] : null} set={fn => setItem(j, fn)} setPrev={fn => setItem(j - 1, fn)} onMove={d => set(x => move(x.items, j, d))} onDel={() => set(x => { x.items.splice(j, 1); })} />)}
         <button type="button" class="btn" onClick={() => set(x => { x.items = x.items || []; x.items.push({ id: uid('i'), label: 'Nouvel exercice', n: 3, unit: b.kind === 'grimpe' ? 'Bloc' : 'Série' }); })}><Icon name="plus" size={18} />Ajouter un exercice</button>
       </>}
     </div>

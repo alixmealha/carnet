@@ -1,5 +1,5 @@
 import { jget, ids } from './store.js';
-import { meta, target, blocks, weekKeys, allItems, doneN, itemLoad, sessionName, PHASE_LABEL, weekLabel } from './plan.js';
+import { meta, target, blocks, weekKeys, allItems, doneN, itemLoad, sessionName, PHASE_LABEL, weekLabel, setLoadsOf, workLoad } from './plan.js';
 import { score, nightTotal, zoneOf, rng, FLAGS, verdict } from './rules.js';
 import { addDays, todayKey, fmtRange } from './dates.js';
 import { climber } from './sports.js';
@@ -30,7 +30,7 @@ export function weeksStats() {
       }
       const t = score(e); if (t !== null) { wsum += t; wn++; }
       const nt = nightTotal(e); if (nt !== null) { ssum += nt; sn++; }
-      if (k <= todayKey()) for (const { it, key } of allItems(k)) { items++; if (doneN(e, key, it.n) >= it.n) itemsDone++; }
+      if (k <= todayKey()) for (const { it, key } of allItems(k)) { const v = doneN(e, key, it.n); if (it.opt && !v) continue; items++; if (v >= it.n) itemsDone++; }
     }
     return { wi, w, ks, label: weekLabel(w), range: fmtRange(w.start, w.end), phase: PHASE_LABEL[w.phase] || w.bloc, plan, real: rh ? real : null, ua: uh ? ua : null, tz,
       well: wn ? wsum / wn : null, sleep: sn ? Math.round(ssum / sn) : null, adherence: items ? itemsDone / items : null };
@@ -63,7 +63,8 @@ export function loadSeries() {
       if (!ld) continue;
       const name = b.kind === 'doigts' ? 'Finger lift · ' + it.label.toLowerCase() : it.label;
       if (!map.has(name)) map.set(name, { name, unit: ld.u, pts: [] });
-      map.get(name).pts.push({ k, v: ld.v, sets: doneN(e, key, it.n), n: it.n });
+      const sl = setLoadsOf(e, key);
+      map.get(name).pts.push({ k, v: sl ? workLoad(sl) : ld.v, sets: doneN(e, key, it.n), n: it.n, sl });
     }
   }
   return [...map.values()].filter(s => s.pts.length).sort((a, b) => b.pts.length - a.pts.length);

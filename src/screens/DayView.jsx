@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset, get, put, isSelf, links, myProfile, subjectSettings, SELF, getSubject, nameOf } from '../lib/store.js';
-import { blocks, target, weekOf, weekLabel, itemKey, doneN, progress, itemLoad, fingerCalc, testIdsOf, PHASE_LABEL, meta, day, eventOn } from '../lib/plan.js';
+import { blocks, target, weekOf, weekLabel, itemKey, doneN, progress, itemLoad, fingerCalc, testIdsOf, PHASE_LABEL, meta, day, eventOn, setDoneCount, setLoadsOf, setsText } from '../lib/plan.js';
 import { WELL, FLAGS, REPAS, RPE, STATUS, SIV, score, verdict, rpeCmp, rng, NSTAGE, NMET, parseDur, durShort, durLong, nightTotal, vfcAvg } from '../lib/rules.js';
 import { dayInsights } from '../lib/insights.js';
 import { testById, valueKeys, resultsOn, saveResults, lastResult, pct } from '../lib/tests.js';
@@ -187,17 +187,16 @@ function LastLine({ k, b, it, ld, full }) {
 
 export function ItemRow({ k, b, it, e, color }) {
   const key = itemKey(b, it), v = doneN(e, key, it.n), full = v >= it.n, ld = itemLoad(b, it, e);
+  const sl = setLoadsOf(e, key), varied = sl && sl.some(x => x !== sl[0]);
   const setDone = val => {
-    const cur = jget(k), done = Object.assign({}, cur.done);
-    if (val > 0) done[key] = val; else delete done[key];
-    jset(k, { done });
+    setDoneCount(k, b, it, val);
     const p = progress(k);
     if (p.total && p.done === p.total && !jget(k).status) jset(k, { status: 'faite' });
   };
   return (
     <div class={'it' + (full ? ' done' : '')}>
       <button type="button" class="ck" aria-pressed={full ? 'true' : 'false'} aria-label={it.label} onClick={() => setDone(full ? 0 : it.n)}>✓</button>
-      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed ? ' chg' : '')}>{ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}</em>}</b>{it.det && <span><Rich text={it.det} /></span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} /></div>
+      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed || varied ? ' chg' : '')}>{varied ? setsText(sl, ld.u) : ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}</em>}</b>{it.det && <span><Rich text={it.det} /></span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} /></div>
       {it.n > 1 && <div class="pips" role="group" aria-label={it.label + ' : ' + v + ' sur ' + it.n}>
         {Array.from({ length: it.n }, (_, i) => i + 1).map(i => <button type="button" class="pip" style={'--c:' + color} aria-pressed={i <= v ? 'true' : 'false'} aria-label={(it.unit || 'Série') + ' ' + i} onClick={() => setDone(v === i ? i - 1 : i)}>{i}</button>)}
       </div>}

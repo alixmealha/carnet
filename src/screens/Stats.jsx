@@ -206,7 +206,7 @@ function Loads() {
       <div class="chipsel" role="group" aria-label="Exercice">{series.map(x => <button class="chip sel" aria-pressed={x.name === s.name ? 'true' : 'false'} onClick={() => setSel(x.name)} style="flex:none">{x.name}</button>)}</div>
       <div class="ch-h" style="margin:10px 0 2px"><div class="num" style="font-size:22px">{unit}{fmtNum(last.v)} kg</div><div class="small" style="margin:0">{s.pts.length > 1 ? (last.v - first.v >= 0 ? '+' : '−') + fmtNum(Math.abs(last.v - first.v)) + ' kg depuis le ' + fmtDay(first.k) : 'Première séance le ' + fmtDay(first.k)}</div></div>
       <Chart n={s.pts.length} height={150} yMin={lo} yMax={hi} ticks={ticks} fmtY={v => unit + fmtNum(v)} xLabels={s.pts.map(p => dom(p.k) + ' ' + MON_S[+p.k.slice(5, 7) - 1].replace('.', ''))} padL={38} minLabelGap={44}
-        tip={i => { const p = s.pts[i]; return fmtShort(p.k) + '\n' + unit + fmtNum(p.v) + ' kg · ' + p.sets + '/' + p.n + ' séries'; }}
+        tip={i => { const p = s.pts[i]; return fmtShort(p.k) + '\n' + unit + fmtNum(p.v) + ' kg · ' + p.sets + '/' + p.n + ' séries' + (p.sl && p.sl.some(x => x !== p.sl[0]) ? '\nSéries : ' + p.sl.map(x => fmtNum(x)).join(' · ') : ''); }}
         draw={c => <g>
           <path d={linePath(s.pts.map((p, i) => [c.cx(i), c.y(p.v)]))} fill="none" stroke="var(--k-muscu)" stroke-width="2" />
           {s.pts.map((p, i) => <circle cx={c.cx(i)} cy={c.y(p.v)} r="4" fill={p.sets >= p.n ? 'var(--k-muscu)' : 'var(--surface)'} stroke="var(--k-muscu)" stroke-width="2" />)}

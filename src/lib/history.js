@@ -1,7 +1,7 @@
 // Historique d'un exercice : dernière réalisation et charge conseillée pour la séance du jour.
 // Progression : double progression (ACSM 2009 : +2 à 10 % quand on dépasse la fourchette) ou réglage par la réserve (Helms 2016).
 import { ids, jget, jset } from './store.js';
-import { blocks, itemKey, doneN, itemLoad } from './plan.js';
+import { blocks, itemKey, doneN, itemLoad, setLoadsOf, setsText, workLoad } from './plan.js';
 import { norm, LIB_BY_ID } from './library.js';
 import { repsOf } from './activity.js';
 import { fmtNum, fmtShort } from './dates.js';
@@ -23,8 +23,9 @@ export function lastPerf(label, k, lib) {
       if (it.id === 'ech' || it.id === 'rac') continue;
       if (!(lib && it.lib === lib) && norm(it.label) !== target) continue;
       const key = itemKey(b, it), n = doneN(e, key, it.n); if (n <= 0) continue;
-      const ld = itemLoad(b, it, e);
-      return { k: d, sets: n, n: it.n, reps: repsOf(it.det), load: ld ? ld.text : '', loadV: ld ? ld.v : null, unit: ld ? ld.u : null, rir: e.rir && typeof e.rir[key] === 'number' ? e.rir[key] : null, full: n >= it.n };
+      const ld = itemLoad(b, it, e), sl = setLoadsOf(e, key), u = ld ? ld.u : it.unit_load || 'kg';
+      const wl = sl ? workLoad(sl) : ld ? ld.v : null;
+      return { k: d, sets: n, n: it.n, reps: repsOf(it.det), load: sl ? setsText(sl, u) : ld ? ld.text : '', loadV: wl, setLoads: sl, unit: u, rir: e.rir && typeof e.rir[key] === 'number' ? e.rir[key] : null, full: n >= it.n };
     }
   }
   return null;
@@ -57,8 +58,10 @@ export function suggestLoad(b, it, k) {
   const v0 = lp.loadV, rx = it.rx || {}, s = step(it, Math.abs(v0)), u = it.unit_load === '+kg' || lp.unit === '+kg' ? '+kg' : 'kg';
   const fmt = v => (u === '+kg' && v > 0 ? '+' : '') + fmtNum(Math.round(v * 100) / 100) + ' kg';
   let v = v0, why;
+  const lighter = lp.setLoads ? lp.setLoads.filter(x => x < v0) : [];
   if (rx.light) { why = 'Semaine de décharge : même charge que la dernière fois (ou un peu moins), loin de l’échec.'; }
   else if (!lp.full) { why = 'Séries incomplètes la dernière fois : on garde la même charge.'; }
+  else if (lighter.length) { why = (lighter.length > 1 ? lighter.length + ' séries allégées' : 'Une série allégée') + ' la dernière fois (' + fmt(Math.min(...lighter)) + ') : on garde ' + fmt(v0) + ' et on vise toutes les séries à cette charge.'; }
   else {
     // répétitions réellement faites : connues seulement si notées dans « Ce que j'ai fait »
     const target = typeof rx.rir === 'number' ? rx.rir : 2, hi = rx.r ? rx.r[1] : null, reps = lp.repsKnown ? num(lp.reps) : null;
