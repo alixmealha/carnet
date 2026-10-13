@@ -11,12 +11,20 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
-const json = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: Object.assign({ 'Content-Type': 'application/json' }, cors) });
+const VERSION = 4;
+const json = (o, status = 200) => new Response(JSON.stringify(Object.assign({ v: VERSION }, o)), { status, headers: Object.assign({ 'Content-Type': 'application/json' }, cors) });
 
+// Clé service : l'ancienne (JWT « eyJ… ») ou la nouvelle (« sb_secret_… »), selon le projet.
+// La nouvelle ne se met que dans l'en-tête apikey : la passer en « Authorization: Bearer » fait échouer l'appel.
+function serviceKey() {
+  const k = env('SUPABASE_SERVICE_ROLE_KEY');
+  if (k) return k;
+  try { const j = JSON.parse(env('SUPABASE_SECRET_KEYS') || '{}'); return j.default || Object.values(j)[0] || ''; } catch (_) { return ''; }
+}
 async function api(path, init, token) {
-  const key = env('SUPABASE_SERVICE_ROLE_KEY');
+  const key = serviceKey(), auth = token || (key.startsWith('eyJ') ? key : '');
   const r = await fetch(env('SUPABASE_URL') + path, Object.assign({}, init, {
-    headers: Object.assign({ apikey: key, Authorization: 'Bearer ' + (token || key), 'Content-Type': 'application/json' }, init && init.headers)
+    headers: Object.assign({ apikey: key, 'Content-Type': 'application/json' }, auth ? { Authorization: 'Bearer ' + auth } : {}, init && init.headers)
   }));
   const t = await r.text();
   let b = null; try { b = t ? JSON.parse(t) : null; } catch (_) { b = t; }
@@ -40,7 +48,7 @@ export async function handle(req) {
 
 async function run(req) {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
-  if (!env('SUPABASE_URL') || !env('SUPABASE_SERVICE_ROLE_KEY')) return json({ error: 'La fonction ne trouve pas la clé service de Supabase (SUPABASE_SERVICE_ROLE_KEY).' }, 500);
+  if (!env('SUPABASE_URL') || !serviceKey()) return json({ error: 'La fonction ne trouve pas la clé service de Supabase (SUPABASE_SERVICE_ROLE_KEY).' }, 500);
   if (req.method !== 'POST') return json({ error: 'Méthode non permise' }, 405);
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   // Qui appelle ? (jeton de session de l'utilisateur connecté)
