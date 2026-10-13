@@ -16,7 +16,7 @@ const welcome = (email, pw) => 'Ton compte Alipto est prêt.\nAdresse : ' + appU
 
 function Create({ onDone }) {
   const [email, setEmail] = useState(''), [pw, setPw] = useState(tempPassword()), [role, setRole] = useState('athlete'), [name, setName] = useState(''), [mine, setMine] = useState(true);
-  const [mode, setMode] = useState('invite');
+  const [mode, setMode] = useState(() => { try { return localStorage.getItem('alipto-admin-mode') || 'pw'; } catch (_) { return 'pw'; } });
   const [busy, setBusy] = useState(false), [err, setErr] = useState(''), [made, setMade] = useState(null);
   const go = async () => {
     setBusy(true); setErr('');
@@ -44,7 +44,7 @@ function Create({ onDone }) {
       </div> : <div class="stack" style="gap:10px">
         <label class="fld">Email<input class="in" type="email" inputmode="email" autocapitalize="off" autocomplete="off" value={email} onInput={e => setEmail(e.target.value)} /></label>
         <label class="fld">Prénom (facultatif)<input class="in" value={name} onInput={e => setName(e.target.value)} /></label>
-        <div><p class="sub-lbl" style="margin-top:0">Accès</p><TextSeg value={mode} onChange={v => setMode(v || mode)} options={[['invite', 'Invitation par e-mail'], ['pw', 'Mot de passe provisoire']]} label="Accès" />
+        <div><p class="sub-lbl" style="margin-top:0">Accès</p><TextSeg value={mode} onChange={v => { const m = v || mode; setMode(m); try { localStorage.setItem('alipto-admin-mode', m); } catch (_) {} }} options={[['pw', 'Mot de passe provisoire'], ['invite', 'Invitation par e-mail']]} label="Accès" />
           <p class="small" style="margin:6px 0 0">{mode === 'invite' ? 'Un e-mail part tout de suite : la personne choisit elle-même son mot de passe. Nécessite l’envoi d’e-mails configuré dans Supabase.' : 'Tu envoies toi-même l’email et le mot de passe provisoire (message privé).'}</p></div>
         {mode === 'pw' && <div style="display:flex;gap:8px;align-items:flex-end">
           <label class="fld" style="flex:1">Mot de passe provisoire<input class="in mono" value={pw} onInput={e => setPw(e.target.value)} autocomplete="off" /></label>

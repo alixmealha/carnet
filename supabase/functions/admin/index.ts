@@ -32,15 +32,24 @@ function frMessage(m) {
   return m;
 }
 
+// Toute erreur imprévue revient en clair (avec les en-têtes CORS), sinon le navigateur n'affiche que « injoignable »
 export async function handle(req) {
+  try { return await run(req); }
+  catch (e) { return json({ error: 'Erreur de la fonction admin : ' + String(e && e.message || e) }, 500); }
+}
+
+async function run(req) {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (!env('SUPABASE_URL') || !env('SUPABASE_SERVICE_ROLE_KEY')) return json({ error: 'La fonction ne trouve pas la clé service de Supabase (SUPABASE_SERVICE_ROLE_KEY).' }, 500);
   if (req.method !== 'POST') return json({ error: 'Méthode non permise' }, 405);
   const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   // Qui appelle ? (jeton de session de l'utilisateur connecté)
   let me;
   try { me = await api('/auth/v1/user', { method: 'GET' }, token); } catch (_) { return json({ error: 'Session expirée : reconnecte-toi.' }, 401); }
-  const prof = await api('/rest/v1/profiles?select=role&id=eq.' + me.id, { method: 'GET' });
-  if (!prof || !prof[0] || prof[0].role !== 'admin') return json({ error: 'Réservé à l’administrateur.' }, 403);
+  let prof;
+  try { prof = await api('/rest/v1/profiles?select=role&id=eq.' + me.id, { method: 'GET' }); }
+  catch (e) { return json({ error: 'Lecture du profil impossible (' + String(e.message || e) + '). As-tu lancé le script SQL de l’étape 2 ?' }, 500); }
+  if (!prof || !prof[0] || prof[0].role !== 'admin') return json({ error: 'Réservé à l’administrateur : ton compte n’a pas le rôle admin dans la table profiles.' }, 403);
 
   let body = {};
   try { body = await req.json(); } catch (_) {}
