@@ -229,6 +229,11 @@ drop trigger if exists docs_notify on public.docs;
 create trigger docs_notify after insert or update on public.docs
   for each row execute function public.notify_change();
 
+/* ---------- 11. Droits du serveur (fonctions admin et notify, clé service) ----------
+   Les projets Supabase récents ne donnent plus ces droits d'office aux nouvelles tables. */
+grant usage on schema public to service_role;
+grant all on table public.docs, public.profiles, public.coach_links, public.invite_codes, public.push_subs to service_role;
+
 -- Recharger le schéma de l'API
 notify pgrst, 'reload schema';
 
