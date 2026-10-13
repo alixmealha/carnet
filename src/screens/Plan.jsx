@@ -351,7 +351,7 @@ function weekSummary(w) {
   return Object.entries(c).sort((a, b) => KIND_LIST.indexOf(a[0]) - KIND_LIST.indexOf(b[0])).map(([kd, n]) => (n > 1 ? n + ' × ' : '') + (KIND[kd] || kd).toLowerCase()).join(' · ') || 'repos';
 }
 
-export function PlanScreen() {
+export function PlanScreen({ seg }) {
   const m = meta();
   const [sh, setSh] = useState(null);
   if (!m) return null;
@@ -363,6 +363,7 @@ export function PlanScreen() {
         <div style="min-width:0"><div class="eyebrow">{!isSelf() ? 'Plan de ' + nameOf(getSubject()) : m.goal ? m.goal.label + ' · ' + fmtShort(m.goal.date) : 'Plan'}</div><h1 class="title">{m.title}</h1></div>
         {ed && <button class="icon-btn" aria-label="Réglages du plan" onClick={() => setSh({ t: 'plan' })}><Icon name="edit" /></button>}
       </div>
+      {seg}
       <div class="stack">
         {!ed && <p class="lock-n"><Icon name="lock" size={16} />Plan verrouillé par ton coach : tu le consultes, lui seul le modifie.</p>}
         {coachView && <label class="card lock-c"><Icon name="lock" size={18} /><span><b>Verrouiller le plan</b><small>{links.locks[subj] ? nameOf(subj) + ' ne peut plus modifier ses séances ni son plan.' : nameOf(subj) + ' peut aussi modifier ses séances.'}</small></span>

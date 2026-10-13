@@ -42,7 +42,7 @@ function Morning({ k, ro }) {
   };
   const setGene = (f, v) => { const ge = Object.assign({}, e.gene); if (v == null) delete ge[f]; else ge[f] = v; jset(k, { gene: ge }); };
   if (!open && (t !== null || ro)) return (
-    <button type="button" class="card sum" onClick={() => setOpen(true)} aria-label="Voir la forme du matin">
+    <button type="button" id="morning" class="card sum" onClick={() => setOpen(true)} aria-label="Voir la forme du matin">
       <span class="sum-k">Forme du matin</span>
       <span class="sum-v">{t !== null ? <><b class="num">{t}<small>/25</small></b><span class={'pill ' + verdict(t).cls}>{verdict(t).lbl}</span></> : <span class="muted">Pas encore remplie</span>}</span>
       {fl.length > 0 && <span class="sum-f">{fl.map(([f, l]) => l + (e.gene && typeof e.gene[f] === 'number' ? ' ' + e.gene[f] + '/10' : '')).join(' · ')}</span>}
@@ -50,7 +50,7 @@ function Morning({ k, ro }) {
     </button>
   );
   return (
-    <section class="card">
+    <section class="card" id="morning">
       <h3 class="h3">Forme du matin <em>{t === null ? '1 = mauvais · 5 = au top' : <button class="btn ghost" style="min-height:28px;padding:0;font-size:13px" onClick={() => setOpen(false)}>Replier</button>}</em></h3>
       <fieldset class="ro" disabled={ro}>
         {WELL.map(([key, lbl, lo, hi]) =>
@@ -140,7 +140,7 @@ function Reading({ k }) {
   const r = dayInsights(k);
   if (!r) return <section class="card"><h3 class="h3">Lecture du jour</h3><p class="small" style="margin:0">Remplis la forme du matin (et ton sommeil si tu l’as) : la séance s’ajuste ici, avec l’explication.</p></section>;
   return (
-    <section class={'card reading ' + r.level}>
+    <section id="reading" class={'card reading ' + r.level}>
       <h3 class="h3">Lecture du jour</h3>
       <div class="light"><i />{r.head}</div>
       <div class="ins">{r.items.map(x => <div class="in-it" style={'--c:' + LVC[x.lvl]}><b>{x.t}</b><span>{x.d}</span><Src ids={x.src} /></div>)}</div>
@@ -326,11 +326,11 @@ export function After({ k, ro }) {
   );
 }
 
-export function DayView({ k, onNav, onStart, onEdit, onOpenTest }) {
+export function DayView({ k, onNav, onStart, onEdit, onOpenTest, noHeader }) {
   const ro = !isSelf();
   return (
     <div class="stack">
-      <DayHeader k={k} onNav={onNav} />
+      {!noHeader && <DayHeader k={k} onNav={onNav} />}
       <Morning k={k} ro={ro} key={'m' + k} />
       <Night k={k} ro={ro} key={'n' + k} />
       <Reading k={k} />

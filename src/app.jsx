@@ -4,20 +4,22 @@ import { sb, cloud } from './lib/supa.js';
 import { meta, newPlan } from './lib/plan.js';
 import { setBadge } from './lib/push.js';
 import { forgotPassword } from './lib/account.js';
+import { Brand, Mark } from './ui/Logo.jsx';
 import { ImportPicker } from './ui/ImportPicker.jsx';
 import { todayKey } from './lib/dates.js';
 import { Icon, Sheet, toast } from './ui/kit.jsx';
 import { Today } from './screens/Today.jsx';
-import { Calendar } from './screens/Calendar.jsx';
 import { DayView } from './screens/DayView.jsx';
 import { SessionMode } from './screens/Session.jsx';
 import { Stats } from './screens/Stats.jsx';
-import { PlanScreen, DayEditor } from './screens/Plan.jsx';
+import { DayEditor } from './screens/Plan.jsx';
+import { PlanTab, setPlanView } from './screens/PlanTab.jsx';
 import { More } from './screens/More.jsx';
 import { Athletes, unreadCount, markSeen } from './screens/Athletes.jsx';
 import { ProfileSetup } from './screens/Setup.jsx';
 
-const BASE_TABS = [['today', 'Aujourd’hui', 'today'], ['cal', 'Calendrier', 'cal'], ['stats', 'Suivi', 'stats'], ['plan', 'Plan', 'plan'], ['more', 'Plus', 'more']];
+// 4 onglets pour un athlète, 5 avec « Athlètes » (recommandation Apple : 5 au plus). Le calendrier vit dans « Plan ».
+const BASE_TABS = [['today', 'Aujourd’hui', 'today'], ['plan', 'Plan', 'cal'], ['stats', 'Suivi', 'stats'], ['more', 'Plus', 'more']];
 const ls = {
   get: k => { try { return localStorage.getItem(k); } catch (_) { return null; } },
   set: (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (_) {} }
@@ -71,8 +73,7 @@ function Login() {
   };
   return (
     <form class="login" onSubmit={submit}>
-      <div class="eyebrow">Carnet d’entraînement</div>
-      <h1 class="title" style="font-size:56px">{forgot ? 'Mot de passe' : 'Alipto'}</h1>
+      {forgot ? <><Mark size={44} /><h1 class="title" style="font-size:48px">Mot de passe</h1></> : <Brand size={56} tagline="Entraînement · coaching" />}
       {forgot ? (sent ? <p class="lead" style="margin:0">Si un compte existe pour <b>{email.trim()}</b>, un e-mail vient de partir. Ouvre le lien qu’il contient : tu choisiras un nouveau mot de passe.</p>
         : <p class="lead" style="margin:0 0 6px">Indique l’email de ton compte : tu recevras un lien pour choisir un nouveau mot de passe.</p>)
         : <p class="lead" style="margin:0 0 6px">Connecte-toi pour retrouver ton plan, ton journal et tes tests.</p>}
@@ -101,7 +102,8 @@ function SetPassword({ type, onDone }) {
   };
   return (
     <form class="login" onSubmit={submit}>
-      <div class="eyebrow">{type === 'invite' ? 'Bienvenue' : 'Mot de passe oublié'}</div>
+      <Mark size={44} />
+      <div class="eyebrow">{type === 'invite' ? 'Bienvenue sur Alipto' : 'Mot de passe oublié'}</div>
       <h1 class="title" style="font-size:44px">{type === 'invite' ? 'Choisis ton mot de passe' : 'Nouveau mot de passe'}</h1>
       <p class="lead" style="margin:0 0 6px">{type === 'invite' ? 'Ton compte est prêt. Choisis un mot de passe : il te servira à te connecter, aussi depuis l’appli installée sur ton écran d’accueil.' : 'Choisis un nouveau mot de passe pour ton compte.'}</p>
       <label class="fld">Mot de passe<input class="in" type="password" autocomplete="new-password" value={pw} onInput={e => setPw(e.target.value)} required autofocus /></label>
@@ -126,6 +128,7 @@ function Onboarding({ onSettings }) {
   const coached = links.coaches.length > 0, locked = planLocked();
   return (
     <div class="login">
+      <Mark size={44} />
       <div class="eyebrow">Premier lancement</div>
       <h1 class="title" style="font-size:52px">Bienvenue</h1>
       {coached ? <p class="lead" style="margin:0">Ton coach prépare ton plan : il apparaîtra ici dès qu’il sera prêt.{locked ? '' : ' Tu peux aussi importer un fichier.'}</p>
@@ -140,7 +143,7 @@ function Onboarding({ onSettings }) {
 
 function Waiting() {
   const err = syncState.state === 'error' || syncState.state === 'offline';
-  return <div class="login"><div class="eyebrow">Alipto</div><h1 class="title">{err ? 'Hors ligne' : 'Un instant'}</h1>
+  return <div class="login"><Mark size={56} cls={err ? '' : 'pulse'} /><h1 class="title">{err ? 'Hors ligne' : 'Un instant'}</h1>
     <p class="lead">{err ? 'Impossible de récupérer ton compte pour le moment.' : 'Récupération de ton compte…'}</p>
     {err && syncState.error && <p class="err">{syncState.error}</p>}
     {err && <button class="btn primary" onClick={() => syncNow()}>Réessayer</button>}</div>;
@@ -166,7 +169,7 @@ function SubjectBar({ onSelf }) {
 export function App() {
   useStore();
   const session = useSession();
-  const [tab, setTab] = useState(() => ls.get('carnet-tab') || 'today');
+  const [tab, setTab] = useState(() => { const t = ls.get('carnet-tab') || 'today'; return t === 'cal' ? 'plan' : t; });
   const [day, setDay] = useState(null);
   const [edit, setEdit] = useState(null);
   const [testFocus, setTestFocus] = useState(null);
@@ -221,9 +224,9 @@ export function App() {
   if (cloud && !links.legacy && (!myRow() || !myRow().onboarded)) return <ProfileSetup />;
 
   const athTab = ['athletes', 'Athlètes', 'people'];
-  const tabs = r === 'coach' ? (coach ? [athTab, ...BASE_TABS] : [athTab, BASE_TABS[4]]) : coach ? [BASE_TABS[0], athTab, ...BASE_TABS.slice(1)] : BASE_TABS;
+  const tabs = r === 'coach' ? (coach ? [athTab, ...BASE_TABS] : [athTab, BASE_TABS[3]]) : coach ? [BASE_TABS[0], athTab, ...BASE_TABS.slice(1)] : BASE_TABS;
   const cur = tabs.some(t => t[0] === tab) ? tab : tabs[0][0];
-  const noPlan = !meta() && ['today', 'cal', 'stats', 'plan'].includes(cur);
+  const noPlan = !meta() && ['today', 'stats', 'plan'].includes(cur);
   const openSession = k => { setDay(null); setSes(k); };
   const openTest = tid => { setDay(null); ls.set('carnet-stats-view', 'tests'); setTestFocus(tid); setTab('stats'); };
   const goSettings = () => { try { sessionStorage.setItem('carnet-more', 'settings'); } catch (_) {} setTab('more'); };
@@ -235,13 +238,12 @@ export function App() {
       <main class={bar ? 'with-subj' : ''} key={subj}>
         {noPlan && <Onboarding onSettings={goSettings} />}
         {!noPlan && cur === 'today' && <Today onStart={openSession} onEdit={onEdit} onOpenTest={openTest} />}
-        {cur === 'athletes' && <Athletes onOpenAthlete={uid => { setSubject(uid); markSeen(uid); setTab('today'); }} onOpenDay={(uid, k) => { setSubject(uid); markSeen(uid); setDay(k); }} onOpenPlan={uid => { setSubject(uid); markSeen(uid); setTab('plan'); }} onGoMore={goSettings} />}
-        {!noPlan && cur === 'cal' && <Calendar onOpen={setDay} />}
+        {cur === 'athletes' && <Athletes onOpenAthlete={uid => { setSubject(uid); markSeen(uid); setTab('today'); }} onOpenDay={(uid, k) => { setSubject(uid); markSeen(uid); setDay(k); }} onOpenPlan={uid => { setSubject(uid); markSeen(uid); setPlanView('prog'); setTab('plan'); }} onGoMore={goSettings} />}
         {!noPlan && cur === 'stats' && <Stats onOpen={setDay} onOpenTest={openTest} testFocus={testFocus} key={testFocus || 'stats'} />}
-        {!noPlan && cur === 'plan' && <PlanScreen />}
+        {!noPlan && cur === 'plan' && <PlanTab onOpen={setDay} />}
         {cur === 'more' && <More session={session} />}
       </main>
-      <nav class={'tabbar' + (tabs.length > 5 ? ' six' : '')} style={tabs.length < 5 ? 'grid-template-columns:repeat(' + tabs.length + ',minmax(0,1fr));padding-left:15%;padding-right:15%' : ''} role="tablist" aria-label="Navigation">
+      <nav class={'tabbar' + (tabs.length > 5 ? ' six' : '')} style={tabs.length < 5 ? 'grid-template-columns:repeat(' + tabs.length + ',minmax(0,1fr))' + (tabs.length < 4 ? ';padding-left:15%;padding-right:15%' : '') : ''} role="tablist" aria-label="Navigation">
         {tabs.map(([id, l, ic]) => <button role="tab" aria-selected={cur === id ? 'true' : 'false'} onClick={() => { if (cur === id) window.scrollTo({ top: 0, behavior: 'smooth' }); setTab(id); if (id !== 'stats') setTestFocus(null); }}><span class="ti"><Icon name={ic} />{id === 'athletes' && unread > 0 && <i class="dotn">{unread > 9 ? '9+' : unread}</i>}</span>{l}</button>)}
       </nav>
       {day && !edit && <Sheet title={self ? 'Fiche du jour' : 'Fiche de ' + nameOf(subj)} onClose={() => setDay(null)}><DayView k={day} onNav={setDay} onStart={openSession} onEdit={onEdit} onOpenTest={openTest} key={day} /></Sheet>}

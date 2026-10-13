@@ -1,3 +1,4 @@
+import { useEffect } from 'preact/hooks';
 import { jget } from '../lib/store.js';
 import { meta, weekKeys, weekLabel, PHASE_LABEL, progress, eventOn } from '../lib/plan.js';
 import { score, verdict, verdictColor } from '../lib/rules.js';
@@ -12,7 +13,9 @@ function legendKinds(m) {
   return KIND_ORDER.filter(k => seen.has(k));
 }
 
-export function Calendar({ onOpen }) {
+export function Calendar({ onOpen, seg }) {
+  // à l'ouverture, on se place sur la semaine en cours plutôt qu'au début du plan
+  useEffect(() => { const el = document.querySelector('.cal .cd.today'); if (el && el.getBoundingClientRect().top > window.innerHeight * 0.6) window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 220)); }, []);
   const m = meta(); if (!m) return null;
   const t = todayKey();
   const groups = [];
@@ -24,6 +27,7 @@ export function Calendar({ onOpen }) {
   return (
     <div class="screen">
       <div class="head"><div><div class="eyebrow">{m.title} · {weekLabel(m.weeks[0])} à {weekLabel(m.weeks[m.weeks.length - 1])}</div><h1 class="title">Calendrier</h1></div></div>
+      {seg}
       <div class="card">
         <div class="cal">
           <div />{DOW_1.map(d => <div class="dow">{d}</div>)}

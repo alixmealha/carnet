@@ -9,6 +9,7 @@ import { Icon, Sheet, toast } from '../ui/kit.jsx';
 import { SettingsPage, Switch } from './Settings.jsx';
 import { AdminPage } from './Admin.jsx';
 import { ROLE_LBL } from './Setup.jsx';
+import { Mark, Wordmark } from '../ui/Logo.jsx';
 
 function RenameSheet({ ex, onClose }) {
   const [v, setV] = useState(ex.label), [fut, setFut] = useState(true);
@@ -102,7 +103,12 @@ export function More({ session }) {
             <li>Lance Alipto depuis son icône : plein écran, hors ligne, et notifications possibles.</li>
           </ol>
         </section>
-        <p class="small" style="text-align:center">{meta() ? meta().title + ' · ' : ''}Alipto v3.1</p>
+        <section class="card about">
+          <Mark size={52} />
+          <div><Wordmark size={30} />
+            <p>Du grec <i>aleiptès</i> : celui qui préparait les athlètes, à la fois entraîneur et soigneur. Ton plan, ta forme, tes tests et ton coach au même endroit.</p>
+            <p class="small" style="margin-top:6px">Version 3.2{meta() ? ' · ' + meta().title : ''}</p></div>
+        </section>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { useState } from 'preact/hooks';
 import { myProfile, myRow, saveMyProfile, role as roleOf } from '../lib/store.js';
 import { logWeight } from '../lib/tests.js';
 import { TextSeg, toast } from '../ui/kit.jsx';
+import { Mark } from '../ui/Logo.jsx';
 
 export const SEXES = [['F', 'Femme'], ['M', 'Homme'], ['X', 'Autre']];
 export const ROLE_LBL = { athlete: 'Athlète', coach: 'Coach', admin: 'Administrateur' };
@@ -60,6 +61,7 @@ export function ProfileSetup() {
   };
   return (
     <form class="login setup" onSubmit={e => { e.preventDefault(); next(); }}>
+      {step === 0 && <Mark size={44} />}
       <div class="eyebrow">Premier lancement · {step + 1}/{steps.length}</div>
       {cur === 'name' && <>
         <h1 class="title" style="font-size:52px">Bienvenue</h1>
