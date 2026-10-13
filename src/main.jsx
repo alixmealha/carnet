@@ -8,5 +8,7 @@ import '@fontsource/ibm-plex-mono/latin-500';
 import './styles.css';
 import { initStore } from './lib/store.js';
 import { App } from './app.jsx';
+import { setupUpdates } from './lib/update.js';
 
 initStore().then(() => render(<App />, document.getElementById('app')));
+setupUpdates();

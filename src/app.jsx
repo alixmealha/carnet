@@ -4,6 +4,7 @@ import { sb, cloud } from './lib/supa.js';
 import { meta, newPlan } from './lib/plan.js';
 import { setBadge } from './lib/push.js';
 import { forgotPassword } from './lib/account.js';
+import { applyUpdateIfIdle } from './lib/update.js';
 import { Brand, Mark } from './ui/Logo.jsx';
 import { ImportPicker } from './ui/ImportPicker.jsx';
 import { todayKey } from './lib/dates.js';
@@ -183,7 +184,7 @@ export function App() {
     if (!started.current) { started.current = true; startAutoSync(); } else { syncNow(); setTab('today'); setDay(null); setEdit(null); setSes(null); }
   }, [session && session.user && session.user.id]);
   useEffect(() => { ls.set('carnet-tab', tab); window.scrollTo(0, 0); }, [tab]);
-  useEffect(() => { ls.set('carnet-ses', ses); }, [ses]);
+  useEffect(() => { ls.set('carnet-ses', ses); if (!ses) applyUpdateIfIdle(); }, [ses]);
 
   // Liens profonds : ?a=<athlète>&d=AAAA-MM-JJ (notifications)
   const openLink = url => {

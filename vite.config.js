@@ -9,8 +9,10 @@ export default defineConfig({
   plugins: [
     preact(),
     VitePWA({
+      // Nouvelle version : le service worker prend la main tout de suite (skipWaiting) et l'appli se recharge
+      // d'elle-même (voir src/lib/update.js), sauf pendant une séance.
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      injectRegister: false,
       includeAssets: ['apple-touch-icon.png', 'favicon.svg', 'push-sw.js'],
       manifest: {
         name: 'Alipto',
@@ -33,7 +35,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: base + 'index.html',
         importScripts: ['push-sw.js'],
-        cleanupOutdatedCaches: true
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true
       }
     })
   ],
