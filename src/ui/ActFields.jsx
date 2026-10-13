@@ -5,6 +5,10 @@ import { target, uid, clone } from '../lib/plan.js';
 import { SIV } from '../lib/rules.js';
 import { ACTS, acts, plannedActs, hasLog, plannedLog, knownExercises } from '../lib/activity.js';
 import { Seg, Icon, Src } from './kit.jsx';
+import { relevantActs } from '../lib/sports.js';
+import { lastPerf, perfText } from '../lib/history.js';
+
+function LastHint({ k, label }) { const lp = lastPerf(label, k); return lp ? <p class="last-t" style="margin:2px 0 0">Dernière fois · {perfText(lp)}</p> : null; }
 
 const ORDER = ACTS.map(a => a[0]);
 const same = (a, b) => a.length === b.length && a.every(x => b.includes(x));
@@ -41,11 +45,13 @@ function ExLog({ k }) {
             <input class="in" list="ex-names" value={r.label} placeholder="Nom de l’exercice" aria-label="Exercice" onInput={e => upd(i, { label: e.target.value })} onBlur={() => commit(rows)} />
             <button type="button" class="icon-btn" aria-label={'Retirer ' + (r.label || 'cet exercice')} onClick={() => { const n = rows.filter((_, j) => j !== i); setRows(n); commit(n); }}><Icon name="close" size={16} /></button>
           </div>
-          <div class="grid3">
+          <div class="grid4 exl-g">
             <label class="fld">Séries<input class="in mono" inputmode="numeric" value={r.sets == null ? '' : r.sets} onInput={e => upd(i, { sets: e.target.value === '' ? null : (num(e.target.value) === null ? e.target.value : num(e.target.value)) })} onBlur={() => commit(rows)} /></label>
             <label class="fld">Rép. / durée<input class="in mono" value={r.reps || ''} placeholder="8 ou 30 s" onInput={e => upd(i, { reps: e.target.value })} onBlur={() => commit(rows)} /></label>
             <label class="fld">Charge<input class="in mono" value={r.load || ''} placeholder="kg, élastique" onInput={e => upd(i, { load: e.target.value })} onBlur={() => commit(rows)} /></label>
+            <label class="fld">Réserve<select class="in mono" value={r.rir == null ? '' : String(r.rir)} onChange={e => { const n = rows.map((x, j) => (j === i ? Object.assign({}, x, { rir: e.target.value === '' ? null : +e.target.value }) : x)); setRows(n); commit(n); }}><option value="">—</option>{[0, 1, 2, 3, 4].map(x => <option value={String(x)}>{x === 4 ? '4+' : x}</option>)}</select></label>
           </div>
+          {r.label && <LastHint k={k} label={r.label} />}
         </div>
       ))}
       <datalist id="ex-names">{names.map(n => <option value={n} />)}</datalist>
@@ -66,11 +72,16 @@ export function ActFields({ k }) {
   const setSiv = (key, v) => { const s = Object.assign({}, jget(k).siv); if (v == null) delete s[key]; else s[key] = v; jset(k, { siv: Object.keys(s).length ? s : null }); };
   const setCardio = patch => { const c = Object.assign({}, jget(k).cardio, patch); for (const x of Object.keys(c)) if (c[x] == null) delete c[x]; jset(k, { cardio: Object.keys(c).length ? c : null }); };
   const pain = e.pain;
+  // Activités du profil (sports pratiqués) + celles du jour ; le reste derrière « Autre »
+  const rel = relevantActs(), [more, setMore] = useState(false);
+  const shown = ACTS.filter(([a]) => !rel || more || rel.has(a) || list.includes(a) || planned.includes(a));
+  const hidden = ACTS.length - shown.length;
   return (
     <div class="stack act-f" style="gap:16px">
       <div>
         <p class="sub-lbl" style="margin-top:0">Activité<small>{planned.length ? 'd’après le plan, modifiable' : 'ce que tu as fait'}</small></p>
-        <div class="chips">{ACTS.map(([a, l]) => <button type="button" class="chip sel" aria-pressed={list.includes(a) ? 'true' : 'false'} onClick={() => toggle(a)}>{l}</button>)}</div>
+        <div class="chips">{shown.map(([a, l]) => <button type="button" class="chip sel" aria-pressed={list.includes(a) ? 'true' : 'false'} onClick={() => toggle(a)}>{l}</button>)}
+          {hidden > 0 && <button type="button" class="chip" style="border-style:dashed" onClick={() => setMore(true)}>Autre…</button>}</div>
       </div>
       {list.includes('grimpe') && <div>
         <p class="small" style="margin:0">Profil de la séance d’escalade, sur 10{tg && typeof tg.s === 'number' ? ' · en bleu, le profil visé' : ''}</p>

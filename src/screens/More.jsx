@@ -107,7 +107,7 @@ export function More({ session }) {
           <Mark size={52} />
           <div><Wordmark size={30} />
             <p>Du grec <i>aleiptès</i> : celui qui préparait les athlètes, à la fois entraîneur et soigneur. Ton plan, ta forme, tes tests et ton coach au même endroit.</p>
-            <p class="small" style="margin-top:6px">Version 3.3{meta() ? ' · ' + meta().title : ''}</p></div>
+            <p class="small" style="margin-top:6px">Version 3.4{meta() ? ' · ' + meta().title : ''}</p></div>
         </section>
       </div>
     </div>

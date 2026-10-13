@@ -4,7 +4,7 @@ import { get, ids, put, remove, profileOf, getSubject, getFor, putFor, SELF } fr
 import { todayKey } from './dates.js';
 
 export const CATS = [
-  ['doigts', 'Doigts'], ['tirage', 'Tirage'], ['poussee', 'Poussée'], ['gainage', 'Gainage'],
+  ['doigts', 'Doigts'], ['tirage', 'Tirage'], ['poussee', 'Poussée'], ['force', 'Force (muscu)'], ['gainage', 'Gainage'],
   ['puissance', 'Puissance'], ['epaule', 'Épaule'], ['mobilite', 'Mobilité'], ['aerobie', 'Aérobie'], ['corps', 'Mesures'], ['perso', 'Mes tests']
 ];
 const M = (k, l, unit, better) => ({ k, l, unit, better: better || 'up' });
@@ -63,6 +63,17 @@ export const CATALOG = [
   { id: 'pushups', cat: 'poussee', name: 'Max pompes', sides: false, measures: V('rép.'),
     proto: ['Corps gainé, poitrine à un poing du sol.', 'Arrêt quand le gainage ou l’amplitude se dégrade.'] },
 
+  { id: 'squat-1rm', cat: 'force', name: 'Squat 1RM', sides: false, measures: V('kg'), rel: true,
+    equip: 'Barre, rack avec sécurités, disques.',
+    proto: ['Échauffement : 2 séries légères puis montées en charge (5, 3, 2, 1 répétitions).', 'Descente au moins cuisses parallèles, remontée complète, sans rebond.', 'Paliers de 2,5 à 5 kg, 3 à 5 min de repos, 3 à 5 tentatives au maximum.', 'Ou plus prudent : 3 à 5 répétitions maximales, 1RM estimé = charge × (1 + rép. ÷ 30).'],
+    tips: 'Toujours avec sécurités ou pareur. L’estimation sur 3 à 5 répétitions suffit pour régler les charges du programme.' },
+  { id: 'bench-1rm', cat: 'force', name: 'Développé couché 1RM', sides: false, measures: V('kg'), rel: true,
+    equip: 'Banc, barre, sécurités ou pareur.',
+    proto: ['Même échauffement progressif que le squat.', 'Barre touchée à la poitrine sans rebond, fesses sur le banc.', 'Paliers de 1 à 2,5 kg, 3 à 5 min de repos.', 'Ou 3 à 5 répétitions maximales : 1RM estimé = charge × (1 + rép. ÷ 30).'] },
+  { id: 'deadlift-1rm', cat: 'force', name: 'Soulevé de terre 1RM', sides: false, measures: V('kg'), rel: true,
+    equip: 'Barre et disques.',
+    proto: ['Échauffement progressif.', 'Dos neutre du début à la fin, barre près du corps, verrouillage hanches et genoux en haut.', 'Paliers de 5 kg puis 2,5 kg, 3 à 5 min de repos.', 'Ou 3 à 5 répétitions maximales : 1RM estimé = charge × (1 + rép. ÷ 30).'] },
+
   { id: 'plank-side', cat: 'gainage', name: 'Gainage latéral', sides: true, measures: V('s'),
     proto: ['Sur l’avant-bras, jambes tendues, corps aligné.', 'Arrêt dès que le bassin s’affaisse.', '1 essai par côté, 2 min de repos.'] },
   { id: 'plank-arms', cat: 'gainage', name: 'Gainage bras tendus', sides: false, measures: V('s'),
@@ -100,6 +111,12 @@ export const CATALOG = [
     equip: 'Tapis de course.',
     proto: ['Échauffement 10 min.', 'Départ à 8 km/h, +1 km/h chaque minute.', 'VMA = vitesse du dernier palier complet (+ fraction du palier entamé).'] },
 
+  { id: 'run-5k', cat: 'aerobie', name: '5 km chrono', sides: false, measures: [M('v', 'Temps', 'min', 'down')],
+    equip: 'Piste, parcours plat mesuré ou montre GPS.',
+    proto: ['Échauffement 10 à 15 min avec quelques accélérations.', '5 km le plus vite possible, allure régulière.', 'Temps en minutes décimales : 22 min 30 s = 22,5.'] },
+  { id: 'cooper', cat: 'aerobie', name: 'Test de Cooper (12 min)', sides: false, measures: V('m'),
+    equip: 'Piste de 400 m ou montre GPS.',
+    proto: ['Échauffement 10 min.', 'Courir la plus grande distance possible en 12 min.', 'VO2max estimée ≈ (distance − 504,9) ÷ 44,73 (Cooper, 1968).'] },
   { id: 'poids', cat: 'corps', name: 'Poids de corps', sides: false, measures: [M('v', 'Poids', 'kg', 'none')],
     proto: ['Le matin, à jeun, après être passé aux toilettes.', 'Sert à calculer les valeurs en % du poids de corps.'] }
 ];

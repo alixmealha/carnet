@@ -3,8 +3,8 @@ import { cloud } from './supa.js';
 import { rangeKeys, r05, fmtNum, fmtDay, addDays, mondayOf, todayKey } from './dates.js';
 import { history } from './tests.js';
 
-export const KIND = { grimpe: 'Escalade', doigts: 'Doigts', muscu: 'Muscu', renfo: 'Renfo', epaule: 'Épaule', kine: 'Kiné', velo: 'Cardio', test: 'Test', compet: 'Compétition', affut: 'Affûtage', recup: 'Récupération', autre: 'Autre', rest: 'Repos' };
-export const KIND_ORDER = ['grimpe', 'doigts', 'muscu', 'renfo', 'epaule', 'kine', 'velo', 'test', 'compet', 'affut', 'recup', 'autre', 'rest'];
+export const KIND = { grimpe: 'Escalade', doigts: 'Doigts', muscu: 'Muscu', renfo: 'Renfo', epaule: 'Épaule', kine: 'Kiné', velo: 'Cardio', course: 'Course', sport: 'Sport', test: 'Test', compet: 'Compétition', affut: 'Affûtage', recup: 'Récupération', autre: 'Autre', rest: 'Repos' };
+export const KIND_ORDER = ['grimpe', 'doigts', 'muscu', 'renfo', 'epaule', 'kine', 'velo', 'course', 'sport', 'test', 'compet', 'affut', 'recup', 'autre', 'rest'];
 
 export const meta = () => get('plan');
 export const day = k => get('p:' + k) || null;
@@ -64,7 +64,7 @@ export function itemLoad(b, it, e) {
   const key = itemKey(b, it), own = e && e.loads && typeof e.loads[key] === 'number' ? e.loads[key] : null;
   if (it.load == null && own == null) return null;
   const v = own != null ? own : it.load, u = it.unit_load || 'kg';
-  return { v, u, changed: own != null && own !== it.load, text: (u === '+kg' ? '+' : '') + fmtNum(v) + ' kg' };
+  return { v, u, changed: it.load != null && own != null && own !== it.load, chosen: it.load == null && own != null, text: (u === '+kg' && v >= 0 ? '+' : '') + fmtNum(v) + ' kg' };
 }
 // Finger lift en % du test : charges calculées
 export function fingerCalc(b, k) {

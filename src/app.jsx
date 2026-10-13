@@ -17,7 +17,9 @@ import { DayEditor } from './screens/Plan.jsx';
 import { PlanTab, setPlanView } from './screens/PlanTab.jsx';
 import { More } from './screens/More.jsx';
 import { Athletes, unreadCount, markSeen } from './screens/Athletes.jsx';
-import { ProfileSetup } from './screens/Setup.jsx';
+import { ProfileSetup, SportsSetup } from './screens/Setup.jsx';
+import { mySportsAsked } from './lib/sports.js';
+import { BuilderEntry } from './screens/Builder.jsx';
 
 // 4 onglets pour un athlète, 5 avec « Athlètes » (recommandation Apple : 5 au plus). Le calendrier vit dans « Plan ».
 const BASE_TABS = [['today', 'Aujourd’hui', 'today'], ['plan', 'Plan', 'cal'], ['stats', 'Suivi', 'stats'], ['more', 'Plus', 'more']];
@@ -121,8 +123,9 @@ function Onboarding({ onSettings }) {
     <div class="login">
       <div class="eyebrow">Carnet de {who}</div>
       <h1 class="title" style="font-size:44px">Pas encore de plan</h1>
-      <p class="lead" style="margin:0">Importe le plan de {who} (fichier .json) : séances, cycles, repères, tests. Son journal déjà rempli n’est jamais écrasé.</p>
-      <ImportPicker label={'Importer le plan de ' + who} />
+      <p class="lead" style="margin:0">Crée le programme de {who} avec l’assistant, ou importe son plan (fichier .json). Son journal déjà rempli n’est jamais écrasé.</p>
+      <BuilderEntry big />
+      <ImportPicker secondary label={'Importer le plan de ' + who} />
       <button class="btn ghost" onClick={() => { newPlan(); toast('Plan vide créé'); }}>Créer un plan vide</button>
     </div>
   );
@@ -133,8 +136,9 @@ function Onboarding({ onSettings }) {
       <div class="eyebrow">Premier lancement</div>
       <h1 class="title" style="font-size:52px">Bienvenue</h1>
       {coached ? <p class="lead" style="margin:0">Ton coach prépare ton plan : il apparaîtra ici dès qu’il sera prêt.{locked ? '' : ' Tu peux aussi importer un fichier.'}</p>
-        : <p class="lead" style="margin:0">Importe ton plan (fichier .json) ou pars d’un plan vide. Si un coach te suit, donne-lui accès à ton carnet : il pourra préparer ton plan.</p>}
-      {!locked && <ImportPicker label="Importer un plan" />}
+        : <p class="lead" style="margin:0">Crée ton programme avec l’assistant : objectif, séances, repos et progression. Tu peux aussi importer un plan (fichier .json) ou partir d’un plan vide. Si un coach te suit, donne-lui accès à ton carnet.</p>}
+      {!locked && <BuilderEntry big />}
+      {!locked && <ImportPicker secondary label="Importer un plan" />}
       {!locked && <button class="btn ghost" onClick={() => { newPlan(); toast('Plan vide créé, à remplir dans l’onglet Plan'); }}>Commencer avec un plan vide</button>}
       {cloud && !coached && !links.legacy && <button class="btn" onClick={onSettings}>Donner accès à mon coach</button>}
       {syncState.state === 'error' && <p class="err">Synchronisation impossible : {syncState.error}</p>}
@@ -223,6 +227,7 @@ export function App() {
   if (cloud && setpw) return <SetPassword type={setpw} onDone={() => { ls.set('carnet-setpw', null); setSetpw(null); }} />;
   if (cloud && !links.legacy && !myRow() && !syncState.last) return <Waiting />;
   if (cloud && !links.legacy && (!myRow() || !myRow().onboarded)) return <ProfileSetup />;
+  if (r !== 'coach' && !mySportsAsked() && (!cloud || syncState.last)) return <SportsSetup />;
 
   const athTab = ['athletes', 'Athlètes', 'people'];
   const tabs = r === 'coach' ? (coach ? [athTab, ...BASE_TABS] : [athTab, BASE_TABS[3]]) : coach ? [BASE_TABS[0], athTab, ...BASE_TABS.slice(1)] : BASE_TABS;

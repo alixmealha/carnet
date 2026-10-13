@@ -4,6 +4,7 @@ import { todayKey, fmtShort, fmtDay, fmtNum, dom, MON_S } from '../lib/dates.js'
 import { Sheet, Fold, Icon, Src, toast } from '../ui/kit.jsx';
 import { Chart, linePath } from '../ui/charts.jsx';
 import { TestEntry } from './DayView.jsx';
+import { relevantTestCats } from '../lib/sports.js';
 
 const f1 = x => fmtNum(Math.round(x * 10) / 10);
 const sideName = { D: 'droite', G: 'gauche' };
@@ -141,6 +142,10 @@ export function TestsView({ onOpenDay, focus }) {
   const [sheet, setSheet] = useState(focus ? { t: 'test', id: focus } : null);
   const tests = allTests(), days = testDays().slice().reverse();
   const done = new Set(); for (const d of testDays()) for (const id of Object.keys(resultsOn(d).res || {})) done.add(id);
+  // Catégories utiles pour les sports du profil ; les autres derrière un bouton (sauf si déjà des résultats)
+  const rel = relevantTestCats(), [all, setAll] = useState(false);
+  const visible = c => !rel || all || rel.has(c) || tests.some(t => t.cat === c && done.has(t.id));
+  const hiddenN = CATS.filter(([c]) => !visible(c) && tests.some(t => t.cat === c)).length;
   return (
     <div class="stack">
       <div class="row-btns">
@@ -154,7 +159,7 @@ export function TestsView({ onOpenDay, focus }) {
         </button>; })}
       </Fold>}
       {CATS.map(([c, l]) => {
-        const list = tests.filter(t => t.cat === c); if (!list.length) return null;
+        const list = tests.filter(t => t.cat === c); if (!list.length || !visible(c)) return null;
         const n = list.filter(t => done.has(t.id)).length;
         return <Fold key={c + (n > 0 ? '1' : '0')} id={'tests-cat-' + c} title={l} open={n > 0} summary={list.length + ' test' + (list.length > 1 ? 's' : '') + (n ? ' · ' + n + ' avec résultats' : '')} cls="flat-b">
           {list.map(t => {
@@ -167,6 +172,7 @@ export function TestsView({ onOpenDay, focus }) {
           })}
         </Fold>;
       })}
+      {hiddenN > 0 && <button class="btn ghost" onClick={() => setAll(true)}>Voir les autres tests ({hiddenN} catégorie{hiddenN > 1 ? 's' : ''})</button>}
       <p class="small" style="text-align:center">Les pourcentages comparent au résultat précédent (côté droit ou première mesure).</p>
       {sheet && sheet.t === 'test' && <TestSheet tid={sheet.id} onClose={() => setSheet(null)} onAdd={id => setSheet({ t: 'entry', pre: [id] })} onOpenDay={onOpenDay} />}
       {sheet && sheet.t === 'entry' && <EntrySheet k0={sheet.k} pre={sheet.pre} onClose={() => setSheet(null)} />}

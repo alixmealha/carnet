@@ -5,7 +5,8 @@ import { score, verdict, verdictColor } from '../lib/rules.js';
 import { todayKey, dow, dom, MON_S, DOW_1, fmtDay } from '../lib/dates.js';
 import { tapesOf } from './Today.jsx';
 import { KIND, KIND_ORDER } from '../lib/plan.js';
-import { ids, get } from '../lib/store.js';
+import { ids, get, canEditPlan } from '../lib/store.js';
+import { BuilderEntry } from './Builder.jsx';
 
 function legendKinds(m) {
   const seen = new Set();
@@ -26,7 +27,7 @@ export function Calendar({ onOpen, seg }) {
   }
   return (
     <div class="screen">
-      <div class="head"><div><div class="eyebrow">{m.title} · {weekLabel(m.weeks[0])} à {weekLabel(m.weeks[m.weeks.length - 1])}</div><h1 class="title">Calendrier</h1></div></div>
+      <div class="head"><div><div class="eyebrow">{m.title} · {weekLabel(m.weeks[0])} à {weekLabel(m.weeks[m.weeks.length - 1])}</div><h1 class="title">Calendrier</h1></div>{canEditPlan() && <BuilderEntry compact />}</div>
       {seg}
       <div class="card">
         <div class="cal">

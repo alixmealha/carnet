@@ -2,8 +2,9 @@ import { jget, ids } from './store.js';
 import { meta, target, blocks, weekKeys, allItems, doneN, itemLoad, sessionName, PHASE_LABEL, weekLabel } from './plan.js';
 import { score, nightTotal, zoneOf, rng, FLAGS, verdict } from './rules.js';
 import { addDays, todayKey, fmtRange } from './dates.js';
+import { climber } from './sports.js';
 
-export function dayPlanned(k) { const t = target(k); return t ? t.i + t.v : 0; }
+export function dayPlanned(k) { const t = target(k); return t ? (t.i || 0) + (t.v || 0) : 0; }
 export function dayReal(k) {
   const e = jget(k);
   if (e.siv && typeof e.siv.i === 'number' && typeof e.siv.v === 'number') return e.siv.i + e.siv.v;
@@ -15,6 +16,7 @@ const climbing = k => blocks(k).some(b => ['grimpe', 'doigts', 'test', 'compet',
 
 export function weeksStats() {
   const m = meta(); if (!m) return [];
+  const cl = climber(); // grimpeur : intensité des séances d'escalade et de doigts ; sinon toutes les séances
   return m.weeks.map((w, wi) => {
     const ks = weekKeys(w); let plan = 0, real = 0, rh = false, ua = 0, uh = false, wsum = 0, wn = 0, ssum = 0, sn = 0, items = 0, itemsDone = 0;
     const tz = [0, 0, 0];
@@ -24,7 +26,7 @@ export function weeksStats() {
       const e = jget(k);
       if (typeof e.rpe === 'number' && typeof e.duree === 'number' && e.duree > 0) {
         ua += e.rpe * e.duree; uh = true;
-        if (climbing(k)) tz[zoneOf(e.rpe)] += e.duree;
+        if (!cl || climbing(k)) tz[zoneOf(e.rpe)] += e.duree;
       }
       const t = score(e); if (t !== null) { wsum += t; wn++; }
       const nt = nightTotal(e); if (nt !== null) { ssum += nt; sn++; }

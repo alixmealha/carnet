@@ -4,6 +4,7 @@ import { myProfile, myRow, saveMyProfile, role as roleOf } from '../lib/store.js
 import { logWeight } from '../lib/tests.js';
 import { TextSeg, toast } from '../ui/kit.jsx';
 import { Mark } from '../ui/Logo.jsx';
+import { SPORTS, DIETS } from '../lib/sports.js';
 
 export const SEXES = [['F', 'Femme'], ['M', 'Homme'], ['X', 'Autre']];
 export const ROLE_LBL = { athlete: 'Athlète', coach: 'Coach', admin: 'Administrateur' };
@@ -35,25 +36,66 @@ export function BodyFields({ f, set }) {
   );
 }
 
+// Sports pratiqués et régime : adaptent les activités, les séances, les tests, le programme et l'alimentation
+export const sportsDraft = p => ({ sports: Array.isArray(p.sports) ? p.sports.slice() : [], diet: p.diet || 'omni' });
+export function SportsFields({ f, set }) {
+  const sp = f.sports || [];
+  const tog = id => set({ sports: sp.includes(id) ? sp.filter(x => x !== id) : sp.concat([id]) });
+  return (
+    <div class="stack" style="gap:12px">
+      <div><p class="sub-lbl" style="margin-top:0">Sports pratiqués<small>plusieurs choix possibles</small></p>
+        <div class="chips">{SPORTS.map(([id, l]) => <button type="button" class="chip sel" aria-pressed={sp.includes(id) ? 'true' : 'false'} onClick={() => tog(id)}>{l}</button>)}</div></div>
+      <div><p class="sub-lbl" style="margin-top:0">Régime alimentaire</p><TextSeg value={f.diet || 'omni'} onChange={v => set({ diet: v || 'omni' })} options={DIETS} label="Régime alimentaire" /></div>
+      <p class="small" style="margin:0">Tes sports règlent les activités proposées après la séance, les types de séance, les tests et l’assistant de programme. Le régime sert aux conseils d’alimentation (la vitamine B12 en végan, par exemple).</p>
+    </div>
+  );
+}
+
+// Profil déjà créé avant l'ajout des sports : on les demande une fois
+export function SportsSetup() {
+  const [f, setF] = useState(() => sportsDraft(myProfile()));
+  const [err, setErr] = useState(''), [busy, setBusy] = useState(false);
+  const save = async skip => {
+    if (!skip && !f.sports.length) { setErr('Choisis au moins un sport, ou « Autre sport ».'); return; }
+    setBusy(true);
+    try { await saveMyProfile(skip ? { sports: [], diet: f.diet } : f); toast('Profil enregistré'); } catch (e) { setErr(e.message); }
+    setBusy(false);
+  };
+  return (
+    <form class="login setup" onSubmit={e => { e.preventDefault(); save(false); }}>
+      <Mark size={44} />
+      <div class="eyebrow">Nouveau dans Alipto</div>
+      <h1 class="title" style="font-size:44px">Tes sports</h1>
+      <p class="lead" style="margin:0">L’appli s’adapte maintenant à ce que tu pratiques : séances, tests, assistant de programme et conseils d’alimentation.</p>
+      <SportsFields f={f} set={patch => setF(Object.assign({}, f, patch))} />
+      {err && <p class="err" role="alert">{err}</p>}
+      <button type="submit" class="btn big primary" disabled={busy}>{busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+      <button type="button" class="btn ghost" disabled={busy} onClick={() => save(true)}>Plus tard</button>
+    </form>
+  );
+}
+
 export function ProfileSetup() {
   const p = myProfile(), row = myRow(), preset = row && row.role;
   const [step, setStep] = useState(0);
   const [name, setName] = useState(p.name || '');
   const [role, setRole] = useState(preset || null);
   const [f, setF] = useState(() => bodyDraft(p));
+  const [sp, setSp] = useState(() => sportsDraft(p));
   const [err, setErr] = useState(''), [busy, setBusy] = useState(false);
-  const steps = ['name'].concat(preset ? [] : ['role']).concat(role === 'coach' ? [] : ['body']);
+  const steps = ['name'].concat(preset ? [] : ['role']).concat(role === 'coach' ? [] : ['body', 'sports']);
   const cur = steps[Math.min(step, steps.length - 1)], last = step >= steps.length - 1;
   const next = async () => {
     setErr('');
     if (cur === 'name' && !name.trim()) { setErr('Ton prénom, pour que ton coach ou tes athlètes te reconnaissent.'); return; }
     if (cur === 'role' && !role) { setErr('Choisis athlète ou coach.'); return; }
+    if (cur === 'sports' && !sp.sports.length) { setErr('Choisis au moins un sport, ou « Autre sport ».'); return; }
     if (!last) { setStep(step + 1); return; }
     const body = role === 'coach' ? {} : checkBody(f);
     if (typeof body === 'string') { setErr(body); return; }
     setBusy(true);
     try {
-      await saveMyProfile(Object.assign({ name: name.trim().slice(0, 40), role, onboarded: true }, body));
+      await saveMyProfile(Object.assign({ name: name.trim().slice(0, 40), role, onboarded: true }, body, role === 'coach' ? {} : sp));
       if (role !== 'coach' && body.weight_kg) logWeight(body.weight_kg);
       toast('Profil enregistré');
     } catch (e) { setErr(/Failed to fetch|network|load/i.test(e.message || '') ? 'Pas de connexion : réessaie dans un instant.' : e.message); }
@@ -81,6 +123,10 @@ export function ProfileSetup() {
         <h1 class="title" style="font-size:44px">Ton profil</h1>
         <BodyFields f={f} set={patch => setF(Object.assign({}, f, patch))} />
       </>}
+      {cur === 'sports' && <>
+        <h1 class="title" style="font-size:44px">Tes sports</h1>
+        <SportsFields f={sp} set={patch => setSp(Object.assign({}, sp, patch))} />
+      </>}
       {err && <p class="err" role="alert">{err}</p>}
       <div class="row-btns">
         {step > 0 && <button type="button" class="btn" onClick={() => { setErr(''); setStep(step - 1); }}>Retour</button>}
@@ -95,9 +141,10 @@ export function ProfileForm() {
   const p = myProfile(), r = roleOf();
   const [name, setName] = useState(p.name || '');
   const [f, setF] = useState(() => bodyDraft(p));
+  const [sp, setSp] = useState(() => sportsDraft(p));
   const [err, setErr] = useState(''), [busy, setBusy] = useState(false);
   const coach = r === 'coach';
-  const dirty = name.trim() !== (p.name || '') || JSON.stringify(f) !== JSON.stringify(bodyDraft(p));
+  const dirty = name.trim() !== (p.name || '') || JSON.stringify(f) !== JSON.stringify(bodyDraft(p)) || (!coach && JSON.stringify(sp) !== JSON.stringify(sportsDraft(p)));
   const save = async () => {
     setErr('');
     if (!name.trim()) { setErr('Le prénom ne peut pas être vide.'); return; }
@@ -106,7 +153,7 @@ export function ProfileForm() {
     setBusy(true);
     try {
       const wasW = Number(p.weight_kg) || null;
-      await saveMyProfile(Object.assign({ name: name.trim().slice(0, 40) }, body));
+      await saveMyProfile(Object.assign({ name: name.trim().slice(0, 40) }, body, coach ? {} : sp));
       if (!coach && body.weight_kg && body.weight_kg !== wasW) logWeight(body.weight_kg);
       toast('Profil enregistré');
     } catch (e) { setErr(e.message); }
@@ -116,6 +163,7 @@ export function ProfileForm() {
     <div class="stack" style="gap:12px">
       <label class="fld">Prénom<input class="in" value={name} onInput={e => setName(e.target.value)} /></label>
       {!coach && <BodyFields f={f} set={patch => setF(Object.assign({}, f, patch))} />}
+      {!coach && <SportsFields f={sp} set={patch => setSp(Object.assign({}, sp, patch))} />}
       {err && <p class="err">{err}</p>}
       <button class="btn primary" disabled={!dirty || busy} onClick={save}>{busy ? 'Enregistrement…' : 'Enregistrer le profil'}</button>
     </div>

@@ -7,6 +7,8 @@ import { mmss, fmtNum, fmtLong } from '../lib/dates.js';
 import { unlockAudio, keepAwake, tick, goSignal, restSignal, doneSignal, say } from '../lib/audio.js';
 import { Icon, Seg, TextSeg, Rich } from '../ui/kit.jsx';
 import { Goal } from './DayView.jsx';
+import { lastPerf, perfText, suggestLoad, applySuggested } from '../lib/history.js';
+import { LIB_BY_ID } from '../lib/library.js';
 
 function useNow(ms) {
   const [n, setN] = useState(Date.now());
@@ -146,25 +148,56 @@ function IntervalTimer({ spec, title, onMark, onClose }) {
 }
 
 /* ---------- Une étape ---------- */
+const STRENGTH = ['muscu', 'renfo', 'doigts', 'epaule'];
 function LoadStepper({ k, b, it }) {
-  const e = jget(k), ld = itemLoad(b, it, e); if (!ld) return null;
-  const key = itemKey(b, it);
+  const e = jget(k), ld = itemLoad(b, it, e), key = itemKey(b, it);
+  const sug = STRENGTH.includes(b.kind) ? suggestLoad(b, it, k) : null;
+  const [own, setOwn] = useState('');
+  if (!ld) {
+    const x = it.lib && LIB_BY_ID[it.lib];
+    if (!STRENGTH.includes(b.kind) || it.id === 'ech' || it.timer && it.unit_load !== '+kg' || x && (x.t === 'iso' || x.t === 'mob' || (x.ld === 'bw' && !it.unit_load))) return null;
+    const commit = () => { const n = parseFloat(String(own).replace(',', '.')); if (!isNaN(n)) { const loads = Object.assign({}, jget(k).loads, { [key]: n }); jset(k, { loads }); } };
+    return <div class="sug">
+      {sug ? <><div><small>Charge conseillée</small><b>{sug.text}</b><span>{sug.why}</span></div><button class="btn primary" onClick={() => applySuggested(k, b, it, sug)}>Utiliser</button></>
+        : <div><small>Charge du jour</small><span>{it.rx ? 'Première fois : prends une charge qui respecte la fourchette et la réserve visées.' : 'Note la charge pour suivre ta progression.'}</span></div>}
+      <label class="fld sug-in">{sug ? 'Autre' : it.unit_load === '+kg' ? 'Lest (kg)' : 'Charge (kg)'}<input class="in mono" inputmode="decimal" value={own} onInput={ev => setOwn(ev.target.value)} onBlur={commit} /></label>
+    </div>;
+  }
   const set = v => { const loads = Object.assign({}, jget(k).loads); if (v === it.load) delete loads[key]; else loads[key] = v; jset(k, { loads }); };
-  const step = ld.v >= 20 ? 2.5 : 0.5;
+  const step = Math.abs(ld.v) >= 20 ? 2.5 : 0.5;
+  const showSug = sug && it.load != null && sug.v !== ld.v && !ld.changed;
   return (
-    <div class="stepper">
-      <button onClick={() => set(Math.max(0, Math.round((ld.v - step) * 2) / 2))} aria-label="Moins">−</button>
-      <div class="v">{ld.text}<small>{ld.changed ? 'modifié · prévu ' + (ld.u === '+kg' ? '+' : '') + fmtNum(it.load) + ' kg' : 'charge prévue'}</small></div>
-      <button onClick={() => set(Math.round((ld.v + step) * 2) / 2)} aria-label="Plus">+</button>
-    </div>
+    <>
+      <div class="stepper">
+        <button onClick={() => set(Math.round((ld.v - step) * 2) / 2)} aria-label="Moins">−</button>
+        <div class="v">{ld.text}<small>{ld.changed ? 'modifié · prévu ' + (ld.u === '+kg' ? '+' : '') + fmtNum(it.load) + ' kg' : ld.chosen ? 'charge du jour' : 'charge prévue'}</small></div>
+        <button onClick={() => set(Math.round((ld.v + step) * 2) / 2)} aria-label="Plus">+</button>
+      </div>
+      {showSug && <div class="sug"><div><small>Conseillé d’après ta dernière séance</small><b>{sug.text}</b><span>{sug.why}</span></div><button class="btn" onClick={() => applySuggested(k, b, it, sug)}>Utiliser</button></div>}
+    </>
   );
+}
+// Dernière réalisation du même exercice
+function LastTime({ k, it }) {
+  const lp = lastPerf(it.label, k, it.lib);
+  return lp ? <p class="last-t">Dernière fois · {perfText(lp)}</p> : null;
+}
+// Réserve sur la dernière série : règle la progression de la séance suivante
+const RIRL = ['0 · échec', '1', '2', '3', '4 et +'];
+function Reserve({ k, b, it }) {
+  const key = itemKey(b, it), e = jget(k), v = e.rir && typeof e.rir[key] === 'number' ? e.rir[key] : null;
+  const set = x => { const r = Object.assign({}, jget(k).rir); if (x == null) delete r[key]; else r[key] = x; jset(k, { rir: Object.keys(r).length ? r : null }); };
+  return <div class="rir-box">
+    <p class="sub-lbl" style="margin:0 0 6px">Réserve sur la dernière série<small>combien de répétitions de plus tu aurais pu faire{it.rx && typeof it.rx.rir === 'number' ? ' · visée ' + it.rx.rir : ''}</small></p>
+    <Seg value={v} onChange={set} from={0} to={4} dense label="Réserve" labels={RIRL} tgt={it.rx && typeof it.rx.rir === 'number' ? i => i === Math.min(4, it.rx.rir) : null} />
+  </div>;
 }
 
 function Pips({ k, b, it, color, onTick }) {
   const key = itemKey(b, it), v = doneN(jget(k), key, it.n);
   return (
     <div class="bigpips" style={'--c:' + color} role="group" aria-label={it.label}>
-      {Array.from({ length: it.n }, (_, i) => i + 1).map(i => <button aria-pressed={i <= v ? 'true' : 'false'} aria-label={(it.unit || 'Série') + ' ' + i} onClick={() => { const nv = v === i ? i - 1 : i; setDone(k, key, nv); if (nv > v && onTick) onTick(); }}>{i}</button>)}
+      {Array.from({ length: it.n }, (_, i) => i + 1).map(i => <button aria-pressed={i <= v ? 'true' : 'false'} aria-label={(it.unit || 'Série') + ' ' + i} onClick={() => { const nv = v === i ? i - 1 : i; setDone(k, key, nv); if (nv > v && onTick) onTick(nv); }}>{i}</button>)}
     </div>
   );
 }
@@ -181,6 +214,7 @@ function StepView({ k, step, startRest, openTimer, onNext, isLast }) {
     <div class="step-k"><i style={'background:' + color} /><Rich text={b.title} /></div>
     <h2 class={'step-t' + (String(step.group ? (b.timer && b.timer.name) || b.title : step.list || !it ? b.title : it.label).length > 34 ? ' long' : '')}>{step.group ? (b.timer && b.timer.name) || b.title : step.list || !it ? <Rich text={b.title} /> : <Rich text={it.label} />}</h2>
     {!step.group && !step.list && it && it.det && <p class="step-d"><Rich text={it.det} /></p>}
+    {!step.group && !step.list && it && STRENGTH.includes(b.kind) && it.id !== 'ech' && <LastTime k={k} it={it} />}
     {(step.group || step.list || !it) && b.desc && <p class="step-d"><Rich text={b.desc} /></p>}
     {fc && <div class="calc" style="margin-top:10px">{fc.text}{fc.hint && <><br /><span class="muted">{fc.hint}</span></>}</div>}
     {fc && fc.guard && <div class="guard">{fc.guard}</div>}
@@ -234,9 +268,11 @@ function StepView({ k, step, startRest, openTimer, onNext, isLast }) {
     action = <button class="btn big primary" style="margin-top:18px" disabled={full} onClick={() => { bump(k, b, it); if (it.rest && v + 1 < it.n) startRest(it.rest, 'Repos · ' + (it.unit === 'Bloc' ? 'bloc ' : it.unit === 'Essai' ? 'essai ' : 'série ') + (v + 2) + ' ensuite'); }}>
       {full ? 'Tout est fait ✓' : (it.unit === 'Bloc' ? 'Bloc fait' : it.unit === 'Essai' ? 'Essai fait' : 'Série faite') + ' · ' + (v + 1) + '/' + it.n}</button>;
   }
+  const askRir = full && STRENGTH.includes(b.kind) && it.unit !== 'Bloc' && it.unit !== 'Essai' && !(T && T.kind === 'interval');
   return <div>{head}<LoadStepper k={k} b={b} it={it} />
-    <Pips k={k} b={b} it={it} color={color} onTick={() => { if (it.rest && !T) startRest(it.rest, 'Repos'); }} />
+    <Pips k={k} b={b} it={it} color={color} onTick={nv => { if (it.rest && !T && nv < it.n) startRest(it.rest, 'Repos'); }} />
     {b.sub && <p class="small" style="margin-top:12px"><Rich text={b.sub} /></p>}
+    {askRir && <Reserve k={k} b={b} it={it} />}
     {full ? nextBtn : action}
     {!full && it.rest && !T && <p class="small">{mmss(it.rest)} de repos se lancent tout seuls après chaque {it.unit === 'Bloc' ? 'bloc' : it.unit === 'Essai' ? 'essai' : 'série'}.</p>}
   </div>;

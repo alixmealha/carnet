@@ -2,7 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import { readImport, applyImport, filterImport } from '../lib/io.js';
 import { toast } from './kit.jsx';
 
-export function ImportPicker({ onDone, label }) {
+export function ImportPicker({ onDone, label, secondary }) {
   const ref = useRef(null);
   const [pending, setPending] = useState(null), [err, setErr] = useState('');
   const pick = async e => {
@@ -13,7 +13,7 @@ export function ImportPicker({ onDone, label }) {
   return (
     <div class="stack" style="gap:10px">
       <input ref={ref} type="file" accept="application/json,.json" hidden onChange={pick} />
-      {!pending && <button class="btn big primary" onClick={() => ref.current.click()}>{label || 'Choisir le fichier'}</button>}
+      {!pending && <button class={'btn big' + (secondary ? '' : ' primary')} onClick={() => ref.current.click()}>{label || 'Choisir le fichier'}</button>}
       {err && <p class="err" role="alert">{err}</p>}
       {pending && <div class="card">
         <p style="margin:0">{pending.n.plan ? 'Plan, ' : ''}{pending.n.days} jours de séances, {pending.n.journal} jours de journal{pending.n.tests ? ', ' + pending.n.tests + ' passations de tests' : ''}.</p>

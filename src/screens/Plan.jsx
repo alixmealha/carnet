@@ -11,6 +11,9 @@ import { todayKey, fmtRange, fmtShort, fmtDay, fmtNum, addDays, mondayOf } from 
 import { Icon, Sheet, Seg, toast } from '../ui/kit.jsx';
 import { tapesOf } from './Today.jsx';
 import { Goal } from './DayView.jsx';
+import { relevantKinds } from '../lib/sports.js';
+import { check48, groupsTxt } from '../lib/builder.js';
+import { BuilderEntry } from './Builder.jsx';
 
 const PHASES = ['volume', 'reprise', 'force', 'puissance', 'specifique', 'affutage', 'recup', 'deload', 'transition', 'coupure', 'autre'];
 const SHORT = { volume: 'Vol.', reprise: 'Rep.', force: 'Force', puissance: 'Puiss.', specifique: 'Spéc.', affutage: 'Affût.', recup: 'Récup.', deload: 'Déch.', transition: 'Trans.', coupure: 'Coup.', autre: 'Cycle' };
@@ -145,6 +148,7 @@ function DayEditor({ k, onClose }) {
   const [d, setD] = useState(() => clone(day(k) || { blocks: [] }));
   const [dirty, setDirty] = useState(false);
   const [to, setTo] = useState('');
+  const relK = relevantKinds(), [allK, setAllK] = useState(false);
   const up = fn => { setD(cur => { const c = clone(cur); c.blocks = c.blocks || []; fn(c); return c; }); setDirty(true); };
   const save = () => {
     const c = clone(d);
@@ -156,15 +160,18 @@ function DayEditor({ k, onClose }) {
   const setTg = fn => up(c => { fn(c.target); });
   const bl = d.blocks || [];
   const hasJournal = Object.keys(jget(k)).length > 0;
+  const w48 = check48(k, d);
   return (
     <Sheet title={'Séance · ' + fmtShort(k)} onClose={close} right={<button class="btn primary" onClick={save} disabled={!dirty}>OK</button>}>
       <div class="stack">
+        {w48.length > 0 && <div class="guard" role="status"><b>Attention, règle des 48 h.</b> {w48.map(x => 'Séance lourde ' + x.when + ' (' + fmtShort(x.k) + ') sur les mêmes muscles : ' + groupsTxt(x.groups)).join(' ; ')}. Idéalement 48 h entre deux séances lourdes des mêmes muscles : allège l’une des deux ou décale-la.</div>}
         {hasJournal && <p class="small" style="margin:0">Ce jour a déjà un journal. Les cases cochées restent liées aux exercices existants ; un exercice supprimé perd ses cases.</p>}
         {bl.length === 0 && <div class="empty">Jour de repos. Ajoute un bloc pour y mettre une séance.</div>}
         {bl.map((b, i) => <BlockEd key={b.id} b={b} i={i} n={bl.length} set={fn => up(c => fn(c.blocks[i]))} onMove={dd => up(c => move(c.blocks, i, dd))} onDel={() => { if (ask('Supprimer le bloc « ' + (b.title || KIND[b.kind]) + ' » ?')) up(c => { c.blocks.splice(i, 1); }); }} />)}
         <div>
           <p class="sub-lbl" style="margin-top:0">Ajouter un bloc</p>
-          <div class="chips">{KIND_LIST.filter(kd => kd !== 'rest').map(kd => <button type="button" class="chip" onClick={() => up(c => { c.blocks.push({ id: uid('b'), kind: kd, title: KIND[kd], desc: '', sub: '', items: [] }); })}><span class="kdot" style={'background:var(--k-' + kd + ')'} />{KIND[kd]}</button>)}</div>
+          <div class="chips">{KIND_LIST.filter(kd => kd !== 'rest' && (!relK || allK || relK.has(kd))).map(kd => <button type="button" class="chip" onClick={() => up(c => { c.blocks.push({ id: uid('b'), kind: kd, title: KIND[kd], desc: '', sub: '', items: [] }); })}><span class="kdot" style={'background:var(--k-' + kd + ')'} />{KIND[kd]}</button>)}
+            {relK && !allK && <button type="button" class="chip" style="border-style:dashed" onClick={() => setAllK(true)}>Autres types…</button>}</div>
         </div>
         <section class="card">
           <h3 class="h3">Objectif de la séance <em><label style="display:inline-flex;align-items:center;gap:8px">Actif <input type="checkbox" class="sw" checked={!!tg} onChange={e => up(c => { if (e.target.checked) c.target = { rpe: [5, 6], s: 5, i: 5, v: 5, fam: 'vol', why: '' }; else delete c.target; })} /></label></em></h3>
@@ -365,6 +372,7 @@ export function PlanScreen({ seg }) {
       </div>
       {seg}
       <div class="stack">
+        {ed && <BuilderEntry />}
         {!ed && <p class="lock-n"><Icon name="lock" size={16} />Plan verrouillé par ton coach : tu le consultes, lui seul le modifie.</p>}
         {coachView && <label class="card lock-c"><Icon name="lock" size={18} /><span><b>Verrouiller le plan</b><small>{links.locks[subj] ? nameOf(subj) + ' ne peut plus modifier ses séances ni son plan.' : nameOf(subj) + ' peut aussi modifier ses séances.'}</small></span>
           <input type="checkbox" class="sw" checked={!!links.locks[subj]} onChange={async e => { const v = e.target.checked; try { await setLock(subj, v); toast(v ? 'Plan verrouillé' : 'Plan déverrouillé'); } catch (x) { toast(x.message); } }} /></label>}

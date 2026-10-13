@@ -8,6 +8,7 @@ import { Chart, niceMax, linePath } from '../ui/charts.jsx';
 import { TextSeg, Fold, Src } from '../ui/kit.jsx';
 import { weekInsights, dayLoad } from '../lib/insights.js';
 import { TestsView } from './Tests.jsx';
+import { climber } from '../lib/sports.js';
 
 const fmtInt = n => Math.round(n).toLocaleString('fr-FR');
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
@@ -92,11 +93,12 @@ function Load({ ws, ci }) {
 
 /* ---------- Répartition de l'intensité ---------- */
 function Zones({ ws, ci }) {
-  const cz = ws[ci], czt = cz ? cz.tz[0] + cz.tz[1] + cz.tz[2] : 0;
+  const cz = ws[ci], czt = cz ? cz.tz[0] + cz.tz[1] + cz.tz[2] : 0, cl = climber();
+  const what = cl ? 'Minutes d’escalade et de doigts' : 'Minutes d’entraînement';
   const sumZ = czt ? 'Cette semaine : ' + ZONES.map(([l], j) => pct(cz.tz[j], czt) + ' % ' + l.toLowerCase()).join(' · ') : 'Rien cette semaine pour l’instant';
-  if (!ws.some(x => x.tz[0] + x.tz[1] + x.tz[2] > 0)) return <Card id="zones" title="Répartition de l’intensité" summary="Pas encore de données" sub="Minutes d’escalade et de doigts selon le ressenti de la séance."><Empty>Ressenti et durée des séances de grimpe : la répartition apparaîtra ici.</Empty></Card>;
+  if (!ws.some(x => x.tz[0] + x.tz[1] + x.tz[2] > 0)) return <Card id="zones" title="Répartition de l’intensité" summary="Pas encore de données" sub={what + ' selon le ressenti de la séance.'}><Empty>Ressenti et durée de tes séances : la répartition apparaîtra ici.</Empty></Card>;
   return (
-    <Card id="zones" title="Répartition de l’intensité" summary={sumZ} sub="Minutes d’escalade et de doigts selon le ressenti. Le trait marque 80 % de facile, en repère seulement pour la force et la puissance."
+    <Card id="zones" title="Répartition de l’intensité" summary={sumZ} sub={what + ' selon le ressenti. ' + (cl ? 'Le trait marque 80 % de facile, en repère seulement pour la force et la puissance.' : 'Repère d’endurance : environ 80 % du temps en facile (entraînement polarisé).')}
       right={<div class="leg">{ZONES.map(([l, z, r]) => <span><i class={z} />{l} {r}</span>)}</div>}>
       <Chart n={ws.length} yMax={100} ticks={[0, 50, 100]} fmtY={v => v + '%'} xLabels={ws.map(x => x.label)} hl={ci}
         tip={i => { const x = ws[i], t = x.tz[0] + x.tz[1] + x.tz[2]; if (!t) return x.label + '\nPas de données'; return x.label + ' · ' + x.phase + '\n' + ZONES.map(([l], j) => l + ' ' + x.tz[j] + ' min (' + pct(x.tz[j], t) + ' %)').join('\n'); }}
@@ -271,7 +273,7 @@ export function Stats({ onOpen, onOpenTest, testFocus }) {
           <div class="stack dash-cols">
           <Bilan />
           <Alerts ws={ws} onOpen={onOpen} />
-          <PlanVsReal ws={ws} ci={ci} />
+          {climber() && <PlanVsReal ws={ws} ci={ci} />}
           <Load ws={ws} ci={ci} />
           <Zones ws={ws} ci={ci} />
           <Wellness />

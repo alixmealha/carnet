@@ -8,6 +8,8 @@ import { fmtLong, addDays, todayKey, fmtNum, fmtShort } from '../lib/dates.js';
 import { Seg, TextSeg, Icon, Rich, Src, toast } from '../ui/kit.jsx';
 import { ActFields } from '../ui/ActFields.jsx';
 import { plannedActs } from '../lib/activity.js';
+import { lastPerf, perfText, suggestLoad } from '../lib/history.js';
+import { check48, groupsTxt } from '../lib/builder.js';
 
 export function DayHeader({ k, onNav, compact }) {
   const w = weekOf(k), m = meta(), ev = eventOn(k);
@@ -174,6 +176,15 @@ export function Goal({ k }) {
   );
 }
 
+// Dernière fois et charge conseillée, sous les exercices de force du jour (pas sur les jours passés)
+const STRONG = ['muscu', 'renfo', 'doigts', 'epaule'];
+function LastLine({ k, b, it, ld, full }) {
+  if (!STRONG.includes(b.kind) || it.id === 'ech' || full || k < todayKey()) return null;
+  const sg = !ld || !ld.changed ? suggestLoad(b, it, k) : null, lp = sg ? sg.last : lastPerf(it.label, k, it.lib);
+  if (!lp) return null;
+  return <span class="last-l">Dernière fois · {perfText(lp)}{sg && (!ld || sg.v !== ld.v) ? ' → conseillé ' + sg.text : ''}</span>;
+}
+
 export function ItemRow({ k, b, it, e, color }) {
   const key = itemKey(b, it), v = doneN(e, key, it.n), full = v >= it.n, ld = itemLoad(b, it, e);
   const setDone = val => {
@@ -186,7 +197,7 @@ export function ItemRow({ k, b, it, e, color }) {
   return (
     <div class={'it' + (full ? ' done' : '')}>
       <button type="button" class="ck" aria-pressed={full ? 'true' : 'false'} aria-label={it.label} onClick={() => setDone(full ? 0 : it.n)}>✓</button>
-      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed ? ' chg' : '')}>{ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}</em>}</b>{it.det && <span><Rich text={it.det} /></span>}</div>
+      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed ? ' chg' : '')}>{ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}</em>}</b>{it.det && <span><Rich text={it.det} /></span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} /></div>
       {it.n > 1 && <div class="pips" role="group" aria-label={it.label + ' : ' + v + ' sur ' + it.n}>
         {Array.from({ length: it.n }, (_, i) => i + 1).map(i => <button type="button" class="pip" style={'--c:' + color} aria-pressed={i <= v ? 'true' : 'false'} aria-label={(it.unit || 'Série') + ' ' + i} onClick={() => setDone(v === i ? i - 1 : i)}>{i}</button>)}
       </div>}

@@ -6,14 +6,17 @@
 // Pour toutes : ressenti 0-10 × durée = charge de séance (Foster).
 import { jget, ids } from './store.js';
 import { blocks, itemKey, doneN, itemLoad, uid } from './plan.js';
+import { climber } from './sports.js';
 
-export const ACTS = [['grimpe', 'Escalade'], ['force', 'Muscu / renfo'], ['kine', 'Kiné'], ['cardio', 'Cardio'], ['mobi', 'Récup / mobilité']];
+export const ACTS = [['grimpe', 'Escalade'], ['force', 'Muscu / renfo'], ['kine', 'Kiné'], ['cardio', 'Cardio'], ['sport', 'Autre sport'], ['mobi', 'Récup / mobilité']];
 export const ACT_LBL = Object.fromEntries(ACTS);
-export const KIND_ACT = { grimpe: 'grimpe', compet: 'grimpe', affut: 'grimpe', doigts: 'force', muscu: 'force', renfo: 'force', epaule: 'force', kine: 'kine', velo: 'cardio', recup: 'mobi', autre: 'mobi' };
+export const KIND_ACT = { grimpe: 'grimpe', compet: 'grimpe', affut: 'grimpe', doigts: 'force', muscu: 'force', renfo: 'force', epaule: 'force', kine: 'kine', velo: 'cardio', course: 'cardio', sport: 'sport', recup: 'mobi', autre: 'mobi' };
 
+// Compétition et affûtage : escalade pour un grimpeur, « autre sport » sinon
+export const actOfKind = kind => (['compet', 'affut'].includes(kind) && !climber() ? 'sport' : KIND_ACT[kind]);
 export function plannedActs(k) {
   const out = [];
-  for (const b of blocks(k)) { const a = KIND_ACT[b.kind]; if (a && !out.includes(a)) out.push(a); }
+  for (const b of blocks(k)) { const a = actOfKind(b.kind); if (a && !out.includes(a)) out.push(a); }
   return ACTS.map(x => x[0]).filter(a => out.includes(a));
 }
 // Activités du jour : celles cochées par l'athlète, sinon celles du plan
@@ -37,7 +40,8 @@ export function plannedLog(k) {
     for (const it of b.items || []) {
       if (it.id === 'ech' || !it.label) continue;
       const key = itemKey(b, it), ld = itemLoad(b, it, e), dn = doneN(e, key, it.n);
-      out.push({ id: uid('l'), label: it.label.replace(/\[[a-z]+\]\s*/gi, ''), sets: dn || it.n || null, reps: repsOf(it.det), load: ld ? ld.text : '', src: key });
+      const rir = e.rir && typeof e.rir[key] === 'number' ? e.rir[key] : null;
+      out.push(Object.assign({ id: uid('l'), label: it.label.replace(/\[[a-z]+\]\s*/gi, ''), sets: dn || it.n || null, reps: repsOf(it.det), load: ld ? ld.text : '', src: key }, rir != null ? { rir } : {}));
     }
   }
   return out;

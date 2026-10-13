@@ -218,8 +218,16 @@ export const nameOf = o => profileOf(o).name || (o === SELF ? 'Moi' : 'Athlète'
 export const subjectSettings = () => Object.assign({ cycle: profileOf(subject).sex === 'F' }, get('settings') || {});
 
 const PCOLS = ['name', 'sex', 'birth_year', 'height_cm', 'weight_kg', 'onboarded'];
+// Champs rangés dans le document « profile » (synchronisé comme le reste du carnet) : sports, régime, réglages d'alimentation
+const DOCKEYS = ['sports', 'diet', 'nutri'];
+export function saveProfileDoc(patch) {
+  const p = {}; for (const k of DOCKEYS) if (k in patch) p[k] = patch[k];
+  if (Object.keys(p).length) putFor(SELF, 'profile', Object.assign({}, getFor(SELF, 'profile') || {}, p));
+}
 export async function saveMyProfile(patch) {
   if (!cloud) { putFor(SELF, 'profile', Object.assign({}, getFor(SELF, 'profile') || {}, patch)); return; }
+  saveProfileDoc(patch);
+  if (!PCOLS.concat(['role']).some(k => k in patch)) return;
   const { data: { session } } = await sb.auth.getSession();
   if (!session) throw new Error('Session expirée : reconnecte-toi.');
   const me = session.user.id, clean = {};

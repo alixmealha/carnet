@@ -54,7 +54,7 @@ function weekCount(k) {
     const d = addDays(mon, i), act = blocks(d).some(b => b.kind !== 'rest'), st = jget(d).status;
     const ok = st === 'faite' || st === 'adaptee';
     if (act) planned++; if (act && ok) done++;
-    days.push(act ? (ok ? 'ok' : st === 'sautee' ? 'ko' : d < todayKey() ? 'miss' : 'todo') : 'rest');
+    days.push(act ? (ok ? 'ok' : st === 'sautee' ? 'ko' : d < todayKey() ? 'miss' : 'todo') : 'off');
   }
   return { planned, done, days };
 }
