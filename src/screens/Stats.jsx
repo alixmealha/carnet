@@ -9,6 +9,7 @@ import { TextSeg, Fold, Src } from '../ui/kit.jsx';
 import { weekInsights, dayLoad } from '../lib/insights.js';
 import { TestsView } from './Tests.jsx';
 import { climber } from '../lib/sports.js';
+import { NutriWeek } from './Nutrition.jsx';
 
 const fmtInt = n => Math.round(n).toLocaleString('fr-FR');
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
@@ -266,8 +267,8 @@ export function Stats({ onOpen, onOpenTest, testFocus }) {
   return (
     <div class="screen">
       <div class="head"><div><div class="eyebrow">{m ? m.title : ''}</div><h1 class="title">Suivi</h1></div></div>
-      <div style="margin-bottom:14px"><TextSeg value={view} onChange={pick} options={[['dash', 'Tableau de bord'], ['tests', 'Tests']]} label="Vue" /></div>
-      {view === 'tests' ? <TestsView onOpenDay={onOpen} focus={testFocus} /> :
+      <div style="margin-bottom:14px"><TextSeg value={view} onChange={pick} options={[['dash', 'Tableau de bord'], ['tests', 'Tests'], ['nutri', 'Alimentation']]} label="Vue" /></div>
+      {view === 'nutri' ? <NutriWeek /> : view === 'tests' ? <TestsView onOpenDay={onOpen} focus={testFocus} /> :
         <div class="stack">
           <Tiles ws={ws} />
           <div class="stack dash-cols">

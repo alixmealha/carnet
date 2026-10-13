@@ -673,3 +673,50 @@ html,body{overflow-x:clip}
 @media (max-width:420px){.exl-g{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .role-c.q-opt{font-size:15px;font-weight:500;padding:12px 14px}
 .role-c.q-opt.on{color:var(--accent)}
+
+/* ---------- Alimentation ---------- */
+.n-tg{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.n-ld{display:flex;flex-direction:column;gap:2px;font-size:14px}
+.n-ld span{color:var(--muted);font-size:13px;font-family:var(--f-mono)}
+.n-chips{display:flex;flex-wrap:wrap;gap:6px}
+.n-chips span{font-size:13px;background:var(--accent-soft);border-radius:999px;padding:4px 10px}
+.n-chips b{font-family:var(--f-mono);font-weight:500}
+.n-tg .src{align-self:flex-start}
+.meals{display:flex;flex-direction:column;gap:2px;border-top:1px solid var(--rule)}
+.meal{padding:8px 0;border-bottom:1px solid var(--rule)}
+.meal-h{display:flex;align-items:center;gap:10px;min-height:32px}
+.meal-h b{font-size:15px;flex:1}
+.meal-h .mono{font-size:13px;color:var(--muted)}
+.meal-h .btn{min-height:30px;font-size:14px}
+.meal-l{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.meal-l li{display:flex;gap:8px;align-items:baseline;font-size:14px}
+.meal-l li>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meal-l li .mono{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.meal-l li button{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:0 2px}
+.meal-copy{font-size:13px;min-height:28px;text-align:left;white-space:normal}
+.n-bars{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.nbar-h{display:flex;align-items:baseline;gap:8px;font-size:13.5px}
+.nbar-h span{flex:1}
+.nbar-h b{font-family:var(--f-mono);font-weight:500}
+.nbar-h small{color:var(--muted);font-family:var(--f-mono);font-size:12px}
+.nbar-t{position:relative;height:8px;border-radius:5px;background:var(--sunk);margin-top:4px;overflow:hidden}
+.nbar-t i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:var(--muted)}
+.nbar-t em{position:absolute;top:0;bottom:0;min-width:3px;background:color-mix(in srgb,var(--good) 30%,transparent);border-left:2px solid var(--good);border-right:2px solid var(--good)}
+.nbar.ok .nbar-t i{background:var(--good)}.nbar.near .nbar-t i{background:var(--accent)}.nbar.low .nbar-t i{background:var(--warn)}.nbar.high .nbar-t i{background:var(--warn)}
+.nbar.low .nbar-h b,.nbar.high .nbar-h b{color:var(--warn)}
+.micro{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.mi{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 5.5em;gap:8px;align-items:center;font-size:13px}
+.mi-l small{color:var(--muted);font-size:11px}
+.mi-t{height:7px;background:var(--sunk);border-radius:4px;overflow:hidden}
+.mi-t i{display:block;height:100%;background:var(--good);border-radius:4px}
+.mi.low .mi-t i{background:var(--warn)}
+.mi-v{text-align:right;font-size:12.5px}
+.mi-v small{display:block;color:var(--muted);font-size:11px}
+.n-adv{margin-top:14px}
+.food-sheet .in[type=search]{font-size:17px}
+.fs-cur{display:flex;flex-wrap:wrap;gap:6px}
+.fs-cur .chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;min-height:32px;padding:4px 6px 4px 12px}
+.fs-cur .chip button{border:0;background:var(--sunk);border-radius:50%;width:22px;height:22px;line-height:20px;font-size:15px;padding:0}
+.qty{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.qty .fld{max-width:10em}
+.mono{font-family:var(--f-mono)}

@@ -34,10 +34,11 @@ export function createMock() {
   const isAdmin = db => roleOf(db, me()) === 'admin';
   const isCoachOf = (db, a) => db.coach_links.some(l => l.coach_id === me() && l.athlete_id === a);
   const isMyCoach = (db, c) => db.coach_links.some(l => l.coach_id === c && l.athlete_id === me());
+  const nutriShared = (db, a) => { const p = db.docs.find(d => d.user_id === a && d.id === 'profile' && !d.deleted); return !!(p && p.data && p.data.nutri && p.data.nutri.share); };
   const locked = (db, a) => db.coach_links.some(l => l.athlete_id === a && l.plan_locked);
   const canSee = (db, table, r) => {
     const m = me();
-    if (table === 'docs') return r.user_id === m || isCoachOf(db, r.user_id);
+    if (table === 'docs') return r.user_id === m || (isCoachOf(db, r.user_id) && (!(r.id.startsWith('n:') || r.id === 'nutri') || nutriShared(db, r.user_id)));
     if (table === 'coach_links') return r.coach_id === m || r.athlete_id === m;
     if (table === 'profiles') return r.id === m || isAdmin(db) || isCoachOf(db, r.id) || isMyCoach(db, r.id);
     if (table === 'invite_codes') return r.athlete_id === m;

@@ -9,7 +9,7 @@ import { Seg, TextSeg, Icon, Rich, Src, toast } from '../ui/kit.jsx';
 import { ActFields } from '../ui/ActFields.jsx';
 import { plannedActs } from '../lib/activity.js';
 import { lastPerf, perfText, suggestLoad } from '../lib/history.js';
-import { check48, groupsTxt } from '../lib/builder.js';
+import { NutriDay } from './Nutrition.jsx';
 
 export function DayHeader({ k, onNav, compact }) {
   const w = weekOf(k), m = meta(), ev = eventOn(k);
@@ -343,13 +343,13 @@ export function DayView({ k, onNav, onStart, onEdit, onOpenTest, noHeader, hero,
   const header = !noHeader && <DayHeader k={k} onNav={onNav} />;
   const morning = <Morning k={k} ro={ro} key={'m' + k} />, night = <Night k={k} ro={ro} key={'n' + k} />, reading = <Reading k={k} />;
   const session = <SessionCard k={k} onStart={onStart} onEdit={onEdit} ro={ro} />, tests = <TestsCard k={k} onOpenTest={onOpenTest} />;
-  const exchanges = <Exchanges k={k} key={'c' + k} />, after = <After k={k} ro={ro} />;
+  const exchanges = <Exchanges k={k} key={'c' + k} />, after = <After k={k} ro={ro} />, nutri = <NutriDay k={k} key={'n' + k} />;
   if (split) return (
     <div class="stack">
       {header}
       <div class="day-cols">
         <div class="stack">{hero}{session}{tests}{after}</div>
-        <div class="stack">{morning}{night}{reading}{exchanges}</div>
+        <div class="stack">{morning}{night}{reading}{nutri}{exchanges}</div>
       </div>
     </div>
   );
@@ -362,6 +362,7 @@ export function DayView({ k, onNav, onStart, onEdit, onOpenTest, noHeader, hero,
       {reading}
       {session}
       {tests}
+      {nutri}
       {exchanges}
       {after}
     </div>

@@ -9,6 +9,7 @@ import { downloadExport } from '../lib/io.js';
 import { Icon, TextSeg, toast } from '../ui/kit.jsx';
 import { ImportPicker } from '../ui/ImportPicker.jsx';
 import { ProfileForm, ROLE_LBL } from './Setup.jsx';
+import { NutriSettings } from './Nutrition.jsx';
 
 const SYNC_LBL = { local: 'Sur cet appareil seulement', idle: 'À jour', syncing: 'Synchronisation…', error: 'Erreur de synchronisation', offline: 'Hors ligne : ça repartira tout seul', signedout: 'Déconnecté' };
 const ago = t => { if (!t) return 'jamais'; const s = Math.round((Date.now() - t) / 1000); return s < 60 ? 'à l’instant' : s < 3600 ? 'il y a ' + Math.round(s / 60) + ' min' : 'il y a ' + Math.round(s / 3600) + ' h'; };
@@ -192,6 +193,7 @@ export function SettingsPage({ session, onBack, onAdmin }) {
         <Appearance />
         {athleteSide && <SessionPrefs />}
         {athleteSide && <Tracking />}
+        {athleteSide && <NutriSettings />}
         <Notifications />
         {cloud && athleteSide && !links.legacy && <MyCoach />}
         {cloud && coachSide && !links.legacy && <MyAthletes />}
@@ -199,7 +201,7 @@ export function SettingsPage({ session, onBack, onAdmin }) {
         <Data />
         {isAdmin() && <button class="card li-card" onClick={onAdmin}><Icon name="shield" /><span><b>Administration</b><small>Comptes, rôles, accès</small></span><span class="chev r" aria-hidden="true" /></button>}
         {links.legacy && <p class="err">La base n’est pas encore à jour : lance le script de l’étape 2 dans Supabase (profils, codes, notifications).</p>}
-        <p class="small" style="text-align:center">Alipto v3.4</p>
+        <p class="small" style="text-align:center">Alipto v3.5</p>
       </div>
     </div>
   );

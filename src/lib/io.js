@@ -8,7 +8,7 @@ export async function readImport(file) {
   try { data = JSON.parse(txt); } catch (_) { throw new Error('Ce fichier n’est pas un fichier JSON lisible.'); }
   if (!data || !['carnet', 'alipto'].includes(data.app) || !data.docs || typeof data.docs !== 'object') throw new Error('Ce fichier ne vient pas d’Alipto.');
   const docs = {};
-  for (const [id, v] of Object.entries(data.docs)) if (['plan', 'settings', 'profile', 'tests'].includes(id) || /^[pjct]:\d{4}-\d{2}-\d{2}$/.test(id)) docs[id] = v;
+  for (const [id, v] of Object.entries(data.docs)) if (['plan', 'settings', 'profile', 'tests', 'nutri', 'models'].includes(id) || /^[pjctn]:\d{4}-\d{2}-\d{2}$/.test(id)) docs[id] = v;
   const n = { plan: !!docs.plan, days: Object.keys(docs).filter(x => x.startsWith('p:')).length, journal: Object.keys(docs).filter(x => x.startsWith('j:')).length, tests: Object.keys(docs).filter(x => x.startsWith('t:')).length };
   return { docs, n };
 }
@@ -18,7 +18,7 @@ export function filterImport(docs) {
   const self = isSelf(), o = getSubject(), keep = {}, skipped = { journal: 0, plan: 0, other: 0 };
   for (const [id, v] of Object.entries(docs)) {
     if (id === 'profile' && cloud) { skipped.other++; continue; }
-    if (!self && (id === 'profile' || id === 'settings')) { skipped.other++; continue; }
+    if (!self && (id === 'profile' || id === 'settings' || id === 'nutri' || id === 'models' || id.startsWith('n:'))) { skipped.other++; continue; }
     if (!self && id.startsWith('j:') && getFor(o, id)) { skipped.journal++; continue; }
     if (self && planLocked() && (id === 'plan' || id.startsWith('p:'))) { skipped.plan++; continue; }
     keep[id] = v;
