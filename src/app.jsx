@@ -178,9 +178,12 @@ export function App() {
   const [day, setDay] = useState(null);
   const [edit, setEdit] = useState(null);
   const [testFocus, setTestFocus] = useState(null);
+  // séance en cours : « AAAA-MM-JJ », ou « AAAA-MM-JJ#bloc » pour un bloc fait à part
   const [ses, setSes] = useState(() => {
-    const k = ls.get('carnet-ses'); if (!k) return null;
-    const e = jget(k); return k === todayKey() && e.startedAt && !e.endedAt ? k : null;
+    const v = ls.get('carnet-ses'); if (!v) return null;
+    const [k, part] = String(v).split('#'), e = jget(k), p = part && e.apart && e.apart[part];
+    if (k !== todayKey()) return null;
+    return part ? (p && p.startedAt && !p.endedAt ? v : null) : (e.startedAt && !e.endedAt ? v : null);
   });
   const started = useRef(false);
   useEffect(() => {
@@ -233,7 +236,7 @@ export function App() {
   const tabs = r === 'coach' ? (coach ? [athTab, ...BASE_TABS] : [athTab, BASE_TABS[3]]) : coach ? [BASE_TABS[0], athTab, ...BASE_TABS.slice(1)] : BASE_TABS;
   const cur = tabs.some(t => t[0] === tab) ? tab : tabs[0][0];
   const noPlan = !meta() && ['today', 'stats', 'plan'].includes(cur);
-  const openSession = k => { setDay(null); setSes(k); };
+  const openSession = (k, part) => { setDay(null); setSes(part ? k + '#' + part : k); };
   const openTest = tid => { setDay(null); ls.set('carnet-stats-view', 'tests'); setTestFocus(tid); setTab('stats'); };
   const goSettings = () => { try { sessionStorage.setItem('carnet-more', 'settings'); } catch (_) {} setTab('more'); };
   const self = isSelf(), subj = getSubject(), bar = !self && cur !== 'athletes';
@@ -255,7 +258,7 @@ export function App() {
       </nav>
       {day && !edit && <Sheet title={self ? 'Fiche du jour' : 'Fiche de ' + nameOf(subj)} onClose={() => setDay(null)}><DayView k={day} onNav={setDay} onStart={openSession} onEdit={onEdit} onOpenTest={openTest} key={day} /></Sheet>}
       {edit && <DayEditor k={edit} onClose={() => setEdit(null)} />}
-      {ses && <SessionMode k={ses} onClose={() => setSes(null)} />}
+      {ses && <SessionMode k={ses.split('#')[0]} part={ses.split('#')[1] || null} key={ses} onClose={() => setSes(null)} />}
     </>
   );
 }

@@ -18,11 +18,90 @@ export function weekKeys(w) { return rangeKeys(w.start, w.end); }
 export const itemKey = (b, it) => b.id + '.' + it.id;
 export function allItems(k) { const out = []; for (const b of blocks(k)) if (b.kind !== 'rest') for (const it of (b.items || [])) out.push({ b, it, key: itemKey(b, it) }); return out; }
 export function doneN(e, key, n) { const v = e && e.done && e.done[key]; return typeof v === 'number' ? Math.min(n, Math.max(0, v)) : 0; }
-export function progress(k) {
-  const e = jget(k); let total = 0, done = 0;
-  // un exercice facultatif ne compte que s'il a été commencé
-  for (const { it, key } of allItems(k)) { const v = doneN(e, key, it.n); if (it.opt && !v) continue; total++; if (v >= it.n) done++; }
-  return { total, done };
+// Progression de la séance (ou d'un bloc fait à part si part = id du bloc).
+// Les blocs faits à part ou déplacés sortent de la séance principale ; un bloc « pas fait » est compté à part (skipped).
+export function progress(k, part) {
+  const e = jget(k); let total = 0, done = 0, skipped = 0;
+  for (const { b, it, key } of allItems(k)) {
+    const st = blockState(e, b);
+    if (part) { if (b.id !== part) continue; }
+    else if (st === 'apart' || st === 'moved') continue;
+    else if (st === 'skip') { skipped++; continue; }
+    // un exercice facultatif ne compte que s'il a été commencé
+    const v = doneN(e, key, it.n); if (it.opt && !v) continue; total++; if (v >= it.n) done++;
+  }
+  return { total, done, skipped };
+}
+
+/* ---------- Bloc sorti de la séance : à un autre moment du jour, un autre jour, ou pas fait ---------- */
+export const SKIP = [['materiel', 'Pas le matériel'], ['temps', 'Pas le temps'], ['fatigue', 'Fatigue'], ['gene', 'Gêne ou douleur'], ['autre', 'Autre raison']];
+export function blockState(e, b) {
+  if (!e || !b) return null;
+  if (e.apart && e.apart[b.id]) return 'apart';
+  if (e.moved && e.moved[b.id]) return 'moved';
+  if (e.skip && e.skip[b.id]) return 'skip';
+  return null;
+}
+const without = (o, id) => { const x = Object.assign({}, o); delete x[id]; return Object.keys(x).length ? x : null; };
+// state : null (retour dans la séance), 'apart', 'skip' (val = raison)
+export function setBlockState(k, b, state, val) {
+  const e = jget(k), patch = { apart: without(e.apart, b.id), skip: without(e.skip, b.id) };
+  if (state === 'apart') patch.apart = Object.assign({}, e.apart, { [b.id]: Object.assign({ at: Date.now() }, e.apart && e.apart[b.id]) });
+  if (state === 'skip') patch.skip = Object.assign({}, e.skip, { [b.id]: val || 'autre' });
+  jset(k, patch);
+}
+export const apartOf = (e, bid) => (e && e.apart && e.apart[bid]) || null;
+export function setApart(k, bid, patch) { const e = jget(k), cur = apartOf(e, bid); if (!cur) return; jset(k, { apart: Object.assign({}, e.apart, { [bid]: Object.assign({}, cur, patch) }) }); }
+// Séances réelles du jour (pour la charge) : la principale et chaque bloc fait à part
+export function sessionsOf(e) {
+  const out = [];
+  if (e && typeof e.rpe === 'number' && typeof e.duree === 'number' && e.duree > 0) out.push({ rpe: e.rpe, duree: e.duree });
+  for (const p of Object.values((e && e.apart) || {})) if (p && typeof p.rpe === 'number' && typeof p.duree === 'number' && p.duree > 0) out.push({ rpe: p.rpe, duree: p.duree, apart: true });
+  return out;
+}
+// Où se place le bloc fait à part par rapport à la séance : « fait 4 h avant la séance », « ordre changé »…
+export function apartNote(k, b) {
+  const e = jget(k), p = apartOf(e, b.id); if (!p || !p.startedAt) return null;
+  const real = blocks(k).filter(x => x.kind !== 'rest'), i = real.findIndex(x => x.id === b.id);
+  const others = real.map((x, j) => ({ x, j })).filter(o => o.x.id !== b.id && !blockState(e, o.x));
+  if (!others.length) return null;
+  const plannedBefore = others.every(o => o.j > i), plannedAfter = others.every(o => o.j < i);
+  const hm = t => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const gap = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 >= 10 ? ' ' + String(m % 60).padStart(2, '0') : ''); };
+  const pEnd = p.endedAt || p.startedAt;
+  if (!e.startedAt) return { text: 'Fait à ' + hm(p.startedAt) + ', avant la séance', changed: plannedAfter };
+  if (pEnd <= e.startedAt) return { text: 'Fait ' + gap(e.startedAt - pEnd) + ' avant la séance', changed: plannedAfter };
+  const mEnd = e.endedAt || e.startedAt;
+  if (p.startedAt >= mEnd) return { text: 'Fait ' + gap(p.startedAt - mEnd) + ' après la séance', changed: plannedBefore };
+  return { text: 'Fait à ' + hm(p.startedAt), changed: false };
+}
+// Déplacer un bloc à un autre jour : copie dans le plan de ce jour, trace dans le journal d'origine
+export function moveBlock(k, b, to) {
+  const src = day(k) || { blocks: [] }, dst = day(to) || { blocks: [] };
+  const srcReal = src.blocks.filter(x => x.kind !== 'rest'), i = srcReal.findIndex(x => x.id === b.id);
+  const taken = new Set((dst.blocks || []).map(x => x.id)), base = 'mv' + k.slice(5, 7) + k.slice(8, 10);
+  let id = base, n = 2; while (taken.has(id)) id = base + '-' + n++;
+  const copy = JSON.parse(JSON.stringify(b)); copy.id = id; copy.movedFrom = k; delete copy.heavy;
+  const rest = (dst.blocks || []).filter(x => x.kind === 'rest'), real = (dst.blocks || []).filter(x => x.kind !== 'rest');
+  const before = i === 0 && srcReal.length > 1;
+  const nd = Object.assign({}, dst, { blocks: before ? [copy].concat(real) : real.concat([copy]) });
+  if (rest.length && !real.length) nd.restBak = rest; // un jour de repos devient un jour avec ce bloc ; on garde le repos pour l'annulation
+  put('p:' + to, nd);
+  const e = jget(k);
+  jset(k, { moved: Object.assign({}, e.moved, { [b.id]: { to, id } }), apart: without(e.apart, b.id), skip: without(e.skip, b.id) });
+}
+export function unmoveBlock(k, b) {
+  const e = jget(k), m = e.moved && e.moved[b.id]; if (!m) return;
+  const dst = day(m.to);
+  if (dst) {
+    const de = jget(m.to), started = Object.keys(de.done || {}).some(x => x.startsWith(m.id + '.'));
+    if (!started) {
+      const bl = dst.blocks.filter(x => x.id !== m.id), nd = Object.assign({}, dst, { blocks: bl.length || !dst.restBak ? bl : dst.restBak });
+      if (!bl.length) delete nd.restBak;
+      put('p:' + m.to, nd);
+    }
+  }
+  jset(k, { moved: without(e.moved, b.id) });
 }
 export function phaseOf(w) { return w.phase || 'volume'; }
 export const PHASE_LABEL = { volume: 'Volume', reprise: 'Reprise', force: 'Force', puissance: 'Puissance', specifique: 'Spécifique', affutage: 'Affûtage', recup: 'Récupération', deload: 'Décharge', transition: 'Transition', coupure: 'Coupure', autre: 'Cycle' };

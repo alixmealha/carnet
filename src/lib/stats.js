@@ -1,5 +1,5 @@
 import { jget, ids } from './store.js';
-import { meta, target, blocks, weekKeys, allItems, doneN, itemLoad, sessionName, PHASE_LABEL, weekLabel, setLoadsOf, workLoad } from './plan.js';
+import { meta, target, blocks, weekKeys, allItems, doneN, itemLoad, sessionName, PHASE_LABEL, weekLabel, setLoadsOf, workLoad, sessionsOf } from './plan.js';
 import { score, nightTotal, zoneOf, rng, FLAGS, verdict } from './rules.js';
 import { addDays, todayKey, fmtRange } from './dates.js';
 import { climber } from './sports.js';
@@ -24,13 +24,13 @@ export function weeksStats() {
       plan += dayPlanned(k);
       const r = dayReal(k); if (r !== null) { real += r; rh = true; }
       const e = jget(k);
-      if (typeof e.rpe === 'number' && typeof e.duree === 'number' && e.duree > 0) {
-        ua += e.rpe * e.duree; uh = true;
-        if (!cl || climbing(k)) tz[zoneOf(e.rpe)] += e.duree;
+      for (const x of sessionsOf(e)) {
+        ua += x.rpe * x.duree; uh = true;
+        if (!cl || climbing(k)) tz[zoneOf(x.rpe)] += x.duree;
       }
       const t = score(e); if (t !== null) { wsum += t; wn++; }
       const nt = nightTotal(e); if (nt !== null) { ssum += nt; sn++; }
-      if (k <= todayKey()) for (const { it, key } of allItems(k)) { const v = doneN(e, key, it.n); if (it.opt && !v) continue; items++; if (v >= it.n) itemsDone++; }
+      if (k <= todayKey()) for (const { b, it, key } of allItems(k)) { if (e.moved && e.moved[b.id]) continue; const v = doneN(e, key, it.n); if (it.opt && !v) continue; items++; if (v >= it.n) itemsDone++; }
     }
     return { wi, w, ks, label: weekLabel(w), range: fmtRange(w.start, w.end), phase: PHASE_LABEL[w.phase] || w.bloc, plan, real: rh ? real : null, ua: uh ? ua : null, tz,
       well: wn ? wsum / wn : null, sleep: sn ? Math.round(ssum / sn) : null, adherence: items ? itemsDone / items : null };

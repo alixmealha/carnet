@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset, get, put, isSelf, links, myProfile, subjectSettings, SELF, getSubject, nameOf } from '../lib/store.js';
-import { blocks, target, weekOf, weekLabel, itemKey, doneN, progress, itemLoad, fingerCalc, testIdsOf, PHASE_LABEL, meta, day, eventOn, setDoneCount, setLoadsOf, setsText } from '../lib/plan.js';
+import { blocks, target, weekOf, weekLabel, itemKey, doneN, progress, itemLoad, fingerCalc, testIdsOf, PHASE_LABEL, meta, day, eventOn, setDoneCount, setLoadsOf, setsText, blockState, apartOf, apartNote, SKIP } from '../lib/plan.js';
+import { BlockMenu } from '../ui/BlockMenu.jsx';
 import { WELL, FLAGS, REPAS, RPE, STATUS, SIV, score, verdict, rpeCmp, rng, NSTAGE, NMET, parseDur, durShort, durLong, nightTotal, vfcAvg } from '../lib/rules.js';
 import { dayInsights } from '../lib/insights.js';
 import { testById, valueKeys, resultsOn, saveResults, lastResult, pct } from '../lib/tests.js';
@@ -191,12 +192,12 @@ export function ItemRow({ k, b, it, e, color }) {
   const setDone = val => {
     setDoneCount(k, b, it, val);
     const p = progress(k);
-    if (p.total && p.done === p.total && !jget(k).status) jset(k, { status: 'faite' });
+    if (p.total && p.done === p.total && !jget(k).status) jset(k, { status: p.skipped ? 'adaptee' : 'faite' });
   };
   return (
     <div class={'it' + (full ? ' done' : '')}>
       <button type="button" class="ck" aria-pressed={full ? 'true' : 'false'} aria-label={it.label} onClick={() => setDone(full ? 0 : it.n)}>✓</button>
-      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed || varied ? ' chg' : '')}>{varied ? setsText(sl, ld.u) : ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}</em>}</b>{it.det && <span><Rich text={it.det} /></span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} /></div>
+      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed || varied ? ' chg' : '')}>{varied ? setsText(sl, ld.u) : ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}{e.falls && e.falls[key] ? ' · ' + e.falls[key] + ' chute' + (e.falls[key] > 1 ? 's' : '') : ''}</em>}</b>{it.det && <span><Rich text={it.det} /></span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} /></div>
       {it.n > 1 && <div class="pips" role="group" aria-label={it.label + ' : ' + v + ' sur ' + it.n}>
         {Array.from({ length: it.n }, (_, i) => i + 1).map(i => <button type="button" class="pip" style={'--c:' + color} aria-pressed={i <= v ? 'true' : 'false'} aria-label={(it.unit || 'Série') + ' ' + i} onClick={() => setDone(v === i ? i - 1 : i)}>{i}</button>)}
       </div>}
@@ -204,9 +205,30 @@ export function ItemRow({ k, b, it, e, color }) {
   );
 }
 
+const plainT = t => String(t || '').replace(/\[[a-z]+\]\s*/g, '').trim();
+const hm = t => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+// État d'un bloc sorti de la séance : à part (avec son bouton), déplacé, pas fait
+function BlockState({ k, b, e, onStart, ro }) {
+  const bs = blockState(e, b);
+  if (b.movedFrom && !bs) return <p class="blk-st">Déplacé du {fmtShort(b.movedFrom).toLowerCase()}</p>;
+  if (bs === 'moved') return <p class="blk-st">Déplacé au {fmtShort(e.moved[b.id].to).toLowerCase()}</p>;
+  if (bs === 'skip') return <p class="blk-st">Pas fait · {((SKIP.find(x => x[0] === e.skip[b.id]) || SKIP[4])[1]).toLowerCase()}</p>;
+  if (bs !== 'apart') return null;
+  const p = apartOf(e, b.id), note = apartNote(k, b);
+  if (p.endedAt) return <div class="blk-ap">
+    <b>Fait à part{p.duree ? ' · ' + p.duree + ' min' : ''}{typeof p.rpe === 'number' ? ' · ressenti ' + p.rpe : ''}</b>
+    {note && <span>{note.text}{note.changed ? ' · ordre changé par rapport au plan' : ''}</span>}
+  </div>;
+  return <div class="blk-ap todo">
+    <b>À faire à part{p.startedAt ? ' · commencé à ' + hm(p.startedAt) : ''}</b>
+    <span>À un autre moment de la journée : il aura sa propre durée et son ressenti.</span>
+    {!ro && onStart && <button class="btn primary" onClick={() => onStart(k, b.id)}><Icon name="play" size={18} />{p.startedAt ? 'Reprendre' : 'Lancer'}</button>}
+  </div>;
+}
 function SessionCard({ k, onStart, onEdit, ro }) {
   const e = jget(k), bl = blocks(k), pr = progress(k), d = day(k) || {}, w = weekOf(k);
-  const active = bl.some(b => b.kind !== 'rest');
+  const [menuB, setMenuB] = useState(null);
+  const active = bl.some(b => b.kind !== 'rest' && !['apart', 'moved'].includes(blockState(e, b)));
   return (
     <section class="card">
       <h3 class="h3">Séance du jour <em>{pr.total ? pr.done + '/' + pr.total + ' fait' : ''}{onEdit && <button class="btn ghost" style="min-height:28px;padding:0 0 0 10px;font-size:13px" onClick={() => onEdit(k)}>Modifier</button>}</em></h3>
@@ -217,12 +239,14 @@ function SessionCard({ k, onStart, onEdit, ro }) {
         {bl.length === 0 && <p class="small" style="margin:0">Rien de prévu ce jour-là.</p>}
         <fieldset class="ro stack" disabled={ro}>
           {bl.map(b => {
-            const color = 'var(--k-' + (b.kind === 'rest' ? 'rest' : b.kind) + ')', fc = b.kind === 'doigts' ? fingerCalc(b, k) : null;
+            const color = 'var(--k-' + (b.kind === 'rest' ? 'rest' : b.kind) + ')', fc = b.kind === 'doigts' ? fingerCalc(b, k) : null, bs = blockState(e, b), off = bs === 'moved' || bs === 'skip';
             return (
-              <div class="blk">
+              <div class={'blk' + (off ? ' off' : bs === 'apart' ? ' apart' : '')}>
                 <span class="tape" style={'background:' + color} />
                 <div style="min-width:0">
-                  <h4><Rich text={b.title} /></h4>
+                  <div class="blk-h"><h4><Rich text={b.title} /></h4>{!ro && onStart && b.kind !== 'rest' && <button type="button" class="blk-m" aria-label={'Options : ' + plainT(b.title)} onClick={() => setMenuB(b)}>•••</button>}</div>
+                  <BlockState k={k} b={b} e={e} onStart={onStart} ro={ro} />
+                  {off ? null : <>
                   {b.desc && <p class="d"><Rich text={b.desc} /></p>}
                   {fc && <div class="calc">{fc.text}{fc.hint && <><br /><span class="muted">{fc.hint}</span></>}</div>}
                   {fc && fc.guard && <div class="guard">{fc.guard}</div>}
@@ -230,6 +254,7 @@ function SessionCard({ k, onStart, onEdit, ro }) {
                   {b.items && b.items.length > 0 && (b.kind === 'rest'
                     ? <ul class="plain">{b.items.map(it => <li><Rich text={it.label} />{it.det ? ' · ' : ''}<Rich text={it.det} /></li>)}</ul>
                     : <div class="items">{b.items.map(it => <ItemRow k={k} b={b} it={it} e={e} color={color} />)}</div>)}
+                  </>}
                 </div>
               </div>
             );
@@ -237,6 +262,7 @@ function SessionCard({ k, onStart, onEdit, ro }) {
         </fieldset>
         {d.edited && d.edited.uid && d.edited.uid !== links.me && <p class="edited">Modifiée par {d.edited.name || 'ton coach'} · {new Date(d.edited.at).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>}
         {d.adapt && <details class="fold why-f"><summary><span class="small" style="margin:0;font-weight:600;color:var(--warn)">Si besoin d’adapter</span></summary><p class="small" style="color:var(--ink)"><Rich text={d.adapt} /></p></details>}
+        {menuB && <BlockMenu k={k} b={menuB} onClose={() => setMenuB(null)} />}
         {active && onStart && !ro && <button class="btn big primary" onClick={() => onStart(k)}><Icon name="play" size={20} />{e.startedAt && !e.endedAt ? 'Reprendre la séance' : pr.done ? 'Continuer la séance' : 'Démarrer la séance'}</button>}
       </div>
     </section>

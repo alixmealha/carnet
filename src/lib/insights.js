@@ -1,7 +1,7 @@
 // Lecture du suivi : interprétation des valeurs du jour et de la semaine, avec un conseil d'adaptation.
 // Les seuils viennent de la littérature (voir sources.js) ; c'est l'écart à sa propre moyenne qui compte le plus.
 import { jget, get, subjectSettings, profileOf, getSubject } from './store.js';
-import { day, target, kinds, eventOn } from './plan.js';
+import { day, target, kinds, eventOn, sessionsOf } from './plan.js';
 import { score, verdict, nightTotal, durLong, nightCompare, FLAGS, rng, WELL } from './rules.js';
 import { addDays, todayKey, fmtNum } from './dates.js';
 
@@ -13,7 +13,8 @@ const range = (k, from, to) => { const out = []; for (let i = from; i <= to; i++
 export const sleepTarget = () => (profileOf(getSubject()).under18 ? 480 : 420);
 const FL = Object.fromEntries(FLAGS);
 
-export function dayLoad(k) { const e = jget(k); return typeof e.rpe === 'number' && typeof e.duree === 'number' && e.duree > 0 ? e.rpe * e.duree : 0; }
+// Charge du jour (ressenti × durée), séances faites à part comprises
+export function dayLoad(k) { return sessionsOf(jget(k)).reduce((s, x) => s + x.rpe * x.duree, 0); }
 // Ratio aigu (7 j) / chronique (moyenne hebdo sur 28 j), seulement avec au moins 3 semaines de données
 export function loadRatio(k) {
   const d28 = range(k, -27, 0), loads = d28.map(dayLoad);

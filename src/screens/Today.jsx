@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import { jget, isSelf, nameOf, getSubject } from '../lib/store.js';
-import { blocks, weekOf, weekLabel, meta, progress, PHASE_LABEL, nextEvent, eventOn, sessionName, day } from '../lib/plan.js';
+import { blocks, weekOf, weekLabel, meta, progress, PHASE_LABEL, nextEvent, eventOn, sessionName, day, blockState, apartOf } from '../lib/plan.js';
 import { score, verdict } from '../lib/rules.js';
 import { dayInsights } from '../lib/insights.js';
 import { todayKey, mondayOf, addDays, DOW_1, dom, fmtRange, diffDays, fmtLong } from '../lib/dates.js';
@@ -63,7 +63,8 @@ const scrollToId = id => { const el = document.getElementById(id); if (el) windo
 // Le résumé du jour : forme, séance, consigne et semaine, avant les détails
 function Hero({ k, onStart }) {
   const e = jget(k), sc = score(e), v = sc !== null ? verdict(sc) : null, self = isSelf();
-  const active = blocks(k).some(b => b.kind !== 'rest'), d = day(k) || {}, pr = progress(k);
+  const active = blocks(k).some(b => b.kind !== 'rest' && !['apart', 'moved'].includes(blockState(e, b))), d = day(k) || {}, pr = progress(k);
+  const aparts = blocks(k).filter(b => blockState(e, b) === 'apart' && !apartOf(e, b.id).endedAt);
   const r = sc !== null ? dayInsights(k) : null, wk = weekCount(k);
   const meta2 = [d.duree && d.duree !== '—' ? d.duree : null, pr.total ? pr.done + '/' + pr.total + ' fait' : null].filter(Boolean).join(' · ');
   return (
@@ -83,6 +84,7 @@ function Hero({ k, onStart }) {
         : self ? <button type="button" class="hero-r todo" onClick={() => scrollToId('morning')}><i />Remplis ta forme du matin : la séance s’ajuste<span class="chev r" aria-hidden="true" /></button>
         : <p class="hero-r todo"><i />{nameOf(getSubject())} n’a pas encore rempli sa forme du matin</p>}
       {active && self && onStart && <button class="btn big primary" onClick={() => onStart(k)}><Icon name="play" size={20} />{e.startedAt && !e.endedAt ? 'Reprendre la séance' : pr.done ? 'Continuer la séance' : 'Démarrer la séance'}</button>}
+      {self && onStart && aparts.map(b => <div class="hero-ap"><span>À part aujourd’hui · <b><Rich text={b.title} /></b></span><button class="btn" onClick={() => onStart(k, b.id)}>{apartOf(e, b.id).startedAt ? 'Reprendre' : 'Lancer'}</button></div>)}
       {wk.planned > 0 && <div class="hero-wk" aria-label={'Semaine : ' + wk.done + ' séances faites sur ' + wk.planned}>
         <span>Cette semaine</span>
         <span class="wk-d">{wk.days.map((x, i) => <i class={x} title={DOW_1[i]} />)}</span>

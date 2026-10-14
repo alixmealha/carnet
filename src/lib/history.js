@@ -25,17 +25,20 @@ export function lastPerf(label, k, lib) {
       const key = itemKey(b, it), n = doneN(e, key, it.n); if (n <= 0) continue;
       const ld = itemLoad(b, it, e), sl = setLoadsOf(e, key), u = ld ? ld.u : it.unit_load || 'kg';
       const wl = sl ? workLoad(sl) : ld ? ld.v : null;
-      return { k: d, sets: n, n: it.n, reps: repsOf(it.det), load: sl ? setsText(sl, u) : ld ? ld.text : '', loadV: wl, setLoads: sl, unit: u, rir: e.rir && typeof e.rir[key] === 'number' ? e.rir[key] : null, full: n >= it.n };
+      return { k: d, sets: n, n: it.n, reps: repsOf(it.det), load: sl ? setsText(sl, u) : ld ? ld.text : '', loadV: wl, setLoads: sl, unit: u, unitN: it.unit, rir: e.rir && typeof e.rir[key] === 'number' ? e.rir[key] : null, full: n >= it.n,
+        falls: e.falls && typeof e.falls[key] === 'number' ? e.falls[key] : null, wall: e.wall && e.wall[key] ? e.wall[key] : null };
     }
   }
   return null;
 }
 export function perfText(p) {
   const parts = [];
-  if (p.sets) parts.push(p.sets + (p.reps && p.repsKnown ? ' × ' + p.reps : ' série' + (p.sets > 1 ? 's' : '')));
+  const u = p.unitN === 'Bloc' ? ' bloc' : p.unitN === 'Essai' ? ' essai' : ' série';
+  if (p.sets) parts.push(p.sets + (p.reps && p.repsKnown ? ' × ' + p.reps : u + (p.sets > 1 ? 's' : '')));
   else if (p.reps) parts.push(p.reps);
   if (p.load) parts.push(p.load);
   if (typeof p.rir === 'number') parts.push('réserve ' + p.rir + (p.rir >= 4 ? '+' : ''));
+  if (typeof p.falls === 'number') parts.push(p.falls + ' chute' + (p.falls > 1 ? 's' : ''));
   return fmtShort(p.k) + ' : ' + parts.join(' · ');
 }
 

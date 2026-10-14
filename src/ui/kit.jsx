@@ -46,7 +46,7 @@ export function TextSeg({ value, onChange, options, label }) {
     <button type="button" aria-pressed={value === k ? 'true' : 'false'} onClick={() => onChange(value === k ? null : k)}>{l}</button>)}</div>;
 }
 
-export function Sheet({ title, onClose, right, children }) {
+export function Sheet({ title, onClose, right, children, cls }) {
   const ref = useRef(null);
   useEffect(() => {
     const onKey = e => { if (e.key === 'Escape') onClose(); };
@@ -67,7 +67,7 @@ export function Sheet({ title, onClose, right, children }) {
     if (d && d.dy > 110) onClose(); else { ref.current.style.transition = 'transform .2s'; ref.current.style.transform = ''; setTimeout(() => { if (ref.current) ref.current.style.transition = ''; }, 220); }
   };
   return (
-    <div class="sheet-wrap" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div class={'sheet-wrap' + (cls ? ' ' + cls : '')} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div class="sheet" ref={ref} role="dialog" aria-modal="true" aria-label={title} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
         <div class="sheet-h">
           <button class="btn ghost" onClick={onClose}>Fermer</button>

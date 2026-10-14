@@ -3,7 +3,7 @@
 // Repères : Thomas, Erdman & Burke 2016 (ACSM/AND/DC), Morton 2018 (protéines), ANSES 2021 (vitamines et minéraux).
 // Compléments : consensus du CIO 2018 (Maughan). Garde-fous : consensus REDs du CIO 2023 (Mountjoy).
 import { get, getFor, put, putFor, putMany, idsFor, jget, ids, profileOf, getSubject, SELF, isSelf, links } from './store.js';
-import { blocks, target, day } from './plan.js';
+import { blocks, target, day, sessionsOf } from './plan.js';
 import { acts, plannedActs, actOfKind } from './activity.js';
 import { sportsOf, dietOf } from './sports.js';
 import { bodyWeightAt } from './tests.js';
@@ -180,7 +180,8 @@ export function dayActivity(k, o) {
   const bl = blocks(k).filter(b => b.kind !== 'rest' && b.kind !== 'test');
   if (!real && (!bl.length || e.status === 'sautee')) return { min: 0, items: [], real: false };
   const tg = target(k), d = day(k) || {};
-  const min = real ? e.duree : (parseMin(d.duree) || (bl.some(b => ['grimpe', 'compet'].includes(b.kind)) ? 90 : 60));
+  const extra = sessionsOf(e).filter(x => x.apart).reduce((t, x) => t + x.duree, 0); // blocs faits à part dans la journée
+  const min = (real ? e.duree : (parseMin(d.duree) || (bl.some(b => ['grimpe', 'compet'].includes(b.kind)) ? 90 : 60))) + extra;
   const r = typeof e.rpe === 'number' ? e.rpe : tg && tg.rpe ? (tg.rpe[0] + tg.rpe[1]) / 2 : 6;
   const as = (list.length ? list : plannedActs(k)).filter(a => a);
   const run = bl.some(b => b.kind === 'course'), bike = bl.some(b => b.kind === 'velo') && !run;

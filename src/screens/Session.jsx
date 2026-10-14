@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset } from '../lib/store.js';
-import { blocks, itemKey, doneN, progress, itemLoad, fingerCalc, target, KIND, setDoneCount, setLoadsOf, setsText } from '../lib/plan.js';
+import { blocks, itemKey, doneN, progress, itemLoad, fingerCalc, target, KIND, setDoneCount, setLoadsOf, setsText, blockState, setBlockState, apartOf, setApart, SKIP } from '../lib/plan.js';
+import { BlockMenu } from '../ui/BlockMenu.jsx';
 import { RPE, STATUS, rpeCmp } from '../lib/rules.js';
 import { ActFields } from '../ui/ActFields.jsx';
 import { mmss, fmtNum, fmtLong } from '../lib/dates.js';
@@ -16,10 +17,14 @@ function useNow(ms) {
   return n;
 }
 
-export function buildSteps(k) {
-  const st = [];
+// part : id d'un bloc fait à part (2e séance du jour) ; sinon la séance principale, sans les blocs faits à part ou déplacés
+export function buildSteps(k, part) {
+  const st = [], e = jget(k);
   for (const b of blocks(k)) {
     if (b.kind === 'rest') continue;
+    const bs = blockState(e, b);
+    if (part ? b.id !== part : bs === 'apart' || bs === 'moved') continue;
+    if (!part && bs === 'skip') { st.push({ b, items: b.items || [], skip: true }); continue; }
     const its = b.items || [];
     if (!its.length) { st.push({ b, items: [] }); continue; }
     // Bloc fait d'éléments simples (échauffement, consignes) : une seule étape en liste à cocher
@@ -37,7 +42,7 @@ export function buildSteps(k) {
   }
   return st;
 }
-const stepDone = (k, s) => { const e = jget(k); return s.items.length ? s.items.every(it => doneN(e, itemKey(s.b, it), it.n) >= it.n) : !!(e.done && e.done[s.b.id + '.*']); };
+const stepDone = (k, s) => { const e = jget(k); if (s.skip) return true; return s.items.length ? s.items.every(it => doneN(e, itemKey(s.b, it), it.n) >= it.n) : !!(e.done && e.done[s.b.id + '.*']); };
 const stepPart = (k, s) => { const e = jget(k); return s.items.some(it => doneN(e, itemKey(s.b, it), it.n) > 0); };
 
 function setDone(k, key, val) {
@@ -206,6 +211,85 @@ function TempoView({ spec, title, ph, phases, idx, left, sec, paused, frac, onTo
 }
 export const tempoText = T => 'Tempo : ' + (T.prep ? T.prep + ' s de mise en place, ' : '') + T.ecc + ' s d’excentrique' + (T.ret ? ', ' + T.ret + ' s de retour' : '') + ', ' + T.reps + ' rép.' + (T.sides && T.sides.length > 1 ? ' par côté, ' + (T.sideRest || 10) + ' s pour changer de côté' : '') + '.';
 
+/* ---------- Mode blocs : « Bloc fini » lance le repos, « Tombé » compte aussi ---------- */
+// Calculé à partir de l'heure : si l'écran se met en veille pendant le repos, on reprend au bon endroit.
+const pl = (n, w) => n + ' ' + w + (n > 1 ? 's' : '');
+function ClimbTimer({ k, b, it, onClose }) {
+  const key = itemKey(b, it), essai = it.unit === 'Essai', W = essai ? 'Essai' : 'Bloc', w = W.toLowerCase();
+  const [st, setSt] = useState(() => ({ ph: 'wall', t0: Date.now(), dur: it.rest || 60, pausedAt: null, acc: 0, last: null }));
+  const now = useNow(200);
+  const e = jget(k), v = doneN(e, key, it.n), falls = (e.falls && e.falls[key]) || 0, wall = (e.wall && e.wall[key]) || 0;
+  const t = Math.max(0, (st.pausedAt || now) - st.t0 - st.acc);
+  const restLeft = st.ph === 'rest' ? Math.max(0, st.dur * 1000 - t) : 0, sec = Math.ceil(restLeft / 1000);
+  const lastTick = useRef(null);
+  useEffect(() => {
+    if (st.ph !== 'rest' || st.pausedAt) return;
+    if (restLeft <= 0) { goSignal(); say(W + ' ' + (v + 1)); setSt(s => ({ ...s, ph: 'wall', t0: s.t0 + s.acc + s.dur * 1000, acc: 0 })); return; }
+    if (lastTick.current !== sec) { lastTick.current = sec; if (sec > 0 && sec <= 3) tick(); }
+  }, [sec, st.ph, st.pausedAt]);
+  const finish = fell => {
+    const ee = jget(k), cur = doneN(ee, key, it.n), ws = st.ph === 'wall' ? Math.round(t / 1000) : 0;
+    setDoneCount(k, b, it, Math.min(it.n, cur + 1));
+    const patch = { wall: Object.assign({}, ee.wall, { [key]: ((ee.wall || {})[key] || 0) + ws }) };
+    if (fell) patch.falls = Object.assign({}, ee.falls, { [key]: ((ee.falls || {})[key] || 0) + 1 });
+    jset(k, patch);
+    const last = { ws, fell, t0: st.t0, acc: st.acc };
+    if (cur + 1 >= it.n) { doneSignal(); say('Terminé'); setSt(s => ({ ...s, ph: 'done', last })); }
+    else { restSignal(); setSt({ ph: 'rest', t0: Date.now(), dur: it.rest || 60, pausedAt: null, acc: 0, last }); }
+  };
+  // appui par erreur : on revient sur le bloc, son chrono continue
+  const undo = () => {
+    const L = st.last; if (!L) return;
+    const ee = jget(k), cur = doneN(ee, key, it.n);
+    setDoneCount(k, b, it, Math.max(0, cur - 1));
+    const patch = { wall: Object.assign({}, ee.wall, { [key]: Math.max(0, ((ee.wall || {})[key] || 0) - L.ws) }) };
+    if (L.fell) patch.falls = Object.assign({}, ee.falls, { [key]: Math.max(0, ((ee.falls || {})[key] || 0) - 1) });
+    jset(k, patch);
+    setSt({ ph: 'wall', t0: L.t0, acc: L.acc, dur: it.rest || 60, pausedAt: null, last: null });
+  };
+  const toggle = () => setSt(s => s.pausedAt ? { ...s, acc: s.acc + (Date.now() - s.pausedAt), pausedAt: null } : { ...s, pausedAt: Date.now() });
+  const go = () => { goSignal(); setSt(s => ({ ...s, ph: 'wall', t0: Date.now(), acc: 0, pausedAt: null })); };
+  const cls = st.ph === 'wall' ? 'work' : st.ph === 'rest' ? 'pause' : 'done';
+  const shown = st.ph === 'wall' ? v + 1 : v;
+  return (
+    <div class={'tmr climb ' + cls} role="timer">
+      <div class="tmr-top"><span>{it.label}</span><button onClick={onClose}>{st.ph === 'done' ? 'Fermer' : 'Arrêter'}</button></div>
+      <div class="tmr-mid">
+        {st.ph === 'wall' && <>
+          <div class="tmr-ph">{W} en cours</div>
+          <div class="tmr-big">{Math.min(shown, it.n)}<small>/{it.n}</small></div>
+          <div class="tmr-sub">sur le {w} depuis {mmss(t / 1000)}{st.pausedAt ? ' · en pause' : ''}</div>
+        </>}
+        {st.ph === 'rest' && <>
+          <div class="tmr-ph">Repos · ensuite {w} {v + 1}</div>
+          <div class="tmr-big">{mmss(sec)}</div>
+          <div class="tmr-sub">{pl(v, 'fait')} · {it.n - v} restant{it.n - v > 1 ? 's' : ''}{falls ? ' · ' + pl(falls, 'chute') : ''}{st.pausedAt ? ' · en pause' : ''}</div>
+        </>}
+        {st.ph === 'done' && <>
+          <div class="tmr-ph">Terminé</div>
+          <div class="tmr-big">✓</div>
+          <div class="tmr-sub">{pl(it.n, w)} · {pl(falls, 'chute')}{wall ? ' · ' + mmss(wall) + ' sur le ' + (essai ? 'bloc' : 'mur') : ''}</div>
+        </>}
+        {it.n <= 40 && st.ph !== 'done' && <div class="tp-dots" aria-label={v + ' faits sur ' + it.n}>{Array.from({ length: it.n }, (_, i) => <i class={i < v ? 'on' : ''} />)}</div>}
+      </div>
+      {st.ph === 'wall' && <>
+        <button class="cl-big" onClick={() => finish(false)}>{essai ? 'Réussi' : 'Bloc fini'}</button>
+        <div class="cl-sub"><button onClick={toggle}>{st.pausedAt ? 'Reprendre' : 'Pause'}</button><button onClick={() => finish(true)}>Tombé · {essai ? 'essai compté' : 'compte quand même'}</button></div>
+      </>}
+      {st.ph === 'rest' && <>
+        <div class="tmr-bar"><i style={'width:' + Math.min(100, t / (st.dur * 10)) + '%'} /></div>
+        <div class="tmr-ctl">
+          <button onClick={() => setSt(s => ({ ...s, dur: Math.max(5, s.dur - 15) }))} aria-label="Moins 15 secondes">−15 s</button>
+          <button onClick={() => setSt(s => ({ ...s, dur: s.dur + 15 }))} aria-label="Plus 15 secondes">+15 s</button>
+          <button onClick={go}>Go</button>
+        </div>
+        <div class="cl-sub"><button onClick={toggle}>{st.pausedAt ? 'Reprendre' : 'Pause'}</button><button onClick={undo}>Annuler le dernier {w}</button></div>
+      </>}
+    </div>
+  );
+}
+const climbable = (b, it) => !it.timer && it.n > 1 && it.rest > 0 && (it.unit === 'Bloc' || it.unit === 'Essai') && !STRENGTH.includes(b.kind);
+
 /* ---------- Une étape ---------- */
 const STRENGTH = ['muscu', 'renfo', 'doigts', 'epaule'];
 function LoadStepper({ k, b, it }) {
@@ -262,7 +346,25 @@ function Pips({ k, b, it, color, onTick }) {
   );
 }
 
-function StepView({ k, step, startRest, openTimer, onNext, isLast }) {
+// Étape avec, en bas, « Pas possible maintenant ? » (à part, autre jour, pas fait)
+function StepView(props) {
+  const { k, step, onMenu, onNext, isLast } = props, { b } = step, e = jget(k);
+  if (step.skip) {
+    const r = (SKIP.find(x => x[0] === (e.skip || {})[b.id]) || SKIP[4])[1];
+    return <div>
+      <div class="step-k"><i style={'background:var(--k-' + b.kind + ')'} /><Rich text={b.title} /></div>
+      <p class="skip-b">Pas fait · {r.toLowerCase()}</p>
+      <button class="btn big" style="margin-top:12px" onClick={() => setBlockState(k, b, null)}>Je le fais finalement</button>
+      <button class="btn big ink" style="margin-top:10px" onClick={onNext}>{isLast ? 'Terminer la séance' : 'Étape suivante'}<Icon name="right" size={20} /></button>
+    </div>;
+  }
+  const its = b.items || [], full = its.length ? its.every(x => doneN(e, itemKey(b, x), x.n) >= x.n) : !!(e.done && e.done[b.id + '.*']);
+  return <div>
+    <StepBody {...props} />
+    {onMenu && !full && <button type="button" class="bm-link" onClick={() => onMenu(b)}>Pas possible maintenant ?<small>Tout le bloc « {plainT(b.title)} » : à part, un autre jour ou pas fait</small></button>}
+  </div>;
+}
+function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) {
   const { b, items } = step, color = 'var(--k-' + b.kind + ')', e = jget(k);
   const [sub, setSub] = useState({ rep: 0, phase: 'heavy' });
   const sk = b.id + ':' + items.map(x => x.id).join(',');
@@ -275,7 +377,7 @@ function StepView({ k, step, startRest, openTimer, onNext, isLast }) {
     <div class="step-k"><i style={'background:' + color} /><Rich text={b.title} /></div>
     <h2 class={'step-t' + (String(ttl).length > 34 ? ' long' : '')}><Rich text={ttl} /></h2>
     {!step.group && !step.list && !step.pair && it && it.det && <p class="step-d"><Rich text={it.det} /></p>}
-    {!step.group && !step.list && !step.pair && it && STRENGTH.includes(b.kind) && it.id !== 'ech' && <LastTime k={k} it={it} />}
+    {!step.group && !step.list && !step.pair && it && (STRENGTH.includes(b.kind) || climbable(b, it)) && it.id !== 'ech' && <LastTime k={k} it={it} />}
     {(step.group || step.list || !it) && b.desc && <p class="step-d"><Rich text={b.desc} /></p>}
     {fc && <div class="calc" style="margin-top:10px">{fc.text}{fc.hint && <><br /><span class="muted">{fc.hint}</span></>}</div>}
     {fc && fc.guard && <div class="guard">{fc.guard}</div>}
@@ -331,8 +433,13 @@ function StepView({ k, step, startRest, openTimer, onNext, isLast }) {
         else { setSub({ phase: 'heavy' }); bump(k, b, it); if (v + 1 < it.n) startRest(T.lightRest, 'Repos avant le contraste suivant', 'Série lourde'); }
       }}>{heavy ? 'Lourde faite' : 'Explosive faite'}</button></div>;
   } else {
-    action = <button class="btn big primary" style="margin-top:18px" disabled={full} onClick={() => { bump(k, b, it); if (it.rest && v + 1 < it.n) startRest(it.rest, 'Repos · ' + (it.unit === 'Bloc' ? 'bloc ' : it.unit === 'Essai' ? 'essai ' : 'série ') + (v + 2) + ' ensuite'); }}>
-      {full ? 'Tout est fait ✓' : (it.unit === 'Bloc' ? 'Bloc fait' : it.unit === 'Essai' ? 'Essai fait' : 'Série faite') + ' · ' + (v + 1) + '/' + it.n}</button>;
+    const cl = openClimb && climbable(b, it);
+    action = <>
+      {cl && <button class="btn big primary" style="margin-top:18px" onClick={() => openClimb(b, it)}><Icon name="timer" />Lancer le mode {it.unit === 'Essai' ? 'essais' : 'blocs'}</button>}
+      <button class={'btn big' + (cl ? '' : ' primary')} style={cl ? 'margin-top:8px' : 'margin-top:18px'} disabled={full} onClick={() => { bump(k, b, it); if (it.rest && v + 1 < it.n) startRest(it.rest, 'Repos · ' + (it.unit === 'Bloc' ? 'bloc ' : it.unit === 'Essai' ? 'essai ' : 'série ') + (v + 2) + ' ensuite'); }}>
+        {full ? 'Tout est fait ✓' : (it.unit === 'Bloc' ? 'Bloc fait' : it.unit === 'Essai' ? 'Essai fait' : 'Série faite') + ' · ' + (v + 1) + '/' + it.n}</button>
+      {cl && <p class="small">Plein écran : « Bloc fini » lance {mmss(it.rest)} de repos, « Tombé » compte le bloc et note la chute.</p>}
+    </>;
   }
   const askRir = full && STRENGTH.includes(b.kind) && it.unit !== 'Bloc' && it.unit !== 'Essai' && !(T && T.kind === 'interval');
   return <div>{head}<LoadStepper k={k} b={b} it={it} />
@@ -340,7 +447,7 @@ function StepView({ k, step, startRest, openTimer, onNext, isLast }) {
     {b.sub && <p class="small" style="margin-top:12px"><Rich text={b.sub} /></p>}
     {askRir && <Reserve k={k} b={b} it={it} />}
     {full ? nextBtn : action}
-    {!full && it.rest && !T && <p class="small">{mmss(it.rest)} de repos se lancent tout seuls après chaque {it.unit === 'Bloc' ? 'bloc' : it.unit === 'Essai' ? 'essai' : 'série'}.</p>}
+    {!full && it.rest && !T && !(openClimb && climbable(b, it)) && <p class="small">{mmss(it.rest)} de repos se lancent tout seuls après chaque {it.unit === 'Bloc' ? 'bloc' : it.unit === 'Essai' ? 'essai' : 'série'}.</p>}
   </div>;
 }
 
@@ -385,23 +492,35 @@ function PairStep({ k, step, head, color, startRest, nextBtn }) {
 }
 
 /* ---------- Fin de séance ---------- */
-function Finish({ k, minutes, onSave, onBack }) {
-  const e = jget(k), tg = target(k), pr = progress(k);
+const plainT = t => String(t || '').replace(/\[[a-z]+\]\s*/g, '').trim();
+function Finish({ k, part, minutes, onSave, onBack, onMenu }) {
+  const e = jget(k), tg = part ? null : target(k), pr = progress(k, part);
+  const pa = part ? apartOf(e, part) || {} : null, rpe = part ? pa.rpe : e.rpe;
+  const setRpe = v => part ? setApart(k, part, { rpe: v }) : jset(k, { rpe: v });
   const [dur, setDur] = useState(String(minutes));
-  const [status, setStatus] = useState(e.status || (pr.total && pr.done === pr.total ? 'faite' : 'adaptee'));
-  const cmp = rpeCmp(tg, e.rpe);
+  const [mine, setMine] = useState(e.status || null);
+  const status = mine || (pr.total && pr.done === pr.total ? (pr.skipped ? 'adaptee' : 'faite') : 'adaptee');
+  const cmp = rpeCmp(tg, rpe);
+  // blocs pas commencés : on demande tout de suite ce qu'on en fait (à part, autre jour, pas fait)
+  const untouched = part ? [] : blocks(k).filter(b => b.kind !== 'rest' && !blockState(e, b) && ((b.items || []).length ? b.items.every(x => !doneN(e, itemKey(b, x), x.n)) : !(e.done && e.done[b.id + '.*'])));
+  const bT = part ? blocks(k).find(b => b.id === part) : null;
   return (
     <div class="stack">
-      <h2 class="h2" style="font-size:30px">Fin de séance</h2>
-      <p class="lead" style="margin:0">{pr.done}/{pr.total} exercices faits. Le ressenti se note idéalement 30 min après : tu peux aussi le remplir plus tard dans la fiche du jour.</p>
-      <TextSeg value={status} onChange={v => setStatus(v || status)} options={STATUS} label="Statut" />
-      <label class="fld">Durée totale (min)<input class="in mono" inputmode="numeric" value={dur} onInput={ev => setDur(ev.target.value)} /></label>
+      <h2 class="h2" style="font-size:30px">{part ? 'Fin · ' + plainT(bT && bT.title) : 'Fin de séance'}</h2>
+      <p class="lead" style="margin:0">{pr.done}/{pr.total} exercices faits.{part ? ' Ce bloc compte comme une séance à part dans la charge du jour.' : ' Le ressenti se note idéalement 30 min après : tu peux aussi le remplir plus tard dans la fiche du jour.'}</p>
+      {untouched.length > 0 && <div class="untouched">
+        <p class="sub-lbl" style="margin:0 0 6px">Pas commencé{untouched.length > 1 ? 's' : ''}</p>
+        {untouched.map(b => <div class="ut-row"><span><Rich text={b.title} /></span><button class="btn" onClick={() => onMenu(b)}>Que faire ?</button></div>)}
+        <p class="small" style="margin:6px 0 0">À un autre moment de la journée, un autre jour, ou pas fait avec la raison.</p>
+      </div>}
+      {!part && <TextSeg value={status} onChange={v => setMine(v || status)} options={STATUS} label="Statut" />}
+      <label class="fld">Durée{part ? '' : ' totale'} (min)<input class="in mono" inputmode="numeric" value={dur} onInput={ev => setDur(ev.target.value)} /></label>
       <div>
-        <Seg value={e.rpe} onChange={v => jset(k, { rpe: v })} from={0} to={10} dense tgt={tg && tg.rpe ? i => i >= tg.rpe[0] && i <= tg.rpe[1] : null} label="Ressenti" />
-        <div class="rpe-lbl">{typeof e.rpe === 'number' ? <>Ressenti <b>{e.rpe}/10 · {RPE[e.rpe]}</b></> : 'Ressenti global de 0 à 10' + (tg ? ' · en bleu, la zone visée' : '')}</div>
+        <Seg value={rpe} onChange={setRpe} from={0} to={10} dense tgt={tg && tg.rpe ? i => i >= tg.rpe[0] && i <= tg.rpe[1] : null} label="Ressenti" />
+        <div class="rpe-lbl">{typeof rpe === 'number' ? <>Ressenti <b>{rpe}/10 · {RPE[rpe]}</b></> : 'Ressenti global de 0 à 10' + (tg ? ' · en bleu, la zone visée' : '')}</div>
         {cmp && <p class={'cmp ' + cmp.cls}>{cmp.text}</p>}
       </div>
-      <ActFields k={k} />
+      {!part && <ActFields k={k} />}
       <div class="row-btns" style="margin-top:6px">
         <button class="btn big" style="flex:1" onClick={onBack}>Retour</button>
         <button class="btn big primary" style="flex:2" onClick={() => onSave(Math.max(0, parseInt(dur, 10) || 0), status)}>Enregistrer</button>
@@ -411,55 +530,68 @@ function Finish({ k, minutes, onSave, onBack }) {
 }
 
 /* ---------- Mode séance ---------- */
-export function SessionMode({ k, onClose }) {
-  const steps = buildSteps(k);
+// part : séance d'un bloc fait à part (autre moment de la journée)
+export function SessionMode({ k, part, onClose }) {
+  const steps = buildSteps(k, part);
   const [i, setI] = useState(() => { const f = steps.findIndex(s => !stepDone(k, s)); return f < 0 ? 0 : f; });
   const [rest, setRest] = useState(null);
   const [timer, setTimer] = useState(null);
+  const [climb, setClimb] = useState(null);
+  const [menuB, setMenuB] = useState(null);
   const [finish, setFinish] = useState(false);
   const now = useNow(1000);
   useEffect(() => {
     unlockAudio(); keepAwake(true);
-    const e = jget(k); if (!e.startedAt || e.endedAt) jset(k, { startedAt: Date.now(), endedAt: null });
+    const e = jget(k);
+    if (part) { const p = apartOf(e, part); if (p && (!p.startedAt || p.endedAt)) setApart(k, part, { startedAt: Date.now(), endedAt: null }); }
+    else if (!e.startedAt || e.endedAt) jset(k, { startedAt: Date.now(), endedAt: null });
     return () => keepAwake(false);
   }, []);
-  const e = jget(k), started = e.startedAt || now, pr = progress(k);
+  const e = jget(k), pa = part ? apartOf(e, part) : null, started = (part ? pa && pa.startedAt : e.startedAt) || now, pr = progress(k, part);
   const startRest = (sec, label, sayText, opt) => setRest({ until: Date.now() + sec * 1000, total: sec, label, say: sayText, ...(opt || {}) });
   const endRest = () => { const r = rest; setRest(null); if (r && r.then) r.then(); };
-  const step = steps[i];
+  const ii = Math.min(i, Math.max(0, steps.length - 1)), step = steps[ii];
   const openTimer = (spec, b, items) => setTimer({ spec, b, items });
   const onMark = ph => {
     const t = timer; if (!t) return;
     const it = t.items.length > 1 ? t.items[ph.si] : t.items[0];
     if (it) bump(k, t.b, it);
   };
-  const save = (minutes, status) => { jset(k, { duree: minutes || null, status, endedAt: Date.now() }); keepAwake(false); onClose(); };
+  const save = (minutes, status) => {
+    if (part) setApart(k, part, { duree: minutes || null, endedAt: Date.now() });
+    else jset(k, { duree: minutes || null, status, endedAt: Date.now() });
+    keepAwake(false); onClose();
+  };
+  const bT = part ? blocks(k).find(b => b.id === part) : null;
+  if (part && !pa) return <div class="ses" role="dialog" aria-label="Mode séance"><div class="ses-body"><p>Ce bloc n’est plus à faire à part.</p><button class="btn big" onClick={onClose}>Fermer</button></div></div>;
   return (
     <div class="ses" role="dialog" aria-label="Mode séance">
       <div class="ses-top">
         <button class="icon-btn" aria-label="Fermer le mode séance" onClick={onClose}><Icon name="close" /></button>
-        <div class="mid"><b>{fmtLong(k)}</b><span>{mmss((now - started) / 1000)} · {pr.done}/{pr.total} fait</span></div>
+        <div class="mid"><b>{part ? plainT(bT && bT.title) + ' · à part' : fmtLong(k)}</b><span>{mmss((now - started) / 1000)} · {pr.done}/{pr.total} fait</span></div>
         <button class="btn" onClick={() => setFinish(true)}>Terminer</button>
       </div>
       <div class="ses-prog"><i style={'width:' + (pr.total ? pr.done / pr.total * 100 : 0) + '%'} /></div>
       <div class="ses-body" style={rest && !timer && !finish ? "padding-bottom:200px" : ""}>
-        {finish ? <Finish k={k} minutes={Math.max(1, Math.round((now - started) / 60000 / 5) * 5)} onSave={save} onBack={() => setFinish(false)} /> : <>
-          {i === 0 && <div style="margin-bottom:16px"><Goal k={k} /></div>}
-          {step ? <StepView k={k} step={step} startRest={startRest} openTimer={openTimer} isLast={i === steps.length - 1} onNext={() => { setRest(null); if (i < steps.length - 1) { setI(i + 1); document.querySelector('.ses-body') && (document.querySelector('.ses-body').scrollTop = 0); } else setFinish(true); }} /> : <p>Rien à faire aujourd’hui.</p>}
+        {finish ? <Finish k={k} part={part} minutes={Math.max(1, Math.round((now - started) / 60000 / 5) * 5)} onSave={save} onBack={() => setFinish(false)} onMenu={setMenuB} /> : <>
+          {ii === 0 && !part && <div style="margin-bottom:16px"><Goal k={k} /></div>}
+          {step ? <StepView k={k} step={step} startRest={startRest} openTimer={openTimer} openClimb={(b, it) => setClimb({ b, it })} onMenu={part ? null : setMenuB} isLast={ii === steps.length - 1} onNext={() => { setRest(null); if (ii < steps.length - 1) { setI(ii + 1); document.querySelector('.ses-body') && (document.querySelector('.ses-body').scrollTop = 0); } else setFinish(true); }} /> : <p>Rien à faire dans cette séance{part ? '' : ' : les blocs du jour sont faits à part ou déplacés'}.</p>}
           <div class="steps-list" aria-label="Étapes">
             {steps.map((s, j) => {
               const d = stepDone(k, s), p = !d && stepPart(k, s);
-              return <button aria-current={j === i ? 'step' : undefined} onClick={() => setI(j)}><span class={'dot' + (d ? ' on' : p ? ' part' : '')}>{d ? '✓' : ''}</span><span style="flex:1;min-width:0"><Rich text={s.group ? (s.b.timer.name || s.b.title) : s.list ? s.b.title : s.pair ? s.items.map(x => x.label).join(' + ') : s.items[0] ? s.items[0].label : s.b.title} /><br /><small class="muted">{s.list ? s.items.length + ' éléments' : (KIND[s.b.kind] || s.b.title)}</small></span></button>;
+              return <button aria-current={j === ii ? 'step' : undefined} onClick={() => setI(j)}><span class={'dot' + (s.skip ? ' skip' : d ? ' on' : p ? ' part' : '')}>{s.skip ? '–' : d ? '✓' : ''}</span><span style="flex:1;min-width:0"><Rich text={s.skip ? s.b.title : s.group ? (s.b.timer.name || s.b.title) : s.list ? s.b.title : s.pair ? s.items.map(x => x.label).join(' + ') : s.items[0] ? s.items[0].label : s.b.title} /><br /><small class="muted">{s.skip ? 'Pas fait' : s.list ? s.items.length + ' éléments' : (KIND[s.b.kind] || s.b.title)}</small></span></button>;
             })}
           </div>
         </>}
       </div>
       {!finish && <div class="ses-foot">
-        <button class="btn" disabled={i === 0} onClick={() => setI(i - 1)}>Précédent</button>
-        {i < steps.length - 1 ? <button class="btn primary" onClick={() => setI(i + 1)}>Étape suivante</button> : <button class="btn primary" onClick={() => setFinish(true)}>Terminer</button>}
+        <button class="btn" disabled={ii === 0} onClick={() => setI(ii - 1)}>Précédent</button>
+        {ii < steps.length - 1 ? <button class="btn primary" onClick={() => setI(ii + 1)}>Étape suivante</button> : <button class="btn primary" onClick={() => setFinish(true)}>Terminer</button>}
       </div>}
-      {rest && !timer && !finish && <RestBar rest={rest} onAdd={d => setRest(r => ({ ...r, until: r.until + d * 1000, total: Math.max(1, r.total + d) }))} onSkip={endRest} />}
+      {rest && !timer && !climb && !finish && <RestBar rest={rest} onAdd={d => setRest(r => ({ ...r, until: r.until + d * 1000, total: Math.max(1, r.total + d) }))} onSkip={endRest} />}
       {timer && <IntervalTimer spec={timer.spec} title={timer.spec.name || timer.b.title} onMark={onMark} onClose={() => setTimer(null)} />}
+      {climb && <ClimbTimer k={k} b={climb.b} it={climb.it} onClose={() => setClimb(null)} />}
+      {menuB && <BlockMenu k={k} b={menuB} top onClose={() => setMenuB(null)} />}
     </div>
   );
 }
