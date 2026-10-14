@@ -107,6 +107,28 @@ export const CATALOG = [
   { id: 'hip-re', cat: 'mobilite', name: 'Rotation externe de hanche à 90°', sides: true, measures: V('°'),
     proto: ['Même position, rotation externe passive maximale.'] },
 
+  { id: 'sit-reach', cat: 'mobilite', name: 'Sit and reach (souplesse postérieure)', sides: false, measures: V('cm'),
+    equip: 'Une marche ou une boîte, un mètre ruban.',
+    proto: ['Échauffement léger, assis jambes tendues, plante des pieds contre la marche.', 'Mains l’une sur l’autre, aller le plus loin possible en 2 s, sans à-coup, genoux tendus.', 'Mesurer le bout des doigts par rapport aux orteils : positif au-delà, négatif avant.', '3 essais, garder le meilleur.'], src: ['acsm2021'] },
+  { id: 'slr', cat: 'mobilite', name: 'Élévation jambe tendue (ischio-jambiers)', sides: true, measures: V('°'),
+    equip: 'Un partenaire, le téléphone en inclinomètre.',
+    proto: ['Sur le dos, l’autre jambe à plat au sol, bassin qui ne bouge pas.', 'Le partenaire lève la jambe tendue, cheville relâchée, jusqu’à la tension franche.', 'Téléphone posé sur le tibia : angle de la jambe avec le sol.'] },
+  { id: 'thomas', cat: 'mobilite', name: 'Test de Thomas modifié (fléchisseurs de hanche)', sides: true, measures: [M('v', 'Angle de la cuisse', '°', 'down')],
+    equip: 'Une table ou un banc haut, le téléphone en inclinomètre.',
+    proto: ['Assis au bord de la table, s’allonger en ramenant un genou contre la poitrine (bas du dos plaqué).', 'L’autre jambe pend librement.', 'Téléphone sur la cuisse qui pend : angle avec l’horizontale. Positif = cuisse au-dessus de l’horizontale (fléchisseurs raides).'], tips: 'Plus l’angle est bas, mieux c’est ; une cuisse sous l’horizontale est normale.', src: ['harvey1998'] },
+  { id: 'shoulder-er', cat: 'mobilite', name: 'Rotation externe d’épaule à 90°', sides: true, measures: V('°'),
+    equip: 'Le téléphone en inclinomètre.',
+    proto: ['Sur le dos, bras écarté à 90°, coude plié à 90°.', 'Laisser la main partir vers l’arrière en rotation externe, sans cambrer.', 'Téléphone sur l’avant-bras : « Remettre à zéro » avant-bras vertical, puis mesurer en fin de rotation.'] },
+  { id: 'frog', cat: 'mobilite', name: 'Grenouille au mur (ouverture de hanche)', sides: false, measures: [M('v', 'Distance bassin-mur', 'cm', 'down')],
+    equip: 'Un mur, un mètre ruban.',
+    proto: ['Face au mur, pieds au mur, talons joints, genoux ouverts sur les côtés, comme en escalade.', 'Rapprocher le bassin du mur le plus possible, buste droit.', 'Mesurer la distance entre le pubis et le mur.'], tips: 'Le test de l’ouverture de hanche utile pour rester près du mur en grimpe.' },
+  { id: 'foot-raise', cat: 'mobilite', name: 'Montée de pied (high step)', sides: true, measures: [M('v', 'Hauteur du pied', 'cm')],
+    equip: 'Un mur, un mètre ruban (ou des marques au mur).',
+    proto: ['Face au mur, pieds au sol, mains au mur à hauteur d’épaules.', 'Monter un pied le plus haut possible le long du mur, sans décoller l’autre talon.', 'Mesurer la hauteur de la pointe du pied.'], tips: 'Rapporté à ta taille, c’est le meilleur indicateur de souplesse utile en grimpe.', src: ['draper2009'] },
+  { id: 'leg-span', cat: 'mobilite', name: 'Écart latéral (leg span)', sides: false, measures: [M('v', 'Écart entre les pieds', 'cm')],
+    equip: 'Un mur, un mètre ruban au sol.',
+    proto: ['Dos au mur, jambes tendues écartées sur les côtés.', 'Écarter le plus possible sans douleur, talons au sol.', 'Mesurer la distance entre les deux talons.'], src: ['draper2009'] },
+
   { id: 'vma', cat: 'aerobie', name: 'VMA palier 1 min (tapis)', sides: false, measures: V('km/h'),
     equip: 'Tapis de course.',
     proto: ['Échauffement 10 min.', 'Départ à 8 km/h, +1 km/h chaque minute.', 'VMA = vitesse du dernier palier complet (+ fraction du palier entamé).'] },
@@ -117,6 +139,17 @@ export const CATALOG = [
   { id: 'cooper', cat: 'aerobie', name: 'Test de Cooper (12 min)', sides: false, measures: V('m'),
     equip: 'Piste de 400 m ou montre GPS.',
     proto: ['Échauffement 10 min.', 'Courir la plus grande distance possible en 12 min.', 'VO2max estimée ≈ (distance − 504,9) ÷ 44,73 (Cooper, 1968).'] },
+  { id: 'cs', cat: 'aerobie', name: 'Vitesse critique (3 min + 12 min)', sides: false, measures: [M('d3', 'Distance en 3 min', 'm'), M('d12', 'Distance en 12 min', 'm')],
+    equip: 'Piste de 400 m ou montre GPS.',
+    proto: ['Échauffement 15 min avec quelques accélérations.', '3 min à fond : la plus grande distance possible.', 'Au moins 30 min de récupération (ou un autre jour).', '12 min à fond, allure régulière.', 'Vitesse critique = (distance 12 min − distance 3 min) ÷ 9 min ; D′ = ce que tu peux courir au-dessus.'],
+    tips: 'La vitesse critique sépare les efforts tenables longtemps de ceux qui épuisent vite : c’est la meilleure référence pour les séances au seuil.', src: ['poole2016', 'jones2017'],
+    derive: v => { if (!(v.d3 > 0 && v.d12 > v.d3)) return null; const cs = (v.d12 - v.d3) / 540, dp = v.d3 - cs * 180; return 'Vitesse critique ' + (Math.round(cs * 36) / 10).toString().replace('.', ',') + ' km/h · D′ ≈ ' + Math.max(0, Math.round(dp / 5) * 5) + ' m'; } },
+  { id: 'vo2max', cat: 'aerobie', name: 'VO2max (montre ou laboratoire)', sides: false, measures: V('ml/kg/min'),
+    proto: ['Valeur donnée par ta montre (Garmin, Polar, Coros…) après plusieurs sorties, ou mesurée en laboratoire.', 'À défaut, l’appli l’estime d’après ta VMA (environ 3,5 × VMA).'], tips: 'Les estimations des montres varient de quelques points : compare-la à elle-même dans le temps.' },
+  { id: 'ftp', cat: 'aerobie', name: 'FTP vélo (20 min)', sides: false, measures: [M('p20', 'Puissance moyenne sur 20 min', 'W')],
+    equip: 'Vélo avec capteur de puissance ou home-trainer connecté.',
+    proto: ['Échauffement 20 min avec 3 accélérations d’1 min.', '5 min à fond puis 10 min faciles (version complète), ou directement :', '20 min le plus fort possible, puissance régulière.', 'FTP ≈ 95 % de la puissance moyenne des 20 min.'], src: ['allen2010'],
+    derive: v => v.p20 > 0 ? 'FTP ≈ ' + Math.round(v.p20 * 0.95) + ' W' : null },
   { id: 'poids', cat: 'corps', name: 'Poids de corps', sides: false, measures: [M('v', 'Poids', 'kg', 'none')],
     proto: ['Le matin, à jeun, après être passé aux toilettes.', 'Sert à calculer les valeurs en % du poids de corps.'] }
 ];
@@ -134,7 +167,7 @@ export function valueKeys(t) {
   const out = [];
   for (const m of t.measures) {
     if (t.sides) for (const [s, l] of [['D', 'droite'], ['G', 'gauche']]) out.push({ key: m.k + '.' + s, label: (t.measures.length > 1 ? m.l + ' ' : '') + l, unit: m.unit, better: m.better, side: s, m: m.k });
-    else out.push({ key: m.k, label: t.measures.length > 1 ? m.l : '', unit: m.unit, better: m.better, m: m.k });
+    else out.push({ key: m.k, label: t.measures.length > 1 || m.l !== 'Résultat' ? m.l : '', unit: m.unit, better: m.better, m: m.k });
   }
   return out;
 }

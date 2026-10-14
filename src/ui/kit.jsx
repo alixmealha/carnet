@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { SOURCES } from '../lib/sources.js';
+import { glossParts, TermSheet } from './Gloss.jsx';
 
 const P = { fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
 const ICONS = {
@@ -14,6 +15,7 @@ const ICONS = {
   play: <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />,
   pause: <g fill="currentColor"><rect x="7" y="5.5" width="3.5" height="13" rx="1" /><rect x="13.5" y="5.5" width="3.5" height="13" rx="1" /></g>,
   timer: <g {...P}><circle cx="12" cy="13.5" r="7" /><path d="M12 13.5V10M10 3.5h4M18 7l1.5-1.5" /></g>,
+  angle: <g {...P}><path d="M4 19h16M4 19 15 6" /><path d="M10 19a6 6 0 0 0-1.6-4.1" /></g>,
   check: <path {...P} stroke-width="2.4" d="M5.5 12.5 10 17l8.5-9.5" />,
   edit: <g {...P}><path d="M14.5 5.5 18.5 9.5 9 19H5v-4z" /></g>,
   plus: <path {...P} d="M12 5v14M5 12h14" />,
@@ -121,12 +123,15 @@ export function NumberInput({ value, onCommit, step, placeholder, label, suffix 
 
 /* ---------- Texte avec couleurs de prises : « 4 blocs [violet] » ---------- */
 const HOLD = /\[(jaune|vert|bleu|violet|rouge|blanc|noir|rose|orange|gris|marron)\]/g;
-export function Rich({ text }) {
+// g : les termes techniques s'expliquent d'un appui (voir Gloss.jsx)
+export function Rich({ text, g }) {
+  const [term, setTerm] = useState(null);
   if (!text) return null;
-  const s = String(text), out = []; let last = 0, m; HOLD.lastIndex = 0;
-  while ((m = HOLD.exec(s))) { if (m.index > last) out.push(s.slice(last, m.index)); out.push(<span class={'hold h-' + m[1]}>{m[1]}</span>); last = m.index + m[0].length; }
-  if (last < s.length) out.push(s.slice(last));
-  return <>{out}</>;
+  const s = String(text), out = [], seen = new Set(); let last = 0, m; HOLD.lastIndex = 0;
+  const plain = x => g ? glossParts(x, setTerm, seen) : [x];
+  while ((m = HOLD.exec(s))) { if (m.index > last) out.push(...plain(s.slice(last, m.index))); out.push(<span class={'hold h-' + m[1]}>{m[1]}</span>); last = m.index + m[0].length; }
+  if (last < s.length) out.push(...plain(s.slice(last)));
+  return <>{out}{term && <TermSheet id={term} onClose={() => setTerm(null)} />}</>;
 }
 
 /* ---------- Carte dépliable (état retenu sur l'appareil) ---------- */
@@ -152,7 +157,7 @@ export function Src({ ids }) {
   if (!list.length) return null;
   return <>
     <button type="button" class="src" onClick={e => { e.stopPropagation(); setOpen(true); }}>{list.map(id => SOURCES[id].s).join(' · ')}</button>
-    {open && <Sheet title="Sources" onClose={() => setOpen(false)}>
+    {open && <Sheet title="Sources" onClose={() => setOpen(false)} cls="top">
       <div class="stack">{list.map(id => <div class="card"><b>{SOURCES[id].s}</b><p class="small" style="color:var(--ink)">{SOURCES[id].n}</p><p class="small">{SOURCES[id].r}</p></div>)}</div>
     </Sheet>}
   </>;

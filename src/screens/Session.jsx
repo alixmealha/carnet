@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset } from '../lib/store.js';
 import { blocks, itemKey, doneN, progress, itemLoad, fingerCalc, target, KIND, setDoneCount, setLoadsOf, setsText, blockState, setBlockState, apartOf, setApart, SKIP } from '../lib/plan.js';
 import { BlockMenu } from '../ui/BlockMenu.jsx';
+import { setAlert, clearAlert } from '../lib/restpush.js';
+import { Warmup } from '../ui/Warmup.jsx';
+import { Gloss } from '../ui/Gloss.jsx';
 import { gradeIn, shiftGrade, gradeIdx } from '../lib/grades.js';
 import { climbBilan, discOf, climbSuggest, sessionBilan } from '../lib/quantify.js';
 import { RPE, STATUS, rpeCmp } from '../lib/rules.js';
@@ -54,18 +57,30 @@ function setDone(k, key, val) {
 }
 function bump(k, b, it, by = 1) { const key = itemKey(b, it), cur = doneN(jget(k), key, it.n); setDoneCount(k, b, it, Math.min(it.n, cur + by)); }
 
+/* ---------- Séance réduite : barre en haut de l'écran pendant qu'on navigue dans l'appli ---------- */
+function MiniBar({ cls, label, big, sub, onOpen, action }) {
+  return <div class={'ses-mini ' + (cls || '')} role="region" aria-label="Séance en cours">
+    <button type="button" class="sm-main" onClick={onOpen} aria-label="Revenir à la séance"><small>{label}</small><b>{big}</b>{sub && <span>{sub}</span>}</button>
+    {action}
+    <button type="button" class="sm-open" onClick={onOpen}>Revenir</button>
+  </div>;
+}
+
 /* ---------- Repos ---------- */
-function RestBar({ rest, onAdd, onSkip }) {
+function RestBar({ rest, onAdd, onSkip, mini, onOpen }) {
   const now = useNow(200);
   const left = Math.max(0, Math.ceil((rest.until - now) / 1000));
   const last = useRef(null);
   useEffect(() => { if (rest.hold) goSignal(); }, [rest.until - rest.total * 1000]);
+  // fin du repos annoncée par notification si l'appli passe en arrière-plan
+  useEffect(() => { if (rest.hold) return; setAlert('rest', () => ({ at: rest.until, title: 'Repos terminé', body: rest.say ? rest.say + ' : c’est reparti' : 'C’est reparti' })); return () => clearAlert('rest'); }, [rest.until, rest.hold]);
   useEffect(() => {
     if (left === last.current) return; last.current = left;
     if (left > 0 && left <= 3) tick();
     if (left <= 0) { doneSignal(); if (rest.say) say(rest.say); const id = setTimeout(onSkip, rest.hold ? 400 : 1200); return () => clearTimeout(id); }
   }, [left]);
   const pct = Math.max(0, Math.min(1, (rest.until - now) / (rest.total * 1000)));
+  if (mini) return <MiniBar cls={rest.hold ? 'work' : 'pause'} label={left > 0 ? rest.label : rest.hold ? 'Terminé' : 'C’est reparti'} big={left > 0 ? mmss(left) : rest.hold ? 'Lâche' : 'Go'} onOpen={onOpen} action={<button type="button" class="sm-act" onClick={onSkip}>{rest.hold ? 'Fini' : 'Passer'}</button>} />;
   return (
     <div class={'rest' + (rest.hold ? ' hold-t' : '')} role="timer" aria-live="off">
       <span class="ring" style={'width:' + (pct * 100) + '%'} />
@@ -116,7 +131,7 @@ export function buildTempoPhases(spec) {
   return ph;
 }
 const TEMPO_NEXT = { ecc: 'excentrique', ret: 'retour', sw: 'changement de bras', setrest: 'repos', prep: 'mise en place' };
-function IntervalTimer({ spec, title, onMark, onClose }) {
+function IntervalTimer({ spec, title, onMark, onClose, mini, onMini }) {
   // Tout est calculé à partir de l'heure de départ : si l'iPhone met l'appli en pause,
   // le minuteur reprend au bon endroit et coche les séries passées entre-temps.
   const plan = useRef(null), tempo = spec.kind === 'tempo';
@@ -158,13 +173,27 @@ function IntervalTimer({ spec, title, onMark, onClose }) {
   }, [sec, idx]);
   const toggle = () => setSt(s => s.pausedAt ? { ...s, acc: s.acc + (Date.now() - s.pausedAt), pausedAt: null } : { ...s, pausedAt: Date.now() });
   const skip = () => setSt(s => ({ ...s, skip: s.skip + Math.max(0, left) + 1 }));
-  if (tempo) return <TempoView spec={spec} title={title} ph={ph} phases={phases} idx={idx} left={left} sec={sec} paused={!!st.pausedAt} frac={Math.min(1, elapsed / total)} onToggle={toggle} onSkip={skip} onClose={onClose} />;
+  // prochaine fin de repos (repos entre séries, changement de bras…) pour la notification en arrière-plan
+  const stRef = useRef(st); stRef.current = st;
+  useEffect(() => {
+    setAlert('timer', () => {
+      const s0 = stRef.current; if (s0.pausedAt) return null;
+      const el = Date.now() - s0.t0 - s0.acc + s0.skip;
+      const j = phases.findIndex(p => p.dur && el < p.at + p.dur * 1000); if (j < 0) return null;
+      const p = phases[j]; if (['work', 'ecc', 'ret'].includes(p.type)) return null;
+      const nx = phases.slice(j + 1).find(q => q.dur) || {};
+      return { at: Date.now() + (p.at + p.dur * 1000 - el), title: (title || 'Minuteur') + ' · repos terminé', body: [nx.side, nx.set ? 'série ' + nx.set : null].filter(Boolean).join(' · ') || 'C’est reparti' };
+    });
+    return () => clearAlert('timer');
+  }, []);
+  if (mini) return <MiniBar cls={['work', 'ecc'].includes(ph.type) ? 'work' : ph.type === 'done' ? 'done' : 'pause'} label={title + ' · ' + (ph.type === 'setrest' ? 'repos' : ph.label.toLowerCase())} big={ph.type === 'done' ? '✓' : ph.dur >= 60 ? mmss(sec) : sec + ' s'} sub={[ph.side, ph.set ? 'série ' + ph.set + '/' + (spec.sets || 1) : null].filter(Boolean).join(' · ')} onOpen={() => onMini(false)} action={ph.type !== 'done' ? <button type="button" class="sm-act" onClick={toggle}>{st.pausedAt ? 'Reprendre' : 'Pause'}</button> : null} />;
+  if (tempo) return <TempoView spec={spec} title={title} ph={ph} phases={phases} idx={idx} left={left} sec={sec} paused={!!st.pausedAt} frac={Math.min(1, elapsed / total)} onToggle={toggle} onSkip={skip} onClose={onClose} onMini={onMini} />;
   const cls = ph.type === 'work' ? 'work' : ph.type === 'rest' ? 'pause' : ph.type === 'done' ? 'done' : ph.type === 'prep' ? 'prep' : 'setrest';
   const doneWork = Math.min(total, elapsed) / 1000, totalWork = total / 1000;
   const nextWork = phases.slice(idx + 1).find(p => p.type === 'work');
   return (
     <div class={'tmr ' + cls} role="timer">
-      <div class="tmr-top"><span>{title}</span><button onClick={onClose}>{ph.type === 'done' ? 'Fermer' : 'Arrêter'}</button></div>
+      <div class="tmr-top"><span>{title}</span>{onMini && ph.type !== 'done' && <button class="tmr-min" onClick={() => onMini(true)} aria-label="Réduire">Réduire</button>}<button onClick={onClose}>{ph.type === 'done' ? 'Fermer' : 'Arrêter'}</button></div>
       <div class="tmr-mid">
         <div class="tmr-ph">{ph.type === 'setrest' ? 'Repos · ensuite ' + (ph.side ? ph.side.toLowerCase() : 'la série suivante') : ph.label}</div>
         <div class="tmr-big">{ph.type === 'done' ? '✓' : (ph.dur >= 60 ? mmss(sec) : sec)}</div>
@@ -182,7 +211,7 @@ function IntervalTimer({ spec, title, onMark, onClose }) {
 }
 
 // Écran du minuteur tempo : phase, secondes, répétitions faites, bande excentrique / retour
-function TempoView({ spec, title, ph, phases, idx, left, sec, paused, frac, onToggle, onSkip, onClose }) {
+function TempoView({ spec, title, ph, phases, idx, left, sec, paused, frac, onToggle, onSkip, onClose, onMini }) {
   const cls = { ecc: 'work', ret: 'pause', prep: 'prep', sw: 'sw', setrest: 'setrest', done: 'done' }[ph.type] || 'prep';
   const doneReps = ph.type === 'ecc' ? ph.rep - 1 : ph.type === 'ret' ? ph.rep : ph.type === 'sw' ? spec.reps : 0; // la dernière excentrique n'a pas de retour
   const f = ph.dur ? 1 - left / (ph.dur * 1000) : 0;
@@ -191,7 +220,7 @@ function TempoView({ spec, title, ph, phases, idx, left, sec, paused, frac, onTo
   const sets = Math.max(1, spec.sets || 1);
   return (
     <div class={'tmr tempo ' + cls} role="timer">
-      <div class="tmr-top"><span>{title}</span><button onClick={onClose}>{ph.type === 'done' ? 'Fermer' : 'Arrêter'}</button></div>
+      <div class="tmr-top"><span>{title}</span>{onMini && ph.type !== 'done' && <button class="tmr-min" onClick={() => onMini(true)} aria-label="Réduire">Réduire</button>}<button onClick={onClose}>{ph.type === 'done' ? 'Fermer' : 'Arrêter'}</button></div>
       <div class="tmr-mid">
         <div class="tmr-ph">{ph.type === 'setrest' ? 'Repos · ensuite la série ' + ph.set : ph.label}</div>
         <div class="tmr-big">{ph.type === 'done' ? '✓' : (ph.dur >= 60 ? mmss(sec) : sec)}</div>
@@ -216,7 +245,7 @@ export const tempoText = T => 'Tempo : ' + (T.prep ? T.prep + ' s de mise en pla
 /* ---------- Mode blocs : « Bloc fini » lance le repos, « Tombé » compte aussi ---------- */
 // Calculé à partir de l'heure : si l'écran se met en veille pendant le repos, on reprend au bon endroit.
 const pl = (n, w) => n + ' ' + w + (n > 1 ? 's' : '');
-function ClimbTimer({ k, b, it, onClose }) {
+function ClimbTimer({ k, b, it, onClose, mini, onMini }) {
   const key = itemKey(b, it), essai = it.unit === 'Essai', voie = it.unit === 'Voie', W = essai ? 'Essai' : voie ? 'Voie' : 'Bloc', w = W.toLowerCase(), disc = discOf(it);
   // cotation des blocs : celle du plan, sinon la dernière notée ; réglable d'un appui (− / +)
   const [grade, setGrade] = useState(() => { const log = (jget(k).cl || {})[key]; return (log && log.length && log[log.length - 1].g) || it.grade || gradeIn(it.label + ' ' + (it.det || ''), disc) || null; });
@@ -257,11 +286,18 @@ function ClimbTimer({ k, b, it, onClose }) {
   };
   const toggle = () => setSt(s => s.pausedAt ? { ...s, acc: s.acc + (Date.now() - s.pausedAt), pausedAt: null } : { ...s, pausedAt: Date.now() });
   const go = () => { goSignal(); setSt(s => ({ ...s, ph: 'wall', t0: Date.now(), acc: 0, pausedAt: null })); };
+  useEffect(() => {
+    if (st.ph !== 'rest' || st.pausedAt) { clearAlert('climb'); return; }
+    setAlert('climb', () => ({ at: st.t0 + st.acc + st.dur * 1000, title: 'Repos terminé', body: W + ' ' + (v + 1) + ' : c’est reparti' }));
+    return () => clearAlert('climb');
+  }, [st.ph, st.t0, st.acc, st.dur, st.pausedAt, v]);
   const cls = st.ph === 'wall' ? 'work' : st.ph === 'rest' ? 'pause' : 'done';
   const shown = st.ph === 'wall' ? v + 1 : v;
+  if (mini) return <MiniBar cls={cls} label={st.ph === 'wall' ? W + ' ' + Math.min(shown, it.n) + '/' + it.n + ' en cours' : st.ph === 'rest' ? 'Repos · ensuite ' + w + ' ' + (v + 1) : 'Terminé'} big={st.ph === 'wall' ? mmss(t / 1000) : st.ph === 'rest' ? mmss(sec) : '✓'} sub={grade || null} onOpen={() => onMini(false)}
+    action={st.ph === 'wall' ? <button type="button" class="sm-act" onClick={() => finish(false)}>{essai ? 'Réussi' : W + ' fini' + (voie ? 'e' : '')}</button> : st.ph === 'rest' ? <button type="button" class="sm-act" onClick={go}>Go</button> : null} />;
   return (
     <div class={'tmr climb ' + cls} role="timer">
-      <div class="tmr-top"><span>{it.label}</span><button onClick={onClose}>{st.ph === 'done' ? 'Fermer' : 'Arrêter'}</button></div>
+      <div class="tmr-top"><span>{it.label}</span>{onMini && st.ph !== 'done' && <button class="tmr-min" onClick={() => onMini(true)} aria-label="Réduire">Réduire</button>}<button onClick={onClose}>{st.ph === 'done' ? 'Fermer' : 'Arrêter'}</button></div>
       <div class="tmr-mid">
         {st.ph !== 'done' && <div class="cl-grade" role="group" aria-label="Cotation">
           <button onClick={() => bumpG(-1)} aria-label="Cotation plus facile">−</button>
@@ -330,14 +366,14 @@ function LoadStepper({ k, b, it }) {
         <button onClick={() => set(Math.round((ld.v + step) * 2) / 2)} aria-label="Plus">+</button>
       </div>
       {done > 0 && sl && <p class="set-l">Séries faites : {setsText(sl, ld.u)}{sl[sl.length - 1] !== ld.v ? ' · la suivante à ' + ld.text : ''}</p>}
-      {showSug && <div class="sug"><div><small>Conseillé d’après ta dernière séance</small><b>{sug.text}</b><span>{sug.why}</span></div><button class="btn" onClick={() => applySuggested(k, b, it, sug)}>Utiliser</button></div>}
+      {showSug && <div class="sug"><div><small>Conseillé d’après ta dernière séance</small><b>{sug.text}</b><span><Gloss text={sug.why} /></span></div><button class="btn" onClick={() => applySuggested(k, b, it, sug)}>Utiliser</button></div>}
     </>
   );
 }
 // Conseil d'après la dernière fois : chutes et ressenti ; « Utiliser » ajuste la séance du jour
 function ClimbSug({ k, b, it }) {
   const sg = climbSuggest(k, b, it); if (!sg) return null;
-  return <div class="sug cl"><div><small>Conseillé d’après ta dernière séance</small><b>{sg.text}</b><span>{sg.why}</span></div>{sg.apply && <button class="btn" onClick={sg.apply}>Utiliser</button>}</div>;
+  return <div class="sug cl"><div><small>Conseillé d’après ta dernière séance</small><b>{sg.text}</b><span><Gloss text={sg.why} /></span></div>{sg.apply && <button class="btn" onClick={sg.apply}>Utiliser</button>}</div>;
 }
 // Dernière réalisation du même exercice
 function LastTime({ k, it }) {
@@ -394,9 +430,9 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
   const head = <>
     <div class="step-k"><i style={'background:' + color} /><Rich text={b.title} /></div>
     <h2 class={'step-t' + (String(ttl).length > 34 ? ' long' : '')}><Rich text={ttl} /></h2>
-    {!step.group && !step.list && !step.pair && it && it.det && <p class="step-d"><Rich text={it.det} /></p>}
+    {!step.group && !step.list && !step.pair && it && it.det && <p class="step-d"><Rich text={it.det} g /></p>}
     {!step.group && !step.list && !step.pair && it && (STRENGTH.includes(b.kind) || climbable(b, it)) && it.id !== 'ech' && <LastTime k={k} it={it} />}
-    {(step.group || step.list || !it) && b.desc && <p class="step-d"><Rich text={b.desc} /></p>}
+    {(step.group || step.list || !it) && b.desc && <p class="step-d"><Rich text={b.desc} g /></p>}
     {fc && <div class="calc" style="margin-top:10px">{fc.text}{fc.hint && <><br /><span class="muted">{fc.hint}</span></>}</div>}
     {fc && fc.guard && <div class="guard">{fc.guard}</div>}
   </>;
@@ -413,7 +449,7 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
           <span class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={x.label} /></i></b>{x.det && <span><Rich text={x.det} /></span>}</span>
         </button>); })}</div>
       {all ? nextBtn : <button class="btn big primary" style="margin-top:18px" onClick={() => { const done = Object.assign({}, jget(k).done); for (const x of items) done[itemKey(b, x)] = 1; jset(k, { done }); }}>Tout est fait</button>}
-      {b.sub && <p class="small"><Rich text={b.sub} /></p>}
+      {b.sub && <p class="small"><Rich text={b.sub} g /></p>}
     </div>;
   }
   if (step.group) {
@@ -427,7 +463,7 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
   if (step.pair) return <PairStep k={k} step={step} head={head} color={color} startRest={startRest} nextBtn={nextBtn} />;
   const key = itemKey(b, it), v = doneN(e, key, it.n), full = v >= it.n;
   const T = it.timer;
-  if (it.n === 1) return <div>{head}<LoadStepper k={k} b={b} it={it} />
+  if (it.n === 1) return <div>{head}{it.id === 'ech' && <Warmup k={k} b={b} />}<LoadStepper k={k} b={b} it={it} />
     {full ? <>{nextBtn}<button class="btn ghost" style="margin-top:6px" onClick={() => setDoneCount(k, b, it, 0)}>Pas fait finalement</button></> : <button class="btn big primary" style="margin-top:20px" onClick={() => setDoneCount(k, b, it, 1)}>Marquer comme fait</button>}</div>;
   let action = null;
   if (T && T.kind === 'interval') {
@@ -463,7 +499,7 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
   const askRir = full && STRENGTH.includes(b.kind) && it.unit !== 'Bloc' && it.unit !== 'Essai' && !(T && T.kind === 'interval');
   return <div>{head}<LoadStepper k={k} b={b} it={it} />
     <Pips k={k} b={b} it={it} color={color} onTick={nv => { if (it.rest && !T && nv < it.n) startRest(it.rest, 'Repos'); }} />
-    {b.sub && <p class="small" style="margin-top:12px"><Rich text={b.sub} /></p>}
+    {b.sub && <p class="small" style="margin-top:12px"><Rich text={b.sub} g /></p>}
     {askRir && <Reserve k={k} b={b} it={it} />}
     {full ? nextBtn : action}
     {!full && it.rest && !T && !(openClimb && climbable(b, it)) && <p class="small">{mmss(it.rest)} de repos se lancent tout seuls après chaque {it.unit === 'Bloc' ? 'bloc' : it.unit === 'Essai' ? 'essai' : 'série'}.</p>}
@@ -495,7 +531,7 @@ function PairStep({ k, step, head, color, startRest, nextBtn }) {
         return (
         <div class={'pair-it' + (on ? ' on' : '')}>
           <div class="sub-lbl" style="margin:0"><span class="pair-n">{j ? 'B' : 'A'}</span><Rich text={x.label} /> <small>{doneN(e, itemKey(b, x), x.n)}/{x.n}</small></div>
-          {x.det && <p class="step-d" style="margin:4px 0 0"><Rich text={x.det} /></p>}
+          {x.det && <p class="step-d" style="margin:4px 0 0"><Rich text={x.det} g /></p>}
           {j === 0 && STRENGTH.includes(b.kind) && <LastTime k={k} it={x} />}
           <LoadStepper k={k} b={b} it={x} />
           <Pips k={k} b={b} it={x} color={color} />
@@ -556,7 +592,7 @@ export function Bilan({ k, part, title }) {
 
 /* ---------- Mode séance ---------- */
 // part : séance d'un bloc fait à part (autre moment de la journée)
-export function SessionMode({ k, part, onClose }) {
+export function SessionMode({ k, part, onClose, mini, onMini }) {
   const steps = buildSteps(k, part);
   const [i, setI] = useState(() => { const f = steps.findIndex(s => !stepDone(k, s)); return f < 0 ? 0 : f; });
   const [rest, setRest] = useState(null);
@@ -588,11 +624,25 @@ export function SessionMode({ k, part, onClose }) {
     keepAwake(false); onClose();
   };
   const bT = part ? blocks(k).find(b => b.id === part) : null;
+  useEffect(() => { document.body.classList.toggle('ses-mini-on', !!mini); return () => document.body.classList.remove('ses-mini-on'); }, [mini]);
+  const expand = () => onMini && onMini(false);
+  // séance réduite : seule la barre du haut reste ; les minuteurs gardent leur place dans l'arbre et continuent (bips, voix, séries cochées)
+  const timers = <>
+    {rest && !timer && !climb && !finish && <RestBar key="rest" rest={rest} mini={mini} onOpen={expand} onAdd={d => setRest(r => ({ ...r, until: r.until + d * 1000, total: Math.max(1, r.total + d) }))} onSkip={endRest} />}
+    {timer && <IntervalTimer key="timer" spec={timer.spec} title={timer.spec.name || timer.b.title} onMark={onMark} onClose={() => setTimer(null)} mini={mini} onMini={onMini} />}
+    {climb && <ClimbTimer key="climb" k={k} b={climb.b} it={climb.it} onClose={() => setClimb(null)} mini={mini} onMini={onMini} />}
+  </>;
+  if (mini) return <>
+    {null}
+    {timers}
+    {!rest && !timer && !climb && <MiniBar label={part ? plainT(bT && bT.title) + ' · à part' : 'Séance en cours'} big={mmss((now - started) / 1000)} sub={pr.done + '/' + pr.total + ' fait'} onOpen={expand} />}
+  </>;
   if (part && !pa) return <div class="ses" role="dialog" aria-label="Mode séance"><div class="ses-body"><p>Ce bloc n’est plus à faire à part.</p><button class="btn big" onClick={onClose}>Fermer</button></div></div>;
-  return (
+  return <>
     <div class="ses" role="dialog" aria-label="Mode séance">
       <div class="ses-top">
         <button class="icon-btn" aria-label="Fermer le mode séance" onClick={onClose}><Icon name="close" /></button>
+        {onMini && <button class="icon-btn" aria-label="Réduire la séance" onClick={() => onMini(true)}><Icon name="down" /></button>}
         <div class="mid"><b>{part ? plainT(bT && bT.title) + ' · à part' : fmtLong(k)}</b><span>{mmss((now - started) / 1000)} · {pr.done}/{pr.total} fait</span></div>
         <button class="btn" onClick={() => setFinish(true)}>Terminer</button>
       </div>
@@ -613,10 +663,9 @@ export function SessionMode({ k, part, onClose }) {
         <button class="btn" disabled={ii === 0} onClick={() => setI(ii - 1)}>Précédent</button>
         {ii < steps.length - 1 ? <button class="btn primary" onClick={() => setI(ii + 1)}>Étape suivante</button> : <button class="btn primary" onClick={() => setFinish(true)}>Terminer</button>}
       </div>}
-      {rest && !timer && !climb && !finish && <RestBar rest={rest} onAdd={d => setRest(r => ({ ...r, until: r.until + d * 1000, total: Math.max(1, r.total + d) }))} onSkip={endRest} />}
-      {timer && <IntervalTimer spec={timer.spec} title={timer.spec.name || timer.b.title} onMark={onMark} onClose={() => setTimer(null)} />}
-      {climb && <ClimbTimer k={k} b={climb.b} it={climb.it} onClose={() => setClimb(null)} />}
       {menuB && <BlockMenu k={k} b={menuB} top onClose={() => setMenuB(null)} />}
     </div>
-  );
+    {timers}
+    {null}
+  </>;
 }

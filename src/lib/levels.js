@@ -103,3 +103,37 @@ export function fcmaxOf(o, cfgLv) {
 // Allure (min/km) à un % de la VMA
 export function paceAt(vma, pct) { const kmh = vma * pct / 100; if (!(kmh > 0)) return null; const s = Math.round(3600 / kmh); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 export const srcTxt = r => r ? (r.src === 'déclaré' || r.src === 'déclarée' ? r.src : r.src + (r.k && r.k > '2000' ? ' le ' + fmtDay(r.k) : '')) : '';
+
+// Vitesse critique (test 3 min + 12 min) : CS en km/h et D′ en mètres
+export function csOf() {
+  const h = history('cs');
+  for (let i = h.length - 1; i >= 0; i--) {
+    const v = h[i].vals || {};
+    if (v.d3 > 0 && v.d12 > v.d3) { const ms = (v.d12 - v.d3) / 540; return { v: Math.round(ms * 36) / 10, ms, dp: Math.max(0, Math.round((v.d3 - ms * 180) / 5) * 5), k: h[i].k, src: 'test' }; }
+  }
+  return null;
+}
+// Allure (min/km) à un % de la vitesse critique
+export const paceCs = (cs, pct) => paceAt(cs.v, pct);
+// VO2max : mesurée (montre, labo), déclarée, sinon estimée d'après la VMA (≈ 3,5 ml/kg/min par km/h)
+export function vo2Of(o, cfgLv) {
+  const lv = cfgLv || levelsDoc(o), cand = [];
+  for (const h of history('vo2max')) if (h.vals && typeof h.vals.v === 'number') cand.push({ k: h.k, v: h.vals.v, src: 'test' });
+  if (typeof lv.vo2 === 'number') cand.push({ k: (lv.at || {}).vo2 || '2000-01-01', v: lv.vo2, src: 'déclarée' });
+  const best = newest(cand); if (best) return best;
+  const vma = vmaOf(o, cfgLv); return vma ? { v: Math.round(vma.v * 3.5), src: 'estimée d’après ta VMA', k: vma.k } : null;
+}
+// FTP vélo : test 20 min (95 %) ou déclarée
+export function ftpOf(o, cfgLv) {
+  const lv = cfgLv || levelsDoc(o), cand = [];
+  for (const h of history('ftp')) if (h.vals && h.vals.p20 > 0) cand.push({ k: h.k, v: Math.round(h.vals.p20 * 0.95), src: 'test' });
+  if (typeof lv.ftp === 'number') cand.push({ k: (lv.at || {}).ftp || '2000-01-01', v: lv.ftp, src: 'déclarée' });
+  return newest(cand);
+}
+// Profil de coureur : vitesse critique rapportée à la VMA (repère indicatif)
+export function runProfile(o, cfgLv) {
+  const cs = csOf(), vma = vmaOf(o, cfgLv); if (!cs || !vma) return null;
+  const r = Math.round(cs.v / vma.v * 100);
+  const txt = r >= 88 ? 'profil endurant : ta marge de progrès est surtout la VMA (intervalles courts).' : r <= 80 ? 'profil plutôt rapide : ta marge est surtout l’endurance (seuil, sorties longues).' : 'profil équilibré : garde les deux.';
+  return { r, txt: 'Vitesse critique à ' + r + ' % de ta VMA : ' + txt };
+}

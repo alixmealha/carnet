@@ -12,6 +12,9 @@ import { ActFields } from '../ui/ActFields.jsx';
 import { plannedActs } from '../lib/activity.js';
 import { lastPerf, perfText, suggestLoad } from '../lib/history.js';
 import { NutriDay } from './Nutrition.jsx';
+import { Inclinometer } from '../ui/Inclinometer.jsx';
+import { Warmup } from '../ui/Warmup.jsx';
+import { Gloss } from '../ui/Gloss.jsx';
 
 export function DayHeader({ k, onNav, compact }) {
   const w = weekOf(k), m = meta(), ev = eventOn(k);
@@ -161,7 +164,7 @@ export function Goal({ k }) {
   if (!climb) return tg.rpe || tg.why ? (
     <div class="goal">
       {tg.rpe && <div class="goal-top"><div class="goal-rpe"><small>Ressenti<br />visé</small><b>{rng(tg)}<i>/10</i></b></div></div>}
-      {tg.why && <p class="goal-why">{tg.why}</p>}
+      {tg.why && <p class="goal-why"><Gloss text={tg.why} /></p>}
     </div>
   ) : null;
   return (
@@ -173,7 +176,7 @@ export function Goal({ k }) {
           {SIV.map(([key, l]) => <div class="siv-row"><span>{l}</span><span class="bar"><i style={'width:' + (tg[key] || 0) * 10 + '%'} /></span><b>{tg[key]}</b></div>)}
         </div>
       </div>
-      {tg.why && <p class="goal-why">{tg.why}</p>}
+      {tg.why && <p class="goal-why"><Gloss text={tg.why} /></p>}
     </div>
   );
 }
@@ -198,7 +201,7 @@ export function ItemRow({ k, b, it, e, color }) {
   return (
     <div class={'it' + (full ? ' done' : '')}>
       <button type="button" class="ck" aria-pressed={full ? 'true' : 'false'} aria-label={it.label} onClick={() => setDone(full ? 0 : it.n)}>✓</button>
-      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed || varied ? ' chg' : '')}>{varied ? setsText(sl, ld.u) : ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}{e.falls && e.falls[key] ? ' · ' + e.falls[key] + ' chute' + (e.falls[key] > 1 ? 's' : '') : ''}</em>}</b>{it.det && <span><Rich text={it.det} /></span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} /></div>
+      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed || varied ? ' chg' : '')}>{varied ? setsText(sl, ld.u) : ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}{e.falls && e.falls[key] ? ' · ' + e.falls[key] + ' chute' + (e.falls[key] > 1 ? 's' : '') : ''}</em>}</b>{it.det && <span><Rich text={it.det} g /></span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} />{it.id === 'ech' && <Warmup k={k} b={b} fold />}</div>
       {it.n > 1 && <div class="pips" role="group" aria-label={it.label + ' : ' + v + ' sur ' + it.n}>
         {Array.from({ length: it.n }, (_, i) => i + 1).map(i => <button type="button" class="pip" style={'--c:' + color} aria-pressed={i <= v ? 'true' : 'false'} aria-label={(it.unit || 'Série') + ' ' + i} onClick={() => setDone(v === i ? i - 1 : i)}>{i}</button>)}
       </div>}
@@ -236,7 +239,7 @@ function SessionCard({ k, onStart, onEdit, ro }) {
       <div class="stack">
         {d.title && <div><h4 class="ses-title"><Rich text={d.title} /></h4>{(d.duree || d.essais) && <p class="small" style="margin:2px 0 0">{[d.duree && d.duree !== '—' ? 'Durée ' + d.duree : null, d.essais && d.essais !== '—' ? 'Essais ' + d.essais : null].filter(Boolean).join(' · ')}</p>}</div>}
         <Goal k={k} />
-        {w && w.why && <details class="fold why-f"><summary><span class="small" style="margin:0;font-weight:600;color:var(--accent)">Pourquoi cette semaine</span></summary><p class="small" style="color:var(--ink)"><Rich text={w.why} /></p></details>}
+        {w && w.why && <details class="fold why-f"><summary><span class="small" style="margin:0;font-weight:600;color:var(--accent)">Pourquoi cette semaine</span></summary><p class="small" style="color:var(--ink)"><Rich text={w.why} g /></p></details>}
         {bl.length === 0 && <p class="small" style="margin:0">Rien de prévu ce jour-là.</p>}
         <fieldset class="ro stack" disabled={ro}>
           {bl.map(b => {
@@ -248,10 +251,10 @@ function SessionCard({ k, onStart, onEdit, ro }) {
                   <div class="blk-h"><h4><Rich text={b.title} /></h4>{!ro && onStart && b.kind !== 'rest' && <button type="button" class="blk-m" aria-label={'Options : ' + plainT(b.title)} onClick={() => setMenuB(b)}>•••</button>}</div>
                   <BlockState k={k} b={b} e={e} onStart={onStart} ro={ro} />
                   {off ? null : <>
-                  {b.desc && <p class="d"><Rich text={b.desc} /></p>}
+                  {b.desc && <p class="d"><Rich text={b.desc} g /></p>}
                   {fc && <div class="calc">{fc.text}{fc.hint && <><br /><span class="muted">{fc.hint}</span></>}</div>}
                   {fc && fc.guard && <div class="guard">{fc.guard}</div>}
-                  {b.sub && <div class="sub"><Rich text={b.sub} /></div>}
+                  {b.sub && <div class="sub"><Rich text={b.sub} g /></div>}
                   {b.items && b.items.length > 0 && (b.kind === 'rest'
                     ? <ul class="plain">{b.items.map(it => <li><Rich text={it.label} />{it.det ? ' · ' : ''}<Rich text={it.det} /></li>)}</ul>
                     : <div class="items">{b.items.map(it => <ItemRow k={k} b={b} it={it} e={e} color={color} />)}</div>)}
@@ -275,12 +278,14 @@ function SessionCard({ k, onStart, onEdit, ro }) {
 export function TestEntry({ k, tids, onOpenTest }) {
   const r = resultsOn(k);
   const [draft, setDraft] = useState(() => { const o = {}; for (const tid of tids) for (const vk of valueKeys(testById(tid) || { measures: [] })) { const v = r.res && r.res[tid] && r.res[tid][vk.key]; o[tid + '|' + vk.key] = typeof v === 'number' ? fmtNum(v) : ''; } o.bw = typeof r.bw === 'number' ? fmtNum(r.bw) : ''; return o; });
-  const commit = () => {
+  const [incl, setIncl] = useState(null);
+  const commitWith = d => {
     const res = {};
-    for (const tid of tids) { const t = testById(tid); if (!t) continue; res[tid] = {}; for (const vk of valueKeys(t)) { const n = parseFloat(String(draft[tid + '|' + vk.key] || '').replace(',', '.')); if (!isNaN(n)) res[tid][vk.key] = n; } }
-    const bw = parseFloat(String(draft.bw || '').replace(',', '.'));
+    for (const tid of tids) { const t = testById(tid); if (!t) continue; res[tid] = {}; for (const vk of valueKeys(t)) { const n = parseFloat(String(d[tid + '|' + vk.key] || '').replace(',', '.')); if (!isNaN(n)) res[tid][vk.key] = n; } }
+    const bw = parseFloat(String(d.bw || '').replace(',', '.'));
     saveResults(k, { res, bw: isNaN(bw) ? null : bw });
   };
+  const commit = () => commitWith(draft);
   return (
     <div class="stack" style="gap:12px">
       {tids.map(tid => {
@@ -291,12 +296,15 @@ export function TestEntry({ k, tids, onOpenTest }) {
           <div class="grid2">{valueKeys(t).map(vk => {
             const cur = parseFloat(String(draft[tid + '|' + vk.key] || '').replace(',', '.')), was = pv && pv.vals[vk.key], p = pct(cur, was);
             return <label class="fld">{(vk.label ? vk.label.charAt(0).toUpperCase() + vk.label.slice(1) : 'Résultat') + (vk.unit ? ' (' + vk.unit + ')' : '')}
-              <input class="in mono" inputmode="decimal" value={draft[tid + '|' + vk.key]} onInput={e => setDraft(Object.assign({}, draft, { [tid + '|' + vk.key]: e.target.value }))} onBlur={commit} />
+              <span class="te-in"><input class="in mono" inputmode="decimal" value={draft[tid + '|' + vk.key]} onInput={e => setDraft(Object.assign({}, draft, { [tid + '|' + vk.key]: e.target.value }))} onBlur={commit} />
+                {vk.unit === '°' && <button type="button" class="btn te-incl" aria-label="Mesurer avec le téléphone" onClick={e => { e.preventDefault(); setIncl(tid + '|' + vk.key); }}><Icon name="angle" size={18} /></button>}</span>
               {typeof was === 'number' && <span class="te-prev">avant : {fmtNum(was)}{p !== null && !isNaN(cur) ? <b class={p >= 0 ? 'up' : 'down'}> {p >= 0 ? '+' : ''}{fmtNum(Math.round(p * 10) / 10)} %</b> : ''}</span>}
             </label>;
           })}</div>
+          {t.derive && (() => { const v = {}; for (const vk of valueKeys(t)) { const n = parseFloat(String(draft[tid + '|' + vk.key] || '').replace(',', '.')); if (!isNaN(n)) v[vk.key] = n; } const d = t.derive(v); return d ? <p class="te-der">{d}</p> : null; })()}
         </div>;
       })}
+      {incl && <Inclinometer onClose={() => setIncl(null)} onTake={deg => { const d = Object.assign({}, draft, { [incl]: String(deg) }); setDraft(d); setIncl(null); setTimeout(() => commitWith(d), 0); }} />}
       <div class="grid2"><label class="fld">Poids de corps ce jour (kg)<input class="in mono" inputmode="decimal" value={draft.bw} onInput={e => setDraft(Object.assign({}, draft, { bw: e.target.value }))} onBlur={commit} /></label></div>
     </div>
   );

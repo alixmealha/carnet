@@ -6,6 +6,7 @@ import { sportsOf } from '../lib/sports.js';
 import { GOALS, GOAL_BY_ID, SYSTEMS, EQUIP, LIB_BY_ID, quiz, quizResult } from '../lib/library.js';
 import { generate, writeProgram, conflicts, LEVELS, DURS, nextMonday, alternatives, groupsTxt, sessionSummary, SESSION_LBL, FORMATS, fmtFamily, fmtOf, fmtReco, weekPlanTypes, buildSession } from '../lib/builder.js';
 import { LevelsForm } from '../ui/Levels.jsx';
+import { Gloss } from '../ui/Gloss.jsx';
 import { levelsDoc, LIFT_OF_LIB, climbLevel } from '../lib/levels.js';
 import { clone } from '../lib/plan.js';
 import { PHASE_LABEL, PHASE_Z } from '../lib/plan.js';
@@ -63,7 +64,7 @@ function GoalStep({ cfg, set, onQuiz, onModel }) {
 }
 function SysCard({ id }) {
   const s = SYSTEMS[id]; if (!s) return null;
-  return <div class="sys"><b>{s.l}</b><span>{s.d}</span><Src ids={s.src} /></div>;
+  return <div class="sys"><b>{s.l}</b><span><Gloss text={s.d} /></span><Src ids={s.src} /></div>;
 }
 
 /* ---------- Étape : quiz ---------- */
@@ -104,7 +105,7 @@ function DaysStep({ cfg, set }) {
 }
 
 /* ---------- Étape : niveau et formats ---------- */
-const FAM_LBL = { conti: 'Séance de volume', resist: 'Séance de résistance', bloc: 'Séance de puissance', doigts: 'Séance de doigts', compet: 'Séance de compétition', force: 'Muscu · force', hyper: 'Muscu · masse', puiss: 'Muscu · puissance' };
+const FAM_LBL = { int: 'Séance d’intervalles (course)', intV: 'Séance d’intervalles (vélo)', conti: 'Séance de volume', resist: 'Séance de résistance', bloc: 'Séance de puissance', doigts: 'Séance de doigts', compet: 'Séance de compétition', force: 'Muscu · force', hyper: 'Muscu · masse', puiss: 'Muscu · puissance' };
 const RECO_WHY = {
   conti: (r, c) => r === 'voies' ? 'Tu as renseigné un niveau en voie : le volume se fait en voie.' : 'Beaucoup de mouvements à intensité basse : la base aérobie des avant-bras et de la technique.',
   resist: r => r === 'voies' ? 'Ton objectif est la résistance en voie : on la travaille dans des voies.' : 'Le 4 × 4 fait durer l’effort 2 à 3 min, la durée de la filière lactique.',
@@ -113,7 +114,9 @@ const RECO_WHY = {
   compet: () => 'Le format des qualifications : blocs nouveaux, temps limité, repos imposé.',
   force: () => 'Repos complets entre les séries : la base la plus simple pour progresser en force.',
   hyper: (r, c) => r === 'supersets' ? 'Séance de ' + c.dur + ' min : les supersets gardent le volume en moins de temps.' : 'Un exercice à la fois, repos complets : le plus simple pour bien charger.',
-  puiss: r => r === 'contraste' ? 'Avec une barre et de l’expérience : la série lourde potentialise la série explosive.' : 'Charges légères lancées vite : la base, sans matériel lourd.'
+  puiss: r => r === 'contraste' ? 'Avec une barre et de l’expérience : la série lourde potentialise la série explosive.' : 'Charges légères lancées vite : la base, sans matériel lourd.',
+  int: () => 'Alterner 30/30 et 3 min varie le stimulus près de la VO2max ; le seuil se cale sur ta vitesse critique quand tu l’as testée.',
+  intV: () => 'Le 4 × 4 min est le format le plus étudié pour la VO2max ; le sweet spot construit l’endurance juste sous la FTP.'
 };
 function LevelStep({ cfg, set }) {
   const types = [...new Set(weekPlanTypes(cfg))], wk = { step: 1, meso: 0, phase: 'volume' };
@@ -122,7 +125,7 @@ function LevelStep({ cfg, set }) {
   const lifts = new Set(), sample = {};
   for (const t of types) { const ss = buildSession(t, cfg, wk, new Set(), {}); sample[t] = ss; for (const b of ss.blocks) for (const it of b.items || []) { const l = LIFT_OF_LIB[it.lib]; if (l && it.rx && it.rx.role === 'main') lifts.add(l); } }
   if (fams.includes('puiss')) ['squat', 'bench', 'pull'].forEach(l => lifts.add(l));
-  const need = { climb: types.some(t => ['conti', 'resist', 'bloc', 'doigts', 'compet'].includes(t)), lifts: [...lifts], cardio: types.some(t => ['ef', 'int', 'long', 'lact', 'sprint'].includes(t)) };
+  const need = { climb: types.some(t => ['conti', 'resist', 'bloc', 'doigts', 'compet'].includes(t)), lifts: [...lifts], cardio: types.some(t => ['ef', 'int', 'long', 'lact', 'sprint', 'circuit'].includes(t)) };
   const self = isSelf();
   const setLv = (key, val, sub) => { const lv = clone(cfg.lv || {}); if (sub) { lv[key] = Object.assign({}, lv[key]); if (val == null) delete lv[key][sub]; else lv[key][sub] = val; } else if (val == null) delete lv[key]; else lv[key] = val; set({ lv }); };
   return <div class="stack">
@@ -145,7 +148,7 @@ function LevelStep({ cfg, set }) {
             {(ex.min || ex.tut) && <span class="fmt-est">{ex.min ? '≈ ' + ex.min + ' min' : ''}{ex.min && ex.tut ? ' · ' : ''}{ex.tut ? '≈ ' + (ex.tut >= 120 ? Math.round(ex.tut / 60) + ' min' : ex.tut + ' s') + ' sous tension' : ''}</span>}
           </button>;
         })}</div>
-        <p class="small" style="margin:6px 0 0">Conseillé : {RECO_WHY[f] ? RECO_WHY[f](reco, cfg) : ''}</p>
+        <p class="small" style="margin:6px 0 0">Conseillé : <Gloss text={RECO_WHY[f] ? RECO_WHY[f](reco, cfg) : ''} /></p>
       </div>;
     })}
   </div>;

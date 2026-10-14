@@ -9,6 +9,8 @@ import './styles.css';
 import { initStore } from './lib/store.js';
 import { App } from './app.jsx';
 import { setupUpdates } from './lib/update.js';
+import { initRestPush } from './lib/restpush.js';
 
 initStore().then(() => render(<App />, document.getElementById('app')));
+initRestPush();
 setupUpdates();

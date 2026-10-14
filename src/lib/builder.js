@@ -6,7 +6,7 @@ import { meta, day, clone, uid, KIND } from './plan.js';
 import { putMany, put, remove, links, myProfile } from './store.js';
 import { cloud } from './supa.js';
 import { addDays, mondayOf, todayKey, dow, fmtDay, diffDays, mmss, fmtNum } from './dates.js';
-import { climbLevel, oneRM, loadForPct, LIFT_OF_LIB, vmaOf, fcmaxOf, paceAt, srcTxt } from './levels.js';
+import { climbLevel, oneRM, loadForPct, LIFT_OF_LIB, vmaOf, fcmaxOf, paceAt, srcTxt, csOf, ftpOf } from './levels.js';
 import { shiftGrade, gapText } from './grades.js';
 import { lastResult } from './tests.js';
 
@@ -77,13 +77,16 @@ export const FORMATS = {
   compet: [['qualif', 'Format qualif', 'Blocs nouveaux, temps limité par bloc'], ['contest', 'Contest', 'Un maximum de blocs en temps limité'], ['flash', 'Flash', 'Un seul essai après lecture']],
   force: [['classique', 'Séries classiques', 'Repos complet entre les séries'], ['clusters', 'Clusters', 'Répétitions isolées : plus lourd, même qualité']],
   hyper: [['classique', 'Séries classiques', 'Un exercice à la fois'], ['supersets', 'Supersets antagonistes', 'Poussée et tirage en alternance : séance plus courte']],
-  puiss: [['balistique', 'Balistique', 'Charges légères lancées vite'], ['contraste', 'Contraste', 'Une série lourde, puis la même chose en explosif']]
+  puiss: [['balistique', 'Balistique', 'Charges légères lancées vite'], ['contraste', 'Contraste', 'Une série lourde, puis la même chose en explosif']],
+  int: [['alterne', '30/30 et 3 min en alternance', 'VO2max, deux formats d’une semaine à l’autre'], ['3030', '30/30', 'VO2max en efforts courts'], ['seuil', 'Seuil', 'Autour de ta vitesse critique']],
+  intV: [['4x4', '4 × 4 min', 'VO2max'], ['sst', 'Sweet spot', '2 longs blocs juste sous la FTP']]
 };
 const FMT_SRC = { clusters: 'tufano2017', supersets: 'robbins2010', contraste: 'seitz2016' };
 // Famille de format d'une séance type
 export function fmtFamily(type, cfg) {
   if (['conti', 'resist', 'bloc', 'doigts', 'compet'].includes(type)) return type;
   if (type === 'puiss') return 'puiss';
+  if (type === 'int') { const sp = cardioSport(cfg, equipSet(cfg.equip)); return sp === 'course' ? 'int' : sp === 'velo' ? 'intV' : null; }
   if (['fbA', 'fbB', 'haut', 'bas', 'renfo'].includes(type)) { const g = ST[type].goal || [cfg.goal, cfg.goal2].find(x => ['force', 'hyper', 'endu_f'].includes(x)) || 'force'; return FORMATS[g] ? g : null; }
   return null;
 }
@@ -97,6 +100,8 @@ export function fmtReco(fam, cfg) {
   if (fam === 'compet') return 'qualif';
   if (fam === 'hyper') return cfg.dur <= 45 ? 'supersets' : 'classique';
   if (fam === 'puiss') return cfg.lvl >= 2 && eq.has('barre') ? 'contraste' : 'balistique';
+  if (fam === 'int') return 'alterne';
+  if (fam === 'intV') return '4x4';
   return 'classique';
 }
 export const fmtOf = (fam, cfg) => (cfg.fmt && cfg.fmt[fam] && FORMATS[fam].some(f => f[0] === cfg.fmt[fam])) ? cfg.fmt[fam] : fmtReco(fam, cfg);
@@ -372,9 +377,14 @@ function climbSession(type, cfg, eq, wk) {
 function vmaTxt(vma, lo, hi) { return vma ? 'allure ' + paceAt(vma.v, hi) + ' à ' + paceAt(vma.v, lo) + ' /km (' + lo + '-' + hi + ' % de ta VMA)' : null; }
 function distTxt(vma, pct, sec) { if (!vma) return null; const m = Math.round(vma.v * pct / 100 / 3.6 * sec / 5) * 5; return '≈ ' + m + ' m en ' + (sec >= 60 ? sec / 60 + ' min' : sec + ' s') + ' (' + pct + ' % de ta VMA)'; }
 function fcTxt(fc, lo, hi) { return fc ? lo + '-' + hi + ' % de ta FC max, soit ' + Math.round(fc.v * lo / 100) + ' à ' + Math.round(fc.v * hi / 100) + ' bpm' : null; }
+// Watts d'après la FTP (zones de Coggan)
+function wTxt(ftp, lo, hi) { return ftp ? (hi ? Math.round(ftp.v * lo / 100) + ' à ' + Math.round(ftp.v * hi / 100) + ' W (' + lo + '-' + hi + ' % de ta FTP)' : 'au moins ' + Math.round(ftp.v * lo / 100) + ' W (' + lo + ' % de ta FTP et plus)') : null; }
+function csTxt(cs, lo, hi) { return cs ? 'allure ' + paceAt(cs.v, hi) + ' à ' + paceAt(cs.v, lo) + ' /km (' + lo + '-' + hi + ' % de ta vitesse critique)' : null; }
 function cardioSession(type, cfg, eq, wk) {
   const sport = cardioSport(cfg, eq), kind = sport === 'course' ? 'course' : 'velo';
-  const vma = sport === 'course' ? vmaOf(null, cfg.lv) : null, fc = fcmaxOf(null, cfg.lv);
+  const vma = sport === 'course' ? vmaOf(null, cfg.lv) : null, fc = fcmaxOf(null, cfg.lv), cs = sport === 'course' ? csOf() : null, ftp = sport === 'velo' ? ftpOf(null, cfg.lv) : null;
+  const fam = type === 'int' ? fmtFamily('int', cfg) : null, fmt = fam ? fmtOf(fam, cfg) : null;
+  let est = fmt ? { fmt } : undefined;
   const m = wk.light ? 0.6 : wk.taper ? 0.5 : 1, lv = cfg.lvl - 1, heavy = new Set();
   const nm = { course: ['Footing', 'Course'], velo: ['Vélo', 'Vélo'], nage: ['Natation', 'Natation'], circuit: ['Circuit', 'Circuit'] }[sport];
   let blocks, short = ST[type] ? ST[type].t : 'Cardio', tg;
@@ -383,7 +393,7 @@ function cardioSession(type, cfg, eq, wk) {
     const base = type === 'long' ? [50, 75, 95][lv] : Math.max(30, cfg.dur - 10), mins = Math.round(base * (wk.light ? 0.7 : wk.taper ? 0.6 : [1, 1.1, 1.15][wk.step]) / 5) * 5;
     const x = sport === 'velo' ? 'velo-z2' : sport === 'nage' ? 'nage-ef' : sport === 'circuit' ? null : type === 'long' ? 'sortie-longue' : 'ef';
     const lbl = x ? (type === 'long' ? 'Sortie longue' : LIB_BY_ID[x].n) : 'Cardio facile (marche rapide, vélo, corde à sauter…)';
-    const zone = vmaTxt(vma, 60, 70) || fcTxt(fc, 60, 70);
+    const zone = vmaTxt(vma, 60, 70) || (sport === 'velo' ? wTxt(ftp, 56, 75) : null) || fcTxt(fc, 60, 70);
     blocks = [{ id: uid('b'), kind, title: nm[1] + ' · ' + (type === 'long' ? 'sortie longue' : 'endurance fondamentale'), desc: mins + ' min faciles', sub: 'Zone 1-2 : tu peux parler en phrases complètes. C’est l’essentiel du volume en endurance (environ 80 %).', items: [Object.assign({ id: uid('i'), label: lbl + ' · ' + mins + ' min', det: (x ? LIB_BY_ID[x].c : 'Zone 1-2, aisance respiratoire.') + (zone ? ' · ' + zone : ''), n: 1, unit: 'Bloc' }, x ? { lib: x } : {})] }];
     tg = { rpe: [2, 4], fam: type === 'long' ? 'vol' : 'easy' };
   } else if (type === 'circuit') {
@@ -394,10 +404,12 @@ function cardioSession(type, cfg, eq, wk) {
   } else {
     // intervalles : 30/30 (VMA), 3 min, 4 × 4 min vélo, 100 m nage, 300 m lactiques
     let it;
-    if (type === 'lact') { const reps = Math.max(3, Math.round(([5, 6, 7][lv] + [0, 1, 2][wk.step]) * m)); it = { label: sport === 'velo' ? 'Vélo 6 × 1 min très vite' : sport === 'nage' ? 'Natation 6 × 50 m vite' : 'Répétitions de 300 m', det: 'Environ 1 min très vite, 3 min 30 de récupération (1:3 à 1:4)', lib: sport === 'course' ? '300m' : null, timer: { kind: 'interval', name: 'Lactique', work: 60, rest: 210, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Vite', restLabel: 'Récup', markEach: 'rep' }, n: reps }; }
-    else if (sport === 'velo') { const reps = Math.max(2, Math.round((4 + (wk.light || wk.taper ? 0 : [0, 0, 1][wk.step])) * m)); it = { label: 'Vélo 4 min à 90-95 % de ta FC max', det: '4 min fort, 3 min faciles' + (fc ? ' · ' + fcTxt(fc, 90, 95) : ''), lib: 'velo-4x4', timer: { kind: 'interval', name: 'Vélo 4 × 4', work: 240, rest: 180, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Fort', restLabel: 'Facile', markEach: 'rep' }, n: reps }; }
+    if (type === 'int' && fmt === 'seuil') { const reps = Math.max(2, Math.round(([3, 4, 5][lv] + (wk.light || wk.taper ? 0 : [0, 0, 1][wk.step])) * m)); it = { label: 'Seuil ' + reps + ' × 8 min', det: '8 min à allure seuil, 2 min de trot' + (cs ? ' · ' + csTxt(cs, 93, 97) : vma ? ' · ' + vmaTxt(vma, 82, 86) + ' (sans test de vitesse critique)' : ' · allure semi-marathon'), lib: '3min', timer: { kind: 'interval', name: 'Seuil', work: 480, rest: 120, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Seuil', restLabel: 'Trot', markEach: 'rep' }, n: reps }; est = { fmt, min: 25 + reps * 10 }; }
+    else if (type === 'int' && fmt === 'sst') { const mins = [12, 15, 20][lv], reps = wk.light || wk.taper ? 1 : 2; it = { label: 'Sweet spot ' + reps + ' × ' + mins + ' min', det: mins + ' min juste sous la FTP, 5 min faciles' + (ftp ? ' · ' + wTxt(ftp, 88, 94) : fc ? ' · ' + fcTxt(fc, 82, 87) : ''), timer: { kind: 'interval', name: 'Sweet spot', work: mins * 60, rest: 300, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Sweet spot', restLabel: 'Facile', markEach: 'rep' }, n: reps }; est = { fmt, min: 25 + reps * (mins + 5) }; }
+    else if (type === 'lact') { const reps = Math.max(3, Math.round(([5, 6, 7][lv] + [0, 1, 2][wk.step]) * m)); it = { label: sport === 'velo' ? 'Vélo 6 × 1 min très vite' : sport === 'nage' ? 'Natation 6 × 50 m vite' : 'Répétitions de 300 m', det: 'Environ 1 min très vite, 3 min 30 de récupération (1:3 à 1:4)' + (sport === 'velo' && ftp ? ' · ' + wTxt(ftp, 121) : ''), lib: sport === 'course' ? '300m' : null, timer: { kind: 'interval', name: 'Lactique', work: 60, rest: 210, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Vite', restLabel: 'Récup', markEach: 'rep' }, n: reps }; }
+    else if (sport === 'velo') { const reps = Math.max(2, Math.round((4 + (wk.light || wk.taper ? 0 : [0, 0, 1][wk.step])) * m)); it = { label: 'Vélo 4 × 4 min', det: '4 min fort (90-95 % de ta FC max), 3 min faciles' + (ftp ? ' · ' + wTxt(ftp, 106, 120) : fc ? ' · ' + fcTxt(fc, 90, 95) : ''), lib: 'velo-4x4', timer: { kind: 'interval', name: 'Vélo 4 × 4', work: 240, rest: 180, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Fort', restLabel: 'Facile', markEach: 'rep' }, n: reps }; }
     else if (sport === 'nage') { const reps = Math.max(4, Math.round(([6, 8, 10][lv] + [0, 1, 2][wk.step]) * m)); it = { label: 'Natation ' + reps + ' × 100 m', det: '100 m soutenu, 20 à 30 s de repos', lib: 'nage-100', n: reps, unit: 'Série', rest: 25 }; }
-    else if (cfg.lvl >= 2 && wk.step === 1) { const reps = Math.max(3, Math.round(([4, 4, 5][lv] + 1) * m)); it = { label: 'Intervalles 3 min', det: '3 min à allure 3 000-5 000 m, 2 min de trot' + (vma ? ' · ' + distTxt(vma, 92, 180) : ''), lib: '3min', timer: { kind: 'interval', name: 'Intervalles 3 min', work: 180, rest: 120, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Vite', restLabel: 'Trot', markEach: 'rep' }, n: reps }; }
+    else if (cfg.lvl >= 2 && wk.step === 1 && fmt !== '3030') { const reps = Math.max(3, Math.round(([4, 4, 5][lv] + 1) * m)); it = { label: 'Intervalles 3 min', det: '3 min à allure 3 000-5 000 m, 2 min de trot' + (vma ? ' · ' + distTxt(vma, 92, 180) : ''), lib: '3min', timer: { kind: 'interval', name: 'Intervalles 3 min', work: 180, rest: 120, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Vite', restLabel: 'Trot', markEach: 'rep' }, n: reps }; }
     else { const sets = lv === 0 ? 1 : 2, reps = Math.max(4, Math.round(([8, 10, 12][lv] + [0, 1, 2][wk.step]) * m)); it = { label: 'Intervalles 30/30', det: '30 s vite (proche de ta VMA), 30 s de trot' + (vma ? ' · ' + distTxt(vma, 100, 30) : '') + ' · ' + sets + ' série' + (sets > 1 ? 's' : '') + ' de ' + reps, lib: '30-30', timer: { kind: 'interval', name: '30/30', work: 30, rest: 30, reps, sets, setRest: 180, prep: 10, workLabel: 'Vite', restLabel: 'Trot' }, n: sets }; }
     blocks = [{ id: uid('b'), kind, title: nm[1] + ' · ' + (type === 'lact' ? 'intervalles lactiques' : 'intervalles'), desc: it.det, sub: type === 'lact' ? 'Filière lactique : efforts de 20 s à 2 min, récupération 1:3 à 1:5.' : 'Les 20 % d’intensité de l’entraînement polarisé : efforts durs, le reste de la semaine reste facile.', items: [ech('15 min faciles, puis 3 accélérations progressives de 20 s.'), Object.assign({ id: uid('i'), unit: 'Série' }, it), { id: 'rac', label: 'Retour au calme', det: '10 min très faciles', n: 1 }] }];
     tg = { rpe: wk.light ? [4, 6] : [7, 9], fam: wk.light ? 'light' : 'hard' };
@@ -405,7 +417,7 @@ function cardioSession(type, cfg, eq, wk) {
   }
   const sys = SYSTEMS[type === 'lact' || type === 'circuit' ? 'lact' : 'aero'];
   tg.why = sys.l + ' · ' + sys.d;
-  return { short, blocks, target: tg, heavy };
+  return { short, blocks, target: tg, heavy, est };
 }
 
 function sprintSession(cfg, eq, wk, used) {

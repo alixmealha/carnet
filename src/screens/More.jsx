@@ -10,6 +10,7 @@ import { SettingsPage, Switch } from './Settings.jsx';
 import { AdminPage } from './Admin.jsx';
 import { ROLE_LBL } from './Setup.jsx';
 import { Mark, Wordmark } from '../ui/Logo.jsx';
+import { Lexicon } from '../ui/Gloss.jsx';
 
 function RenameSheet({ ex, onClose }) {
   const [v, setV] = useState(ex.label), [fut, setFut] = useState(true);
@@ -44,6 +45,14 @@ function Exercises() {
   );
 }
 
+// Lexique : tous les termes expliqués (les mêmes s'ouvrent d'un appui là où ils apparaissent, soulignés en pointillés)
+function LexiconCard() {
+  const [open, setOpen] = useState(false);
+  return <>
+    <button class="card li-card" onClick={() => setOpen(true)}><Icon name="flask" /><span><b>Lexique</b><small>Potentialisation, réserve, VMA, vitesse critique… : les termes de l’appli expliqués simplement</small></span><span class="chev r" aria-hidden="true" /></button>
+    {open && <Sheet title="Lexique" onClose={() => setOpen(false)}><Lexicon /></Sheet>}
+  </>;
+}
 function Reperes() {
   return (
     <section class="card">
@@ -93,6 +102,7 @@ export function More({ session }) {
         </button>
         {syncState.rejectedAt > 0 && Date.now() - syncState.rejectedAt < 6e4 && <p class="lock-n"><Icon name="lock" size={16} />Une modification a été refusée par le serveur{links.myLock ? ' : ton plan est verrouillé par ton coach' : ''}.</p>}
         {meta() && (self ? hasCarnet() : true) && <Exercises />}
+        <LexiconCard />
         <Reperes />
         <section class="card">
           <h3 class="h3">Installer sur l’iPhone</h3>
