@@ -6,6 +6,8 @@ import { sportsOf } from '../lib/sports.js';
 import { GOALS, GOAL_BY_ID, SYSTEMS, EQUIP, LIB_BY_ID, quiz, quizResult } from '../lib/library.js';
 import { generate, writeProgram, conflicts, LEVELS, DURS, nextMonday, alternatives, groupsTxt, sessionSummary, SESSION_LBL, FORMATS, fmtFamily, fmtOf, fmtReco, weekPlanTypes, buildSession } from '../lib/builder.js';
 import { LevelsForm } from '../ui/Levels.jsx';
+import { missingFor, LVL_LBL } from '../lib/needs.js';
+import { SPORT_LBL } from '../lib/sports.js';
 import { Gloss } from '../ui/Gloss.jsx';
 import { levelsDoc, LIFT_OF_LIB, climbLevel } from '../lib/levels.js';
 import { clone } from '../lib/plan.js';
@@ -191,6 +193,7 @@ function Preview({ cfg, set, prog }) {
       <SysCard id={g.sys} />
       <ModelSave cfg={cfg} />
     </section>
+    <NeedsCard cfg={cfg} set={set} prog={prog} />
     {prog.warnings.length > 0 && <div class="guard">Règle des 48 h : {prog.warnings.map(x => DOW_L[x.d].toLowerCase() + ' et ' + DOW_L[x.d2].toLowerCase() + ' (' + groupsTxt(x.groups) + ')').join(' ; ')}. Avec ces jours imposés, deux séances dures se suivent : allège l’une des deux ou décale un jour si tu peux.</div>}
     <div class="wk-nav" style="margin:0"><button class="icon-btn" disabled={wi === 0} aria-label="Semaine précédente" onClick={() => setWi(wi - 1)}><Icon name="left" /></button>
       <div class="lbl"><b>Semaine {wi + 1}</b> · {PHASE_LABEL[w.phase]}{w.light ? ' (décharge)' : w.taper ? ' (affûtage)' : ''}</div>
@@ -216,6 +219,28 @@ function Preview({ cfg, set, prog }) {
       </div>
     </Sheet>}
   </div>;
+}
+
+// Ce qui manque pour le sport et l'objectif : doses minimales par tissu et besoins du sport, ajoutables d'un appui
+function NeedsCard({ cfg, set, prog }) {
+  const { list, tips } = missingFor(prog);
+  const sp = (cfg.sports || []).filter(x => SPORT_LBL[x] && x !== 'autre');
+  const toggle = x => {
+    if (x.kind === 'goal2') { set({ goal2: 'force' }); toast('Force ajoutée en second objectif'); return; }
+    const ex = cfg.extras || [];
+    set({ extras: x.added ? ex.filter(id => id !== x.id) : ex.concat([x.id]) });
+  };
+  return <section class="card needs">
+    <h3 class="h3" style="margin-bottom:2px">Ce qui manque{sp.length ? ' pour ' + sp.map(x => SPORT_LBL[x].toLowerCase()).join(' et ') : ''}</h3>
+    <p class="small" style="margin:0 0 10px">{list.length ? 'D’après les doses minimales qui font progresser muscles, tendons et os, et les besoins de ton sport. Un appui l’ajoute au programme, 2 fois par semaine.' : 'Ton programme couvre déjà l’essentiel pour ton sport et ton objectif.'}</p>
+    {list.length > 0 && <div class="stack" style="gap:8px">{list.map(x => <div class={'need' + (x.added ? ' on' : '')}>
+      <div class="need-h"><b>{x.t}</b><span class={'need-lv ' + (x.lvl === 'solide' ? 'a' : x.lvl === 'modéré' ? 'b' : 'c')}>{LVL_LBL[x.lvl]}</span></div>
+      <p class="small" style="margin:4px 0 0"><Gloss text={x.why} /></p>
+      {x.warn && <p class="warn-l">{x.warn} À valider avec un professionnel de santé.</p>}
+      <div class="need-f"><Src ids={x.src} /><button type="button" class={'btn' + (x.added ? ' ghost' : '')} aria-pressed={x.added ? 'true' : 'false'} onClick={() => toggle(x)}>{x.added ? 'Retirer' : x.kind === 'goal2' ? 'Ajouter en second objectif' : 'Ajouter'}</button></div>
+    </div>)}</div>}
+    {tips.length > 0 && <ul class="need-tips">{tips.map(t => <li><b>{t.t}</b> · <Gloss text={t.why} /></li>)}</ul>}
+  </section>;
 }
 
 function ModelSave({ cfg }) {

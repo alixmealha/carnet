@@ -35,7 +35,9 @@ export const GLOSS = [
   { id: 'r48', t: 'Règle des 48 h', a: [], d: 'Pas deux séances lourdes de suite sur les mêmes muscles : il faut environ 48 h pour récupérer.', src: ['acsm2009'] },
   { id: 'dp', t: 'Double progression', a: [], d: 'On monte d’abord les répétitions jusqu’au haut de la fourchette, puis la charge, et on recommence.', src: ['acsm2009'] },
   { id: 'ramp', t: 'RAMP', a: [], d: 'Méthode d’échauffement en trois temps : monter en température, activer et mobiliser, puis potentialiser en montant vers l’intensité de la séance.', src: ['jeffreys2007'] },
-  { id: 'hyper', t: 'Hypertrophie', a: [], d: 'La prise de muscle : séries de 6 à 12 répétitions proches de l’échec, au moins 10 séries par muscle et par semaine.', src: ['schoenfeld2017'] }
+  { id: 'hyper', t: 'Hypertrophie', a: [], d: 'La prise de muscle : séries de 6 à 12 répétitions proches de l’échec, au moins 10 séries par muscle et par semaine.', src: ['schoenfeld2017'] },
+  { id: 'bfr', t: 'BFR', a: ['occlusion vasculaire'], d: 'Blood flow restriction : un brassard en haut du bras ou de la cuisse freine le retour du sang. Une charge très légère (20 à 30 % du max) fait alors progresser la masse musculaire presque comme une charge lourde. À éviter sans avis médical en cas de problème de circulation ou de coagulation, d’hypertension, de maladie cardiaque ou de grossesse.', src: ['patterson2019', 'lixandrao2018', 'hughes2017'] },
+  { id: 'aop', t: 'Pression d’occlusion', a: ['pression d\'occlusion'], d: 'La pression de brassard qui coupe complètement le sang d’un membre, mesurée avec un manomètre. En BFR, on serre à 40-80 % de cette pression ; sans manomètre, un serrage ressenti d’environ 7 sur 10, jamais douloureux ni engourdissant.', src: ['patterson2019', 'wilson2013'] }
 ];
 export const GLOSS_BY_ID = Object.fromEntries(GLOSS.map(g => [g.id, g]));
 // Expression qui repère tous les termes (le plus long d'abord), en mots entiers

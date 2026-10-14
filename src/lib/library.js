@@ -6,7 +6,7 @@
 
 export const EQUIP = [
   ['salle', 'Salle de muscu'], ['halteres', 'Haltères / kettlebell'], ['traction', 'Barre de traction'], ['poutre', 'Poutre (pan, fingerboard)'],
-  ['salle-esc', 'Salle d’escalade'], ['elastique', 'Élastiques'], ['exterieur', 'Extérieur (piste, route)'], ['velo', 'Vélo / home-trainer'], ['piscine', 'Piscine']
+  ['salle-esc', 'Salle d’escalade'], ['elastique', 'Élastiques'], ['exterieur', 'Extérieur (piste, route)'], ['velo', 'Vélo / home-trainer'], ['piscine', 'Piscine'], ['bfr', 'Brassards BFR']
 ];
 // Ce qu'apporte chaque choix (une salle de muscu a des barres, des haltères, une barre de traction…)
 export function equipSet(list) {
@@ -38,6 +38,10 @@ export const LIB = [
   E('swing', 'Kettlebell swing', 'muscu', { q: ['puiss', 'endu_f'], g: ['jambes', 'dos'], eq: ['halteres'], pat: 'hinge', c: 'Mouvement de hanches explosif, bras relâchés.' }),
   E('nordic', 'Nordic hamstring', 'renfo', { q: ['prev', 'hyper'], g: ['jambes'], ld: 'bw', heavy: true, rr: [4, 6], pat: 'ischio', c: 'Chevilles bloquées, descente la plus lente possible, on se rattrape avec les mains.', src: ['vandyk2019'] }),
   E('pont', 'Pont fessier unipodal', 'renfo', { q: ['prev', 'endu_f'], g: ['jambes'], ld: 'bw', pat: 'ischio', c: 'Bassin aligné, 2 s en haut.' }),
+  E('iso-mollets', 'Isométrie lourde des mollets', 'renfo', { q: ['prev'], g: [], eq: ['halteres', 'machines', 'rien'], t: 'iso', hold: '3 s', ld: 'kg', pat: 'tendon', c: 'Pointe de pied sur une marche, genou tendu (et genou plié pour le soléaire) : pousser 3 s presque au maximum contre une charge ou un point fixe.', src: ['bohm2015'] }),
+  E('iso-quad', 'Isométrie lourde des quadriceps', 'renfo', { q: ['prev'], g: ['jambes'], eq: ['machines', 'halteres', 'rien'], t: 'iso', hold: '3 s', ld: 'kg', pat: 'tendon', c: 'Leg extension bloqué ou chaise lestée, genou vers 60° : pousser 3 s presque au maximum.', src: ['bohm2015'] }),
+  E('leg-ext', 'Leg extension', 'muscu', { q: ['hyper'], g: ['jambes'], eq: ['machines', 'elastique'], pat: 'quad-iso', c: 'Assis, tendre les genoux puis redescendre en 2 s. Se fait aussi avec un élastique accroché à la cheville.' }),
+  E('curl', 'Curl biceps', 'muscu', { q: ['hyper'], g: [], eq: ['halteres', 'elastique', 'machines'], pat: 'bras', c: 'Coudes près du corps, monter puis redescendre en 2 s, sans balancer le buste.' }),
   E('mollets', 'Extensions de mollets', 'renfo', { q: ['prev', 'endu_f'], g: [], eq: ['halteres', 'rien'], pat: 'mollet', c: 'Sur une marche, montée sur la pointe, descente lente talon sous la marche.' }),
   // ---- Poussée
   E('dc', 'Développé couché', 'muscu', { q: ['force', 'hyper'], g: ['poussee'], eq: ['barre'], heavy: true, pat: 'push-h', c: 'Omoplates serrées, barre au bas des pectoraux, pieds ancrés.' }),

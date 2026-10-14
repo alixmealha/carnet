@@ -351,7 +351,7 @@ function LoadStepper({ k, b, it }) {
     const commit = () => { const n = parseFloat(String(own).replace(',', '.')); if (!isNaN(n)) { const loads = Object.assign({}, jget(k).loads, { [key]: n }); jset(k, { loads }); } };
     return <div class="sug">
       {sug ? <><div><small>Charge conseillée</small><b>{sug.text}</b><span>{sug.why}</span></div><button class="btn primary" onClick={() => applySuggested(k, b, it, sug)}>Utiliser</button></>
-        : <div><small>Charge du jour</small><span>{it.rx ? 'Première fois : prends une charge qui respecte la fourchette et la réserve visées.' : 'Note la charge pour suivre ta progression.'}</span></div>}
+        : <div><small>Charge du jour</small><span>{it.repsBySet ? 'Première fois : une charge très légère, que tu soulèverais bien plus de 30 fois sans brassards.' : it.rx && it.rx.r ? 'Première fois : prends une charge qui respecte la fourchette et la réserve visées.' : 'Note la charge pour suivre ta progression.'}</span></div>}
       <label class="fld sug-in">{sug ? 'Autre' : it.unit_load === '+kg' ? 'Lest (kg)' : 'Charge (kg)'}<input class="in mono" inputmode="decimal" value={own} onInput={ev => setOwn(ev.target.value)} onBlur={commit} /></label>
     </div>;
   }
@@ -431,6 +431,7 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
     <div class="step-k"><i style={'background:' + color} /><Rich text={b.title} /></div>
     <h2 class={'step-t' + (String(ttl).length > 34 ? ' long' : '')}><Rich text={ttl} /></h2>
     {!step.group && !step.list && !step.pair && it && it.det && <p class="step-d"><Rich text={it.det} g /></p>}
+    {!step.group && !step.list && !step.pair && it && it.warn && <p class="warn-l">{it.warn}</p>}
     {!step.group && !step.list && !step.pair && it && (STRENGTH.includes(b.kind) || climbable(b, it)) && it.id !== 'ech' && <LastTime k={k} it={it} />}
     {(step.group || step.list || !it) && b.desc && <p class="step-d"><Rich text={b.desc} g /></p>}
     {fc && <div class="calc" style="margin-top:10px">{fc.text}{fc.hint && <><br /><span class="muted">{fc.hint}</span></>}</div>}
@@ -498,8 +499,9 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
   }
   const askRir = full && STRENGTH.includes(b.kind) && it.unit !== 'Bloc' && it.unit !== 'Essai' && !(T && T.kind === 'interval');
   return <div>{head}<LoadStepper k={k} b={b} it={it} />
+    {it.repsBySet && !full && <div class="phase-box" style="margin-top:12px"><div class="ph">Série {v + 1}/{it.n}</div><div class="pv">{it.repsBySet[Math.min(v, it.repsBySet.length - 1)]} répétitions</div></div>}
     <Pips k={k} b={b} it={it} color={color} onTick={nv => { if (it.rest && !T && nv < it.n) startRest(it.rest, 'Repos'); }} />
-    {b.sub && <p class="small" style="margin-top:12px"><Rich text={b.sub} g /></p>}
+    {b.sub && !it.extra && <p class="small" style="margin-top:12px"><Rich text={b.sub} g /></p>}
     {askRir && <Reserve k={k} b={b} it={it} />}
     {full ? nextBtn : action}
     {!full && it.rest && !T && !(openClimb && climbable(b, it)) && <p class="small">{mmss(it.rest)} de repos se lancent tout seuls après chaque {it.unit === 'Bloc' ? 'bloc' : it.unit === 'Essai' ? 'essai' : 'série'}.</p>}

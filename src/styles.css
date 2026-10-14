@@ -829,3 +829,17 @@ html,body{overflow-x:clip}
 .qty .fld{max-width:10em}
 .mono{font-family:var(--f-mono)}
 .set-l{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);margin:6px 0 0;text-align:center}
+
+/* précautions (BFR) */
+.warn-l { display: block; margin: 6px 0 0; padding: 6px 10px; border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 9%, transparent); border-radius: 0 8px 8px 0; font-size: 12.5px; line-height: 1.4; color: var(--ink); }
+
+/* Ce qui manque (aperçu de l'assistant) */
+.need { border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; }
+.need.on { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--good); }
+.need-h { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+.need-lv { font-size: 11px; font-family: var(--f-mono); padding: 1px 6px; border-radius: 6px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.need-lv.a { color: var(--good); } .need-lv.b { color: var(--warn); }
+.need-f { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-top: 8px; flex-wrap: wrap; }
+.need-f .btn { margin-left: auto; }
+.need-tips { margin: 10px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.need-tips b { color: var(--ink); font-weight: 600; }

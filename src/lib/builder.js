@@ -9,6 +9,7 @@ import { addDays, mondayOf, todayKey, dow, fmtDay, diffDays, mmss, fmtNum } from
 import { climbLevel, oneRM, loadForPct, LIFT_OF_LIB, vmaOf, fcmaxOf, paceAt, srcTxt, csOf, ftpOf } from './levels.js';
 import { shiftGrade, gapText } from './grades.js';
 import { lastResult } from './tests.js';
+import { applyExtras, EXTRAS } from './needs.js';
 
 export const LEVELS = [[1, 'Débutant', 'moins d’un an d’entraînement régulier'], [2, 'Intermédiaire', '1 à 3 ans'], [3, 'Avancé', 'plus de 3 ans']];
 export const DURS = [45, 60, 75, 90];
@@ -530,6 +531,8 @@ export function generate(cfg) {
       if (i % 2 === 1 && (t === 'fbA' || t === 'fbB') && types.filter(x => x === 'fbA').length !== types.filter(x => x === 'fbB').length) t = t === 'fbA' ? 'fbB' : 'fbA';
       days[d] = Object.assign(buildSession(t, cfg, wk, used, memo), { type: t });
     }
+    // compléments choisis dans l'aperçu (ce qui manque pour ton sport)
+    applyExtras(days, cfg, wk);
     weeks.push({ i, start: ws, end: addDays(ws, 6), phase: wk.phase, light: !!wk.light, taper: !!wk.taper, days });
   }
   // conflits de la règle des 48 h restants (jours imposés trop proches)
@@ -568,9 +571,13 @@ export function programNotes(prog) {
   for (const l of ['squat', 'bench', 'deadlift', 'pull', 'dips']) { const r = oneRM(l, null, c.lv); if (r) rep.push('1RM ' + ({ squat: 'squat', bench: 'développé couché', deadlift: 'soulevé de terre', pull: 'traction', dips: 'dips' })[l] + ' ' + r.txt + ' (' + srcTxt(r) + ')'); }
   const v = vmaOf(null, c.lv); if (v) rep.push('VMA ' + fmtNum(v.v) + ' km/h');
   if (rep.length) lines.push('- Repères utilisés : ' + rep.join(' ; ') + '.');
-  lines.push('', 'Sources : ACSM 2009 ; NSCA 2016 ; Schoenfeld 2016 et 2017 ; Helms 2016 ; Williams 2017 ; Bell 2023' + (c.event ? ' ; Bosquet 2007' : '') + ([c.goal, c.goal2].includes('aero') ? ' ; Stöggl 2014' : '') + (fams.some(f => fmtOf(f, c) === 'clusters') ? ' ; Tufano 2017' : '') + (fams.some(f => fmtOf(f, c) === 'supersets') ? ' ; Robbins 2010' : '') + (fams.some(f => fmtOf(f, c) === 'contraste') ? ' ; Seitz 2016' : '') + (v ? ' ; Billat 2001' : '') + '.');
+  const ex = (c.extras || []).filter(id => EXTRAS[id]);
+  if (ex.length) lines.push('- Compléments pour ton sport : ' + ex.map(id => EXTRAS[id].t.toLowerCase()).join(', ') + '.');
+  lines.push('', 'Sources : ACSM 2009 ; NSCA 2016 ; Schoenfeld 2016 et 2017 ; Helms 2016 ; Williams 2017 ; Bell 2023' + (c.event ? ' ; Bosquet 2007' : '') + ([c.goal, c.goal2].includes('aero') ? ' ; Stöggl 2014' : '') + (fams.some(f => fmtOf(f, c) === 'clusters') ? ' ; Tufano 2017' : '') + (fams.some(f => fmtOf(f, c) === 'supersets') ? ' ; Robbins 2010' : '') + (fams.some(f => fmtOf(f, c) === 'contraste') ? ' ; Seitz 2016' : '') + (v ? ' ; Billat 2001' : '') + exSrc(ex) + '.');
   return lines.join('\n');
 }
+const SRC_TXT = { turner2003: 'Turner 2003', bohm2015: 'Bohm 2015', vandyk2019: 'van Dyk 2019', byram2010: 'Byram 2010', lixandrao2018: 'Lixandrão 2018', patterson2019: 'Patterson 2019', wilson2013: 'Wilson 2013' };
+const exSrc = ex => { const s = [...new Set(ex.flatMap(id => EXTRAS[id].src || []))].map(x => SRC_TXT[x]).filter(Boolean); return s.length ? ' ; ' + s.join(' ; ') : ''; };
 // mode : 'replace' (les séances prévues sur ces jours sont remplacées) ou 'merge' (le programme s'ajoute)
 export function writeProgram(prog, mode) {
   const t = todayKey(), c = prog.cfg;

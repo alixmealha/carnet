@@ -31,6 +31,7 @@ export function climbBilan(k, b, it) {
 // Reps par série pour le tonnage
 function repsPerSet(it) {
   if (it.reps) return it.reps;
+  if (it.repsBySet) return it.repsBySet[0];
   if (it.rx && Array.isArray(it.rx.r)) return Math.round((it.rx.r[0] + it.rx.r[1]) / 2);
   const m = String(it.det || '').match(/(\d+)\s*(?:-\s*\d+\s*)?(?:rép|répétitions)/i);
   return m ? +m[1] : null;
@@ -47,7 +48,7 @@ export function strengthBilan(k, part) {
       const sl = setLoadsOf(e, key), ld = itemLoad(b, it, e); if (!sl && !ld) continue;
       const bw = it.unit_load === '+kg' ? bodyWeightAt(k) || 0 : 0;
       const loads = sl || Array.from({ length: n }, () => ld.v);
-      ton += loads.reduce((a, w) => a + (bw + w) * r, 0);
+      ton += loads.reduce((a, w, i) => a + (bw + w) * (it.repsBySet ? it.repsBySet[Math.min(i, it.repsBySet.length - 1)] : r), 0);
       const lift = LIFT_OF_LIB[it.lib || (libMatch(it.label) || {}).id];
       const rm = lift ? oneRM(lift) : null;
       if (rm && rm.v > 0) { const avg = loads.reduce((a, w) => a + bw + w, 0) / loads.length; pcts.push(it.label + ' ≈ ' + Math.round(avg / rm.v * 100) + ' % de ton 1RM'); }
