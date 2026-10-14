@@ -26,7 +26,7 @@ export function Gloss({ text }) {
   if (!text) return null;
   return <>{glossParts(String(text), setId, new Set())}{id && <TermSheet id={id} onClose={() => setId(null)} />}</>;
 }
-// Lexique complet (Plus → Lexique)
+// Lexique complet (Plus → Repères → Lexique)
 export function Lexicon() {
   return <div class="stack" style="gap:10px">{GLOSS.slice().sort((a, b) => a.t.localeCompare(b.t, 'fr')).map(g => <div class="lex"><b>{g.t}</b><p>{g.d}</p>{g.src && <Src ids={g.src} />}</div>)}</div>;
 }

@@ -1,4 +1,4 @@
-// « Mes repères » : niveau en escalade, 1RM, VMA, FC max. Tout est facultatif ; à défaut, l'appli estime d'après tes tests et tes séances.
+// « Mon niveau » (Plus → Profil) : niveau en escalade, 1RM, VMA, FC max. Tout est facultatif ; à défaut, l'appli estime d'après tes tests et tes séances.
 import { useState } from 'preact/hooks';
 import { isSelf } from '../lib/store.js';
 import { SCALE } from '../lib/grades.js';

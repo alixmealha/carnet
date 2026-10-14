@@ -1,4 +1,4 @@
-// Profil : saisie à la première connexion, puis modifiable dans Paramètres.
+// Profil : saisie à la première connexion, puis modifiable dans Plus → Profil.
 import { useState } from 'preact/hooks';
 import { myProfile, myRow, saveMyProfile, role as roleOf } from '../lib/store.js';
 import { logWeight } from '../lib/tests.js';
@@ -136,7 +136,7 @@ export function ProfileSetup() {
   );
 }
 
-// Formulaire de profil dans Paramètres
+// Formulaire de profil (Plus → Profil)
 export function ProfileForm() {
   const p = myProfile(), r = roleOf();
   const [name, setName] = useState(p.name || '');

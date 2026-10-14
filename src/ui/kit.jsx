@@ -30,7 +30,9 @@ const ICONS = {
   lock: <g {...P}><rect x="5" y="10.5" width="14" height="10" rx="2.2" /><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" /></g>,
   key: <g {...P}><circle cx="8" cy="14.5" r="4" /><path d="M11 11.5 19.5 3M16 6.5l2.5 2.5M14 8.5l2 2" /></g>,
   shield: <g {...P}><path d="M12 3.5 19 6v5.5c0 4.3-2.9 7.6-7 9-4.1-1.4-7-4.7-7-9V6z" /><path d="m9 12 2.2 2.2L15.5 10" /></g>,
-  chevd: <path {...P} d="M7 10l5 5 5-5" />
+  chevd: <path {...P} d="M7 10l5 5 5-5" />,
+  sliders: <g {...P}><path d="M4 7h9M17 7h3M4 17h3M11 17h9" /><circle cx="15" cy="7" r="2" /><circle cx="9" cy="17" r="2" /></g>,
+  book: <g {...P}><path d="M5.5 18.5V6a2 2 0 0 1 2-2H18.5v12.5H7.5a2 2 0 0 0-2 2 2 2 0 0 0 2 2H18.5" /></g>
 };
 export function Icon({ name, size }) {
   return <svg viewBox="0 0 24 24" width={size || 24} height={size || 24} aria-hidden="true">{ICONS[name]}</svg>;

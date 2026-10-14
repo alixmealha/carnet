@@ -12,7 +12,7 @@ async function shareText(txt) {
   try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(txt); toast('Copié'); } catch (_) { toast('Copie impossible : recopie le texte à la main'); }
 }
-const welcome = (email, pw) => 'Ton compte Alipto est prêt.\nAdresse : ' + appUrl() + '\nEmail : ' + email + '\nMot de passe provisoire : ' + pw + '\nSur iPhone : ouvre l’adresse dans Safari, Partager → Sur l’écran d’accueil. Change ton mot de passe dans Plus → Paramètres.';
+const welcome = (email, pw) => 'Ton compte Alipto est prêt.\nAdresse : ' + appUrl() + '\nEmail : ' + email + '\nMot de passe provisoire : ' + pw + '\nSur iPhone : ouvre l’adresse dans Safari, Partager → Sur l’écran d’accueil. Change ton mot de passe dans Plus → Paramètres → Compte.';
 
 function Create({ onDone }) {
   const [email, setEmail] = useState(''), [pw, setPw] = useState(tempPassword()), [role, setRole] = useState('athlete'), [name, setName] = useState(''), [mine, setMine] = useState(true);

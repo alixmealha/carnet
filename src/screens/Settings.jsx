@@ -1,4 +1,5 @@
-// Paramètres : profil, apparence, séance, suivi, notifications, coach / athlètes, compte, données, administration.
+// Profil (qui tu es, ton niveau, ton alimentation, ton coach ou tes athlètes) et Paramètres (apparence, séance, suivi,
+// notifications, compte, données, administration) : deux pages de l'onglet Plus.
 import { useEffect, useState } from 'preact/hooks';
 import { syncState, syncNow, settings, setSettings, wipeLocal, links, role, isAdmin, getFor, SELF, myProfile, nameOf, isSelf, getSubject, setSubject, removeAllMine, hasCarnet } from '../lib/store.js';
 import { sb, cloud } from '../lib/supa.js';
@@ -75,7 +76,7 @@ function MyCoach() {
   useEffect(() => { load(); }, []);
   const gen = async () => { setBusy(true); setErr(''); try { const c = await newCode(); setFresh(c); load(); } catch (e) { setErr(e.message); } setBusy(false); };
   const share = async c => {
-    const txt = 'Mon code Alipto : ' + fmtCode(c.code) + '\nÀ saisir dans Plus → Paramètres → Mes athlètes (valable 7 jours, une seule fois).';
+    const txt = 'Mon code Alipto : ' + fmtCode(c.code) + '\nÀ saisir dans Plus → Profil → Mes athlètes (valable 7 jours, une seule fois).';
     try { if (navigator.share) { await navigator.share({ text: txt }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
     try { await navigator.clipboard.writeText(txt); toast('Code copié'); } catch (_) { toast(fmtCode(c.code)); }
   };
@@ -109,7 +110,7 @@ export function AddAthlete({ compact }) {
   };
   return (
     <div class="stack" style="gap:8px">
-      {!compact && <p class="small" style="margin:0">Demande à ton athlète son code : Plus → Paramètres → Mon coach → Donner accès à un coach.</p>}
+      {!compact && <p class="small" style="margin:0">Demande à ton athlète son code : Plus → Profil → Mon coach → Donner accès à un coach.</p>}
       <div style="display:flex;gap:8px;align-items:flex-end">
         <label class="fld" style="flex:1">Code de l’athlète<input class="in mono code-in" value={code} placeholder="ABCD-EFGH" autocapitalize="characters" autocomplete="off" spellcheck={false} onInput={e => setCode(e.target.value.toUpperCase())} /></label>
         <button class="btn primary" disabled={busy || code.replace(/[^A-Za-z0-9]/g, '').length < 8} onClick={go}>Ajouter</button>
@@ -183,28 +184,37 @@ function Data() {
   );
 }
 
-export function SettingsPage({ session, onBack, onAdmin }) {
+const Page = ({ title, onBack, children }) => <div class="screen">
+  <div class="page-h"><button class="icon-btn" aria-label="Retour" onClick={onBack}><Icon name="back" /></button><h1 class="title">{title}</h1></div>
+  <div class="stack cols2">{children}</div>
+</div>;
+
+export function ProfilePage({ onBack }) {
   const r = role(), athleteSide = r !== 'coach', coachSide = r === 'coach' || r === 'admin';
   useEffect(() => { window.scrollTo(0, 0); }, []);
-  return (
-    <div class="screen">
-      <div class="page-h"><button class="icon-btn" aria-label="Retour" onClick={onBack}><Icon name="back" /></button><h1 class="title">Paramètres</h1></div>
-      <div class="stack cols2">
-        <Sec title="Profil" right={r ? ROLE_LBL[r] : ''}><ProfileForm key={myProfile().name} /></Sec>
-        {athleteSide && <Sec title="Mes repères" right="facultatif"><LevelsForm /></Sec>}
-        <Appearance />
-        {athleteSide && <SessionPrefs />}
-        {athleteSide && <Tracking />}
-        {athleteSide && <NutriSettings />}
-        <Notifications />
-        {cloud && athleteSide && !links.legacy && <MyCoach />}
-        {cloud && coachSide && !links.legacy && <MyAthletes />}
-        <Account session={session} />
-        <Data />
-        {isAdmin() && <button class="card li-card" onClick={onAdmin}><Icon name="shield" /><span><b>Administration</b><small>Comptes, rôles, accès</small></span><span class="chev r" aria-hidden="true" /></button>}
-        {links.legacy && <p class="err">La base n’est pas encore à jour : lance le script de l’étape 2 dans Supabase (profils, codes, notifications).</p>}
-        <p class="small" style="text-align:center">Alipto v3.5</p>
-      </div>
-    </div>
-  );
+  return <Page title="Profil" onBack={onBack}>
+    <Sec title="Moi" right={r ? ROLE_LBL[r] : ''}><ProfileForm key={myProfile().name} /></Sec>
+    {athleteSide && <Sec title="Mon niveau" right="facultatif">
+      <p class="small" style="margin:0 0 12px">Sert aux cotations, charges et allures des programmes. Sans valeur, l’appli estime d’après tes tests et tes séances.</p>
+      <LevelsForm /></Sec>}
+    {athleteSide && <NutriSettings />}
+    {cloud && athleteSide && !links.legacy && <MyCoach />}
+    {cloud && coachSide && !links.legacy && <MyAthletes />}
+    {links.legacy && <p class="err">La base n’est pas encore à jour : lance le script de l’étape 2 dans Supabase (profils, codes, notifications).</p>}
+  </Page>;
+}
+
+export function SettingsPage({ session, onBack, onAdmin }) {
+  const r = role(), athleteSide = r !== 'coach';
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+  return <Page title="Paramètres" onBack={onBack}>
+    <Appearance />
+    {athleteSide && <SessionPrefs />}
+    {athleteSide && <Tracking />}
+    <Notifications />
+    <Account session={session} />
+    <Data />
+    {isAdmin() && <button class="card li-card" onClick={onAdmin}><Icon name="shield" /><span><b>Administration</b><small>Comptes, rôles, accès</small></span><span class="chev r" aria-hidden="true" /></button>}
+    <p class="small" style="text-align:center">Alipto v3.5</p>
+  </Page>;
 }

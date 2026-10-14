@@ -14,6 +14,7 @@ import { Goal } from './DayView.jsx';
 import { relevantKinds } from '../lib/sports.js';
 import { check48, groupsTxt } from '../lib/builder.js';
 import { BuilderEntry } from './Builder.jsx';
+import { PlanExercises } from '../ui/PlanExercises.jsx';
 
 const PHASES = ['volume', 'reprise', 'force', 'puissance', 'specifique', 'affutage', 'recup', 'deload', 'transition', 'coupure', 'autre'];
 const SHORT = { volume: 'Vol.', reprise: 'Rep.', force: 'Force', puissance: 'Puiss.', specifique: 'Spéc.', affutage: 'Affût.', recup: 'Récup.', deload: 'Déch.', transition: 'Trans.', coupure: 'Coup.', autre: 'Cycle' };
@@ -420,6 +421,7 @@ export function PlanScreen({ seg }) {
             <span style="min-width:0"><b style="font-weight:600">{weekLabel(w)}</b> · {fmtRange(w.start, w.end)}<small>{(PHASE_LABEL[w.phase] || w.bloc) + ' · ' + weekSummary(w)}</small></span><span class="r" />
           </button>)}
         </Fold>
+        <PlanExercises />
 
         <h3 class="h3" style="margin:8px 0 -4px">Repères du plan</h3>
         {(m.sections || []).map((s, i) => <details class="card fold">

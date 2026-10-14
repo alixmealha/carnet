@@ -1,4 +1,4 @@
-// Petit lexique : les termes techniques s'expliquent d'un appui là où ils apparaissent (et tous ensemble dans Plus → Lexique).
+// Petit lexique : les termes techniques s'expliquent d'un appui là où ils apparaissent (et tous ensemble dans Plus → Repères → Lexique).
 // t : terme affiché, d : explication courte, a : autres formes reconnues dans les textes, src : sources.
 export const GLOSS = [
   { id: 'potentialisation', t: 'Potentialisation', a: ['potentialiser', 'potentialise', 'potentialisée'], d: 'Une série lourde ou explosive rend les efforts qui suivent un peu plus forts et rapides pendant quelques minutes. On s’en sert à la fin de l’échauffement et dans le contraste.', src: ['seitz2016'] },

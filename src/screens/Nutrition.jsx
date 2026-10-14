@@ -95,7 +95,7 @@ export function NutriDay({ k }) {
   const adv = dayAdvice(k);
   return (
     <Fold id="nutri-day" title="Alimentation" summary={summary} cls="nutri">
-      {!tg && <p class="small" style="margin:0 0 10px">Renseigne ton poids et ta taille dans Paramètres → Profil pour avoir les repères du jour.</p>}
+      {!tg && <p class="small" style="margin:0 0 10px">Renseigne ton poids et ta taille dans Plus → Profil pour avoir les repères du jour.</p>}
       {tg && <div class="n-tg">
         <div class="n-ld"><b>{tg.ld.lbl}</b>{nb && tg.kcal && <span>Dépense estimée ≈ {R(tg.ex.lo)} à {R(tg.ex.hi)} kcal{tg.goal !== 'maintien' ? ' · objectif ' + (tg.goal === 'perte' ? 'perte : ' : 'prise : ') + R(tg.kcal[0]) + '–' + R(tg.kcal[1]) + ' kcal' : ''}</span>}</div>
         {nb && <div class="n-chips"><span>Protéines <b>{tg.p[0]}–{tg.p[1]} g</b></span><span>Glucides <b>{tg.g[0]}–{tg.g[1]} g</b></span>{tg.l && <span>Lipides <b>{tg.l[0]}–{tg.l[1]} g</b></span>}</div>}
@@ -186,7 +186,7 @@ export function SuppSheet({ onClose }) {
   </Sheet>;
 }
 
-/* ---------- Réglages (Paramètres) ---------- */
+/* ---------- Réglages (Plus → Profil) ---------- */
 export function NutriSettings() {
   const p = myProfile(), n = p.nutri || {}, pr = nutriPrefs(SELF_ID);
   const set = patch => saveProfileDoc({ nutri: Object.assign({}, n, patch) });
@@ -197,7 +197,7 @@ export function NutriSettings() {
     <div style="padding:10px 14px 14px" class="stack">
       <div><p class="sub-lbl" style="margin-top:0">En dehors du sport, tu es…</p><TextSeg value={pr.life} onChange={v => v && set({ life: v })} options={LIFE.map(x => [x[0], x[1]])} label="Activité quotidienne" /></div>
       {!p.under18 && <div><p class="sub-lbl" style="margin-top:0">Objectif de poids</p><TextSeg value={pr.goal} onChange={v => v && set({ goal: v })} options={GOALS_W} label="Objectif de poids" />
-        <p class="small">Perte : déficit modéré (300 à 500 kcal) et jamais sous le métabolisme de base ; prise : léger surplus. Le régime alimentaire se règle dans Profil.</p></div>}
+        <p class="small">Perte : déficit modéré (300 à 500 kcal) et jamais sous le métabolisme de base ; prise : léger surplus. Le régime alimentaire se règle plus haut, dans « Moi ».</p></div>}
     </div>
   </section>;
 }
