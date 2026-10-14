@@ -463,7 +463,7 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
   if (step.pair) return <PairStep k={k} step={step} head={head} color={color} startRest={startRest} nextBtn={nextBtn} />;
   const key = itemKey(b, it), v = doneN(e, key, it.n), full = v >= it.n;
   const T = it.timer;
-  if (it.n === 1) return <div>{head}{it.id === 'ech' && <Warmup k={k} b={b} />}<LoadStepper k={k} b={b} it={it} />
+  if (it.n === 1) return <div>{head}{it.id === 'ech' && <Warmup k={k} b={b} onTimer={spec => openTimer(spec, b, [])} />}<LoadStepper k={k} b={b} it={it} />
     {full ? <>{nextBtn}<button class="btn ghost" style="margin-top:6px" onClick={() => setDoneCount(k, b, it, 0)}>Pas fait finalement</button></> : <button class="btn big primary" style="margin-top:20px" onClick={() => setDoneCount(k, b, it, 1)}>Marquer comme fait</button>}</div>;
   let action = null;
   if (T && T.kind === 'interval') {

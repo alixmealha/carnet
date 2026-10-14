@@ -57,10 +57,10 @@ export function warmupFor(k, b) {
       R('Grimpe très facile ou cardio léger', '5 à 8 min, jusqu’à transpirer un peu'),
       mobUp,
       A('Hanches et gainage', 'Grenouille au mur, fentes, 2 × 20 s de gainage'),
-      P('Doigts en rampe', '3 suspensions (ou levées) de 10 s à environ 50, 70 puis 85 % de l’effort, 1 min entre chaque'),
+      Object.assign(P('Doigts en rampe · 7 × 7/3', '7 suspensions de 7 s, 3 s de pause, en montant progressivement la charge d’une suspension à l’autre et en changeant de préhension (tendu, semi-arqué, arqué, pince)'), { timer: { kind: 'interval', name: 'Doigts 7/3', work: 7, rest: 3, reps: 7, sets: 1, setRest: 0, prep: 10, workLabel: 'Suspends', restLabel: 'Pause' }, src: ['remilieux'] }),
       P('Blocs de plus en plus durs', '4 à 6 blocs ' + climbUp(f === 'doigts' ? null : bm) + ', repos complet entre les derniers'),
       P(f === 'compet' ? 'Mise en situation' : '1 ou 2 essais proches du max', f === 'compet' ? '1 bloc lu puis tenté comme en compétition, 3 min de repos avant de commencer' : 'Mouvements durs mais propres : tu dois finir l’échauffement frais')
-    ], why: 'Les doigts et les épaules montent en charge progressivement avant les efforts maximaux : force et précision sont meilleures, le risque de blessure plus bas.' };
+    ], why: 'Les doigts et les épaules montent en charge progressivement avant les efforts maximaux : force et précision sont meilleures, le risque de blessure plus bas. Doigts : 7 × 7/3 de Julien Remilieux.' };
     case 'resist': return { min: 15, steps: [
       R('Grimpe très facile', '5 min'),
       mobUp,
