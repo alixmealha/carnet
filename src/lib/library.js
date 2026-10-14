@@ -101,6 +101,10 @@ export const LIB = [
   E('4x4', '4 blocs enchaînés (4 × 4)', 'grimpe', { q: ['resist', 'endu_f'], sp: ['escalade'], g: ['doigts'], eq: ['salle-esc', 'pan'], t: 'serie', ld: 'bw', pat: 'climb-lact', c: '4 blocs enchaînés sans pause, 2 à 3 niveaux sous ta limite.' }),
   E('int-pan', 'Intervalles 1 min sur pan', 'grimpe', { q: ['resist', 'endu_f'], sp: ['escalade'], g: ['doigts'], eq: ['pan', 'salle-esc'], t: 'int', ld: 'bw', pat: 'climb-lact', c: '1 min de grimpe soutenue, 3 min de repos (1:3).', src: ['nsca2016'] }),
   E('enchainement', 'Enchaînement de deux voies', 'grimpe', { q: ['resist'], sp: ['escalade'], g: ['doigts'], eq: ['salle-esc'], t: 'serie', ld: 'bw', pat: 'climb-lact', c: 'Deux voies d’affilée sans redescendre au sol si possible, niveau à vue moins 2.' }),
+  E('volume-blocs', 'Volume de blocs faciles', 'grimpe', { q: ['aero', 'conti', 'tech'], sp: ['escalade'], eq: ['salle-esc', 'pan'], t: 'bloc', ld: 'bw', pat: 'climb-aero', c: 'Beaucoup de blocs nettement sous ton flash, 1 min de repos : enchaîner sans « bouteiller ».' }),
+  E('compet-sim', 'Simulation de compétition', 'grimpe', { q: ['puiss', 'bloc', 'compet'], sp: ['escalade'], g: ['doigts', 'tirage'], eq: ['salle-esc'], t: 'essai', ld: 'bw', heavy: true, pat: 'climb-comp', c: 'Blocs nouveaux, temps limité par bloc, autant de repos : lecture, engagement, gestion des essais.' }),
+  E('flash', 'Flash de blocs nouveaux', 'grimpe', { q: ['compet', 'tech'], sp: ['escalade'], eq: ['salle-esc'], t: 'essai', ld: 'bw', pat: 'climb-comp', c: 'Un seul essai après une lecture d’1 min : comme en qualification.' }),
+  E('finger-lift', 'Finger lift', 'doigts', { q: ['force', 'doigts'], sp: ['escalade'], g: ['doigts'], eq: ['halteres', 'salle'], t: 'hang', ld: 'kg', lvl: 2, heavy: true, u18: false, pat: 'finger-max', c: 'Bloc ou réglette chargé, une main, semi-arqué : levée de 7 s sans à-coup.' }),
   E('conti', 'Continuité', 'grimpe', { q: ['aero', 'conti'], sp: ['escalade'], eq: ['salle-esc', 'pan'], t: 'bloc', ld: 'bw', pat: 'climb-aero', c: 'Grimpe facile sans t’arrêter, avant-bras chauds mais jamais « bouteillés ».' }),
   E('volume', 'Volume de voies faciles', 'grimpe', { q: ['aero', 'conti', 'tech'], sp: ['escalade'], eq: ['salle-esc'], t: 'essai', ld: 'bw', pat: 'climb-aero', c: 'Beaucoup de voies 2 à 3 niveaux sous ton max, en soignant les placements.' }),
   E('technique', 'Technique', 'grimpe', { q: ['tech'], sp: ['escalade'], eq: ['salle-esc', 'pan'], t: 'essai', ld: 'bw', pat: 'climb-tech', c: 'Un thème par séance : pieds précis, lecture, chutes, dynamique.' }),
@@ -138,6 +142,7 @@ export const GOALS = [
   { id: 'bloc', l: 'Puissance en bloc', d: 'Passer les mouvements durs', sys: 'alac', sp: 'escalade' },
   { id: 'resist', l: 'Résistance', d: 'Ne plus « bouteiller » dans les voies', sys: 'lact', sp: 'escalade' },
   { id: 'conti', l: 'Continuité', d: 'Grimper longtemps sans fatigue', sys: 'aero', sp: 'escalade' },
+  { id: 'compet', l: 'Compétition de bloc', d: 'Passer des blocs nouveaux, vite et sous pression', sys: 'alac', sp: 'escalade' },
   { id: 'prev', l: 'Prévention', d: 'Se blesser moins : épaules, doigts, dos, genoux', sys: 'prev' }
 ];
 export const GOAL_BY_ID = Object.fromEntries(GOALS.map(g => [g.id, g]));
@@ -169,7 +174,7 @@ export function quiz(cl) {
       { id: 'mixte', l: 'Un peu de tout', w: {} }
     ] },
     { id: 'pref', q: 'Ce qui te motive le plus en ce moment…', opts: [
-      { id: 'perf', l: 'Un objectif de performance (compétition, projet, chrono)', w: {} },
+      { id: 'perf', l: 'Un objectif de performance (compétition, projet, chrono)', w: cl ? { compet: 1 } : {} },
       { id: 'phys', l: 'Mon physique', w: { hyper: 1 } },
       { id: 'sante', l: 'Être en forme et sans douleur', w: { prev: 1, aero: 1 } }
     ] }

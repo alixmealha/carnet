@@ -310,6 +310,19 @@ details.fold[open]>summary::after{transform:rotate(-135deg)}
 .ut-row span{font-weight:600;min-width:0}
 /* Mode blocs */
 .tmr-big small{font-size:.32em;opacity:.7}
+.bilan{padding:12px 14px;border-radius:14px;background:var(--sunk)}
+.bilan p{margin:0;font-size:14px;line-height:1.45}
+.bilan p+p{margin-top:4px}
+.bilan b{font-weight:600}
+.fmt-c{text-align:left}
+.fmt-c b{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fmt-reco{font-size:11.5px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:2px 8px}
+.fmt-c .fmt-main{display:block;margin-top:6px;font-size:13px;color:var(--ink)}
+.fmt-c .fmt-est{display:block;margin-top:2px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.lv-hint{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:3px}
+.cl-grade{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+.cl-grade b{font-family:var(--f-mono);font-size:22px;font-weight:600;min-width:4ch;text-align:center}
+.cl-grade button{width:44px;height:44px;border-radius:50%;border:1px solid currentColor;background:transparent;color:inherit;font-size:22px;line-height:1}
 .tmr.climb .cl-big{min-height:min(30vh,220px);border:0;border-radius:22px;background:var(--accent-ink);color:var(--accent);font-size:28px;font-weight:700;margin-top:8px}
 .tmr.climb .cl-sub{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
 .tmr.climb .cl-sub button{flex:1;min-height:48px;border-radius:14px;border:1px solid currentColor;background:transparent;color:inherit;font-weight:600;font-size:15px;opacity:.9}
@@ -722,6 +735,7 @@ html,body{overflow-x:clip}
 .sug>div{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px}
 .sug small{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .sug b{font-family:var(--f-mono);font-size:22px;font-weight:500}
+.sug.cl b{font-family:inherit;font-size:17px;font-weight:600}
 .sug span{font-size:13px;line-height:1.35}
 .sug-in{flex:0 0 7.5em}
 .rir-box{margin-top:16px}

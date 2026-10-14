@@ -4,7 +4,10 @@ import { getSubject, profileOf, isSelf, nameOf, getFor, putFor, SELF, links } fr
 import { uid } from '../lib/plan.js';
 import { sportsOf } from '../lib/sports.js';
 import { GOALS, GOAL_BY_ID, SYSTEMS, EQUIP, LIB_BY_ID, quiz, quizResult } from '../lib/library.js';
-import { generate, writeProgram, conflicts, LEVELS, DURS, nextMonday, alternatives, groupsTxt, sessionSummary, SESSION_LBL } from '../lib/builder.js';
+import { generate, writeProgram, conflicts, LEVELS, DURS, nextMonday, alternatives, groupsTxt, sessionSummary, SESSION_LBL, FORMATS, fmtFamily, fmtOf, fmtReco, weekPlanTypes, buildSession } from '../lib/builder.js';
+import { LevelsForm } from '../ui/Levels.jsx';
+import { levelsDoc, LIFT_OF_LIB, climbLevel } from '../lib/levels.js';
+import { clone } from '../lib/plan.js';
 import { PHASE_LABEL, PHASE_Z } from '../lib/plan.js';
 import { DOW_3, DOW_L, todayKey, mondayOf, addDays, fmtDay, fmtShort, diffDays } from '../lib/dates.js';
 import { Sheet, TextSeg, Src, Icon, toast } from '../ui/kit.jsx';
@@ -16,7 +19,7 @@ const prefKey = () => KEY + ':' + (links.me || 'local') + ':' + getSubject();
 // Modèles : réglages d'un programme gardés dans son propre carnet (un coach peut les appliquer à plusieurs athlètes)
 const models = () => ((getFor(SELF, 'models') || {}).list || []);
 function saveModel(name, cfg) {
-  const keep = ['goal', 'goal2', 'days', 'fixed', 'fixedLbl', 'dur', 'lvl', 'equip', 'weeks', 'swap'], c = {};
+  const keep = ['goal', 'goal2', 'days', 'fixed', 'fixedLbl', 'dur', 'lvl', 'equip', 'weeks', 'swap', 'fmt'], c = {};
   for (const k of keep) c[k] = cfg[k];
   putFor(SELF, 'models', { list: models().filter(m => m.name !== name).concat([{ id: uid('m'), name, cfg: c, at: Date.now() }]) });
 }
@@ -27,7 +30,9 @@ function initial() {
   const eq = [...new Set(sp.flatMap(s => DEFAULT_EQ[s] || []))];
   return Object.assign({ goal: null, goal2: null, days: [0, 2, 4], fixed: [], fixedLbl: '', dur: 60, lvl: 2, equip: eq, weeks: 8, start: nextMonday(), event: null, eventLbl: '' },
     saved ? { days: saved.days, fixed: saved.fixed || [], fixedLbl: saved.fixedLbl || '', dur: saved.dur, lvl: saved.lvl, equip: saved.equip, weeks: saved.weeks } : {},
-    { sports: sp, u18: !!p.under18, swap: {} });
+    { sports: sp, u18: !!p.under18, swap: {}, fmt: (saved && saved.fmt) || {} },
+    // coach qui prépare le programme d'un athlète : repères de l'athlète, complétables pour ce programme seulement
+    isSelf() ? {} : { lv: clone(levelsDoc(o)) });
 }
 
 function Card({ on, title, sub, onClick }) {
@@ -98,6 +103,54 @@ function DaysStep({ cfg, set }) {
   </div>;
 }
 
+/* ---------- Étape : niveau et formats ---------- */
+const FAM_LBL = { conti: 'Séance de volume', resist: 'Séance de résistance', bloc: 'Séance de puissance', doigts: 'Séance de doigts', compet: 'Séance de compétition', force: 'Muscu · force', hyper: 'Muscu · masse', puiss: 'Muscu · puissance' };
+const RECO_WHY = {
+  conti: (r, c) => r === 'voies' ? 'Tu as renseigné un niveau en voie : le volume se fait en voie.' : 'Beaucoup de mouvements à intensité basse : la base aérobie des avant-bras et de la technique.',
+  resist: r => r === 'voies' ? 'Ton objectif est la résistance en voie : on la travaille dans des voies.' : 'Le 4 × 4 fait durer l’effort 2 à 3 min, la durée de la filière lactique.',
+  bloc: () => 'Les blocs à ta limite recrutent au maximum, frais à chaque essai.',
+  doigts: r => r === 'hangs' ? 'Avec une poutre, la charge des suspensions se règle au kilo près.' : 'Sans poutre (ou avant 18 ans), les petites prises en bloc font progresser sans risque.',
+  compet: () => 'Le format des qualifications : blocs nouveaux, temps limité, repos imposé.',
+  force: () => 'Repos complets entre les séries : la base la plus simple pour progresser en force.',
+  hyper: (r, c) => r === 'supersets' ? 'Séance de ' + c.dur + ' min : les supersets gardent le volume en moins de temps.' : 'Un exercice à la fois, repos complets : le plus simple pour bien charger.',
+  puiss: r => r === 'contraste' ? 'Avec une barre et de l’expérience : la série lourde potentialise la série explosive.' : 'Charges légères lancées vite : la base, sans matériel lourd.'
+};
+function LevelStep({ cfg, set }) {
+  const types = [...new Set(weekPlanTypes(cfg))], wk = { step: 1, meso: 0, phase: 'volume' };
+  const fams = [...new Set(types.map(t => fmtFamily(t, cfg)).filter(Boolean))];
+  // repères utiles : ceux qu'utilisent les séances de ce programme
+  const lifts = new Set(), sample = {};
+  for (const t of types) { const ss = buildSession(t, cfg, wk, new Set(), {}); sample[t] = ss; for (const b of ss.blocks) for (const it of b.items || []) { const l = LIFT_OF_LIB[it.lib]; if (l && it.rx && it.rx.role === 'main') lifts.add(l); } }
+  if (fams.includes('puiss')) ['squat', 'bench', 'pull'].forEach(l => lifts.add(l));
+  const need = { climb: types.some(t => ['conti', 'resist', 'bloc', 'doigts', 'compet'].includes(t)), lifts: [...lifts], cardio: types.some(t => ['ef', 'int', 'long', 'lact', 'sprint'].includes(t)) };
+  const self = isSelf();
+  const setLv = (key, val, sub) => { const lv = clone(cfg.lv || {}); if (sub) { lv[key] = Object.assign({}, lv[key]); if (val == null) delete lv[key][sub]; else lv[key][sub] = val; } else if (val == null) delete lv[key]; else lv[key] = val; set({ lv }); };
+  return <div class="stack">
+    {(need.climb || need.lifts.length || need.cardio) && <section class="card">
+      <h3 class="h3" style="margin-bottom:4px">Ton niveau <em>facultatif</em></h3>
+      <p class="small" style="margin:0 0 12px">Avec ces repères, les séances donnent des cotations, des charges et des allures précises. Sans eux, les consignes restent relatives (« 3 niveaux sous ton flash »).{self ? ' Ils sont gardés dans ton profil.' : ' Ce que tu complètes ici sert à ce programme seulement.'}</p>
+      <LevelsForm need={need} lv={self ? undefined : cfg.lv || {}} onSet={self ? undefined : setLv} />
+    </section>}
+    {fams.map(f => {
+      const t = types.find(x => fmtFamily(x, cfg) === f), cur = fmtOf(f, cfg), reco = fmtReco(f, cfg);
+      return <div>
+        <p class="sub-lbl" style="margin:4px 0 6px">{FAM_LBL[f]} <small>{FORMATS[f].length} formats</small></p>
+        <div class="stack" style="gap:8px">{FORMATS[f].map(([id, l, d]) => {
+          const ss = buildSession(t, Object.assign({}, cfg, { fmt: Object.assign({}, cfg.fmt, { [f]: id }) }), wk, new Set(), {}), ex = ss.est || {};
+          const main = sessionSummary(ss).filter(it => it.id !== 'ech')[0];
+          return <button type="button" class={'role-c fmt-c' + (cur === id ? ' on' : '')} onClick={() => set({ fmt: Object.assign({}, cfg.fmt, { [f]: id }) })}>
+            <b>{l}{id === reco && <span class="fmt-reco">Conseillé</span>}</b>
+            <span>{d}</span>
+            {main && <span class="fmt-main">{main.n > 1 ? main.n + ' × ' : ''}{main.label}{main.det ? ' · ' + main.det.split(' · ').slice(0, 2).join(' · ') : ''}</span>}
+            {(ex.min || ex.tut) && <span class="fmt-est">{ex.min ? '≈ ' + ex.min + ' min' : ''}{ex.min && ex.tut ? ' · ' : ''}{ex.tut ? '≈ ' + (ex.tut >= 120 ? Math.round(ex.tut / 60) + ' min' : ex.tut + ' s') + ' sous tension' : ''}</span>}
+          </button>;
+        })}</div>
+        <p class="small" style="margin:6px 0 0">Conseillé : {RECO_WHY[f] ? RECO_WHY[f](reco, cfg) : ''}</p>
+      </div>;
+    })}
+  </div>;
+}
+
 /* ---------- Étape : matériel et dates ---------- */
 function EquipStep({ cfg, set }) {
   const t = todayKey(), thisMon = mondayOf(t), nm = nextMonday();
@@ -129,6 +182,7 @@ function Preview({ cfg, set, prog }) {
       <h3 class="h3" style="margin-bottom:2px">Ton programme</h3>
       <p class="small" style="margin:0 0 8px;font-family:var(--f-mono)">{prog.weeks.length} semaines · {fmtDay(prog.start)} → {fmtDay(prog.end)}</p>
       <p class="lead" style="margin:0"><b>{g.l}</b>{g2 ? <> + {g2.l.toLowerCase()}</> : null} · {cfg.days.length} séance{cfg.days.length > 1 ? 's' : ''} par semaine de {cfg.dur} min</p>
+      {(() => { const fams = [...new Set(prog.types.map(t => fmtFamily(t, cfg)).filter(Boolean))]; return fams.length ? <p class="small" style="margin:6px 0 0">Formats : {fams.map(f => FAM_LBL[f].replace('Séance de ', '').replace('Muscu · ', '').toLowerCase() + ' en ' + FORMATS[f].find(x => x[0] === fmtOf(f, cfg))[1].toLowerCase()).join(' · ')}</p> : null; })()}
       <div class="phw" role="img" aria-label="Phases du programme">{prog.weeks.map((x, i) => <button type="button" class={'phw-b' + (i === wi ? ' on' : '')} onClick={() => setWi(i)} aria-label={'Semaine ' + (i + 1)}><span class={'tl-bar ' + (PHASE_Z[x.phase] || 'z2')} /><small>{i + 1}</small></button>)}</div>
       <div class="leg" style="margin-top:6px">{[...new Set(prog.weeks.map(x => x.phase))].map(p => <span><i class={PHASE_Z[p] || 'z2'} />{PHASE_LABEL[p]}</span>)}</div>
       <SysCard id={g.sys} />
@@ -168,8 +222,8 @@ function ModelSave({ cfg }) {
     <button class="btn" disabled={!name.trim()} onClick={() => { saveModel(name.trim(), cfg); setOpen(false); toast('Modèle enregistré'); }}>OK</button></div>;
 }
 
-const STEPS = ['goal', 'days', 'equip', 'preview'];
-const TITLES = { goal: 'Objectif', quiz: 'Trouver ton objectif', days: 'Disponibilités', equip: 'Matériel et dates', preview: 'Aperçu' };
+const STEPS = ['goal', 'days', 'equip', 'level', 'preview'];
+const TITLES = { goal: 'Objectif', quiz: 'Trouver ton objectif', days: 'Disponibilités', equip: 'Matériel et dates', level: 'Niveau et formats', preview: 'Aperçu' };
 export function Builder({ onClose }) {
   const [cfg, setCfg] = useState(initial), [step, setStep] = useState('goal'), [ask, setAsk] = useState(null);
   const set = patch => setCfg(c => Object.assign({}, c, patch));
@@ -178,7 +232,7 @@ export function Builder({ onClose }) {
   const err = step === 'goal' && !cfg.goal ? 'Choisis un objectif (ou réponds au quiz).' : step === 'days' && !cfg.days.length ? 'Choisis au moins un jour.' : step === 'equip' && cfg.event && diffDays(cfg.start, cfg.event) < 13 ? 'La date de l’objectif doit être au moins deux semaines après le début.' : '';
   const next = () => {
     if (err) { toast(err); return; }
-    if (step === 'equip') { try { localStorage.setItem(prefKey(), JSON.stringify({ days: cfg.days, fixed: cfg.fixed, fixedLbl: cfg.fixedLbl, dur: cfg.dur, lvl: cfg.lvl, equip: cfg.equip, weeks: cfg.weeks })); } catch (_) {} }
+    if (step === 'level') { try { localStorage.setItem(prefKey(), JSON.stringify({ days: cfg.days, fixed: cfg.fixed, fixedLbl: cfg.fixedLbl, dur: cfg.dur, lvl: cfg.lvl, equip: cfg.equip, weeks: cfg.weeks, fmt: cfg.fmt })); } catch (_) {} }
     setStep(STEPS[idx + 1]); document.querySelector('.sheet-b') && (document.querySelector('.sheet-b').scrollTop = 0);
   };
   const back = () => { if (step === 'quiz') setStep('goal'); else if (idx > 0) setStep(STEPS[idx - 1]); else onClose(); };
@@ -189,12 +243,13 @@ export function Builder({ onClose }) {
   };
   const add = () => { const c = conflicts(prog); if (c.length) setAsk(c); else save('replace'); };
   return (
-    <Sheet title={TITLES[step]} onClose={() => onClose(false)} right={<span class="eyebrow">{idx + 1}/4</span>}>
+    <Sheet title={TITLES[step]} onClose={() => onClose(false)} right={<span class="eyebrow">{idx + 1}/{STEPS.length}</span>}>
       <div class="stack builder">
         {step === 'goal' && <GoalStep cfg={cfg} set={set} onQuiz={() => setStep('quiz')} onModel={m => { set(Object.assign({}, m.cfg, { swap: m.cfg.swap || {}, fixed: m.cfg.fixed || [], start: nextMonday(), event: null })); setStep('preview'); }} />}
         {step === 'quiz' && <QuizStep cfg={cfg} set={set} onDone={() => setStep('days')} />}
         {step === 'days' && <DaysStep cfg={cfg} set={set} />}
         {step === 'equip' && <EquipStep cfg={cfg} set={set} />}
+        {step === 'level' && <LevelStep cfg={cfg} set={set} />}
         {step === 'preview' && prog && <Preview cfg={cfg} set={set} prog={prog} />}
         {ask && <section class="card"><h3 class="h3">Séances déjà prévues</h3>
           <p class="small" style="margin:0 0 10px">{ask.length} jour{ask.length > 1 ? 's ont' : ' a'} déjà une séance sur cette période (à partir du {fmtDay(ask[0])}).</p>

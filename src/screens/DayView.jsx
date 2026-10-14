@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset, get, put, isSelf, links, myProfile, subjectSettings, SELF, getSubject, nameOf } from '../lib/store.js';
 import { blocks, target, weekOf, weekLabel, itemKey, doneN, progress, itemLoad, fingerCalc, testIdsOf, PHASE_LABEL, meta, day, eventOn, setDoneCount, setLoadsOf, setsText, blockState, apartOf, apartNote, SKIP } from '../lib/plan.js';
 import { BlockMenu } from '../ui/BlockMenu.jsx';
+import { Bilan } from './Session.jsx';
 import { WELL, FLAGS, REPAS, RPE, STATUS, SIV, score, verdict, rpeCmp, rng, NSTAGE, NMET, parseDur, durShort, durLong, nightTotal, vfcAvg } from '../lib/rules.js';
 import { dayInsights } from '../lib/insights.js';
 import { testById, valueKeys, resultsOn, saveResults, lastResult, pct } from '../lib/tests.js';
@@ -262,6 +263,7 @@ function SessionCard({ k, onStart, onEdit, ro }) {
         </fieldset>
         {d.edited && d.edited.uid && d.edited.uid !== links.me && <p class="edited">Modifiée par {d.edited.name || 'ton coach'} · {new Date(d.edited.at).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>}
         {d.adapt && <details class="fold why-f"><summary><span class="small" style="margin:0;font-weight:600;color:var(--warn)">Si besoin d’adapter</span></summary><p class="small" style="color:var(--ink)"><Rich text={d.adapt} /></p></details>}
+        {(e.endedAt || pr.done > 0) && <Bilan k={k} title="Bilan" />}
         {menuB && <BlockMenu k={k} b={menuB} onClose={() => setMenuB(null)} />}
         {active && onStart && !ro && <button class="btn big primary" onClick={() => onStart(k)}><Icon name="play" size={20} />{e.startedAt && !e.endedAt ? 'Reprendre la séance' : pr.done ? 'Continuer la séance' : 'Démarrer la séance'}</button>}
       </div>

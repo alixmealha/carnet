@@ -9,6 +9,7 @@ import { downloadExport } from '../lib/io.js';
 import { Icon, TextSeg, toast } from '../ui/kit.jsx';
 import { ImportPicker } from '../ui/ImportPicker.jsx';
 import { ProfileForm, ROLE_LBL } from './Setup.jsx';
+import { LevelsForm } from '../ui/Levels.jsx';
 import { NutriSettings } from './Nutrition.jsx';
 
 const SYNC_LBL = { local: 'Sur cet appareil seulement', idle: 'À jour', syncing: 'Synchronisation…', error: 'Erreur de synchronisation', offline: 'Hors ligne : ça repartira tout seul', signedout: 'Déconnecté' };
@@ -190,6 +191,7 @@ export function SettingsPage({ session, onBack, onAdmin }) {
       <div class="page-h"><button class="icon-btn" aria-label="Retour" onClick={onBack}><Icon name="back" /></button><h1 class="title">Paramètres</h1></div>
       <div class="stack cols2">
         <Sec title="Profil" right={r ? ROLE_LBL[r] : ''}><ProfileForm key={myProfile().name} /></Sec>
+        {athleteSide && <Sec title="Mes repères" right="facultatif"><LevelsForm /></Sec>}
         <Appearance />
         {athleteSide && <SessionPrefs />}
         {athleteSide && <Tracking />}

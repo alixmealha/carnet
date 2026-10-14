@@ -18,7 +18,7 @@ import { BuilderEntry } from './Builder.jsx';
 const PHASES = ['volume', 'reprise', 'force', 'puissance', 'specifique', 'affutage', 'recup', 'deload', 'transition', 'coupure', 'autre'];
 const SHORT = { volume: 'Vol.', reprise: 'Rep.', force: 'Force', puissance: 'Puiss.', specifique: 'Spéc.', affutage: 'Affût.', recup: 'Récup.', deload: 'Déch.', transition: 'Trans.', coupure: 'Coup.', autre: 'Cycle' };
 const FAMS = [['vol', 'Volume (modéré)'], ['easy', 'Facile'], ['hard', 'Dur'], ['light', 'Léger / récup'], ['muscu', 'Muscu'], ['test', 'Test']];
-const UNITS = ['Série', 'Bloc', 'Essai'];
+const UNITS = ['Série', 'Bloc', 'Voie', 'Essai'];
 const TIMERS = [['', 'Aucun'], ['cluster', 'Clusters'], ['contrast', 'Contraste'], ['interval', 'Intervalles'], ['tempo', 'Tempo']];
 const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; };
 const ask = q => window.confirm(q);

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset } from '../lib/store.js';
 import { blocks, itemKey, doneN, progress, itemLoad, fingerCalc, target, KIND, setDoneCount, setLoadsOf, setsText, blockState, setBlockState, apartOf, setApart, SKIP } from '../lib/plan.js';
 import { BlockMenu } from '../ui/BlockMenu.jsx';
+import { gradeIn, shiftGrade, gradeIdx } from '../lib/grades.js';
+import { climbBilan, discOf, climbSuggest, sessionBilan } from '../lib/quantify.js';
 import { RPE, STATUS, rpeCmp } from '../lib/rules.js';
 import { ActFields } from '../ui/ActFields.jsx';
 import { mmss, fmtNum, fmtLong } from '../lib/dates.js';
@@ -215,7 +217,10 @@ export const tempoText = T => 'Tempo : ' + (T.prep ? T.prep + ' s de mise en pla
 // Calculé à partir de l'heure : si l'écran se met en veille pendant le repos, on reprend au bon endroit.
 const pl = (n, w) => n + ' ' + w + (n > 1 ? 's' : '');
 function ClimbTimer({ k, b, it, onClose }) {
-  const key = itemKey(b, it), essai = it.unit === 'Essai', W = essai ? 'Essai' : 'Bloc', w = W.toLowerCase();
+  const key = itemKey(b, it), essai = it.unit === 'Essai', voie = it.unit === 'Voie', W = essai ? 'Essai' : voie ? 'Voie' : 'Bloc', w = W.toLowerCase(), disc = discOf(it);
+  // cotation des blocs : celle du plan, sinon la dernière notée ; réglable d'un appui (− / +)
+  const [grade, setGrade] = useState(() => { const log = (jget(k).cl || {})[key]; return (log && log.length && log[log.length - 1].g) || it.grade || gradeIn(it.label + ' ' + (it.det || ''), disc) || null; });
+  const bumpG = n => setGrade(g => g ? shiftGrade(g, n, disc) : (disc === 'voie' ? '6a' : '6A'));
   const [st, setSt] = useState(() => ({ ph: 'wall', t0: Date.now(), dur: it.rest || 60, pausedAt: null, acc: 0, last: null }));
   const now = useNow(200);
   const e = jget(k), v = doneN(e, key, it.n), falls = (e.falls && e.falls[key]) || 0, wall = (e.wall && e.wall[key]) || 0;
@@ -232,6 +237,8 @@ function ClimbTimer({ k, b, it, onClose }) {
     setDoneCount(k, b, it, Math.min(it.n, cur + 1));
     const patch = { wall: Object.assign({}, ee.wall, { [key]: ((ee.wall || {})[key] || 0) + ws }) };
     if (fell) patch.falls = Object.assign({}, ee.falls, { [key]: ((ee.falls || {})[key] || 0) + 1 });
+    // journal bloc par bloc : cotation, chute, temps sur le bloc
+    patch.cl = Object.assign({}, ee.cl, { [key]: ((ee.cl || {})[key] || []).concat([Object.assign({ t: ws }, grade ? { g: grade } : {}, fell ? { f: 1 } : {})]) });
     jset(k, patch);
     const last = { ws, fell, t0: st.t0, acc: st.acc };
     if (cur + 1 >= it.n) { doneSignal(); say('Terminé'); setSt(s => ({ ...s, ph: 'done', last })); }
@@ -244,6 +251,7 @@ function ClimbTimer({ k, b, it, onClose }) {
     setDoneCount(k, b, it, Math.max(0, cur - 1));
     const patch = { wall: Object.assign({}, ee.wall, { [key]: Math.max(0, ((ee.wall || {})[key] || 0) - L.ws) }) };
     if (L.fell) patch.falls = Object.assign({}, ee.falls, { [key]: Math.max(0, ((ee.falls || {})[key] || 0) - 1) });
+    patch.cl = Object.assign({}, ee.cl, { [key]: ((ee.cl || {})[key] || []).slice(0, -1) });
     jset(k, patch);
     setSt({ ph: 'wall', t0: L.t0, acc: L.acc, dur: it.rest || 60, pausedAt: null, last: null });
   };
@@ -255,10 +263,15 @@ function ClimbTimer({ k, b, it, onClose }) {
     <div class={'tmr climb ' + cls} role="timer">
       <div class="tmr-top"><span>{it.label}</span><button onClick={onClose}>{st.ph === 'done' ? 'Fermer' : 'Arrêter'}</button></div>
       <div class="tmr-mid">
+        {st.ph !== 'done' && <div class="cl-grade" role="group" aria-label="Cotation">
+          <button onClick={() => bumpG(-1)} aria-label="Cotation plus facile">−</button>
+          <b>{grade || 'cotation ?'}</b>
+          <button onClick={() => bumpG(1)} aria-label="Cotation plus dure">+</button>
+        </div>}
         {st.ph === 'wall' && <>
           <div class="tmr-ph">{W} en cours</div>
           <div class="tmr-big">{Math.min(shown, it.n)}<small>/{it.n}</small></div>
-          <div class="tmr-sub">sur le {w} depuis {mmss(t / 1000)}{st.pausedAt ? ' · en pause' : ''}</div>
+          <div class="tmr-sub">sur {voie ? 'la' : 'le'} {w} depuis {mmss(t / 1000)}{st.pausedAt ? ' · en pause' : ''}</div>
         </>}
         {st.ph === 'rest' && <>
           <div class="tmr-ph">Repos · ensuite {w} {v + 1}</div>
@@ -268,12 +281,12 @@ function ClimbTimer({ k, b, it, onClose }) {
         {st.ph === 'done' && <>
           <div class="tmr-ph">Terminé</div>
           <div class="tmr-big">✓</div>
-          <div class="tmr-sub">{pl(it.n, w)} · {pl(falls, 'chute')}{wall ? ' · ' + mmss(wall) + ' sur le ' + (essai ? 'bloc' : 'mur') : ''}</div>
+          <div class="tmr-sub">{climbBilan(k, b, it).join(' · ')}</div>
         </>}
         {it.n <= 40 && st.ph !== 'done' && <div class="tp-dots" aria-label={v + ' faits sur ' + it.n}>{Array.from({ length: it.n }, (_, i) => <i class={i < v ? 'on' : ''} />)}</div>}
       </div>
       {st.ph === 'wall' && <>
-        <button class="cl-big" onClick={() => finish(false)}>{essai ? 'Réussi' : 'Bloc fini'}</button>
+        <button class="cl-big" onClick={() => finish(false)}>{essai ? 'Réussi' : W + ' fini' + (voie ? 'e' : '')}</button>
         <div class="cl-sub"><button onClick={toggle}>{st.pausedAt ? 'Reprendre' : 'Pause'}</button><button onClick={() => finish(true)}>Tombé · {essai ? 'essai compté' : 'compte quand même'}</button></div>
       </>}
       {st.ph === 'rest' && <>
@@ -288,7 +301,7 @@ function ClimbTimer({ k, b, it, onClose }) {
     </div>
   );
 }
-const climbable = (b, it) => !it.timer && it.n > 1 && it.rest > 0 && (it.unit === 'Bloc' || it.unit === 'Essai') && !STRENGTH.includes(b.kind);
+const climbable = (b, it) => !it.timer && it.n > 1 && it.rest > 0 && ['Bloc', 'Essai', 'Voie'].includes(it.unit) && !STRENGTH.includes(b.kind);
 
 /* ---------- Une étape ---------- */
 const STRENGTH = ['muscu', 'renfo', 'doigts', 'epaule'];
@@ -320,6 +333,11 @@ function LoadStepper({ k, b, it }) {
       {showSug && <div class="sug"><div><small>Conseillé d’après ta dernière séance</small><b>{sug.text}</b><span>{sug.why}</span></div><button class="btn" onClick={() => applySuggested(k, b, it, sug)}>Utiliser</button></div>}
     </>
   );
+}
+// Conseil d'après la dernière fois : chutes et ressenti ; « Utiliser » ajuste la séance du jour
+function ClimbSug({ k, b, it }) {
+  const sg = climbSuggest(k, b, it); if (!sg) return null;
+  return <div class="sug cl"><div><small>Conseillé d’après ta dernière séance</small><b>{sg.text}</b><span>{sg.why}</span></div>{sg.apply && <button class="btn" onClick={sg.apply}>Utiliser</button>}</div>;
 }
 // Dernière réalisation du même exercice
 function LastTime({ k, it }) {
@@ -435,10 +453,11 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
   } else {
     const cl = openClimb && climbable(b, it);
     action = <>
-      {cl && <button class="btn big primary" style="margin-top:18px" onClick={() => openClimb(b, it)}><Icon name="timer" />Lancer le mode {it.unit === 'Essai' ? 'essais' : 'blocs'}</button>}
+      {cl && <ClimbSug k={k} b={b} it={it} />}
+      {cl && <button class="btn big primary" style="margin-top:18px" onClick={() => openClimb(b, it)}><Icon name="timer" />Lancer le mode {it.unit === 'Essai' ? 'essais' : it.unit === 'Voie' ? 'voies' : 'blocs'}</button>}
       <button class={'btn big' + (cl ? '' : ' primary')} style={cl ? 'margin-top:8px' : 'margin-top:18px'} disabled={full} onClick={() => { bump(k, b, it); if (it.rest && v + 1 < it.n) startRest(it.rest, 'Repos · ' + (it.unit === 'Bloc' ? 'bloc ' : it.unit === 'Essai' ? 'essai ' : 'série ') + (v + 2) + ' ensuite'); }}>
-        {full ? 'Tout est fait ✓' : (it.unit === 'Bloc' ? 'Bloc fait' : it.unit === 'Essai' ? 'Essai fait' : 'Série faite') + ' · ' + (v + 1) + '/' + it.n}</button>
-      {cl && <p class="small">Plein écran : « Bloc fini » lance {mmss(it.rest)} de repos, « Tombé » compte le bloc et note la chute.</p>}
+        {full ? 'Tout est fait ✓' : (it.unit === 'Bloc' ? 'Bloc fait' : it.unit === 'Essai' ? 'Essai fait' : it.unit === 'Voie' ? 'Voie faite' : 'Série faite') + ' · ' + (v + 1) + '/' + it.n}</button>
+      {cl && <p class="small">Plein écran : « {it.unit === 'Essai' ? 'Réussi' : it.unit === 'Voie' ? 'Voie finie' : 'Bloc fini'} » lance {mmss(it.rest)} de repos, « Tombé » compte {it.unit === 'Voie' ? 'la voie' : 'le bloc'} et note la chute. Règle la cotation avec − / +.</p>}
     </>;
   }
   const askRir = full && STRENGTH.includes(b.kind) && it.unit !== 'Bloc' && it.unit !== 'Essai' && !(T && T.kind === 'interval');
@@ -513,6 +532,7 @@ function Finish({ k, part, minutes, onSave, onBack, onMenu }) {
         {untouched.map(b => <div class="ut-row"><span><Rich text={b.title} /></span><button class="btn" onClick={() => onMenu(b)}>Que faire ?</button></div>)}
         <p class="small" style="margin:6px 0 0">À un autre moment de la journée, un autre jour, ou pas fait avec la raison.</p>
       </div>}
+      <Bilan k={k} part={part} />
       {!part && <TextSeg value={status} onChange={v => setMine(v || status)} options={STATUS} label="Statut" />}
       <label class="fld">Durée{part ? '' : ' totale'} (min)<input class="in mono" inputmode="numeric" value={dur} onInput={ev => setDur(ev.target.value)} /></label>
       <div>
@@ -527,6 +547,11 @@ function Finish({ k, part, minutes, onSave, onBack, onMenu }) {
       </div>
     </div>
   );
+}
+
+export function Bilan({ k, part, title }) {
+  const bl = sessionBilan(k, part); if (!bl.length) return null;
+  return <div class="bilan">{title && <p class="sub-lbl" style="margin:0 0 4px">{title}</p>}{bl.map(x => <p><b><Rich text={x.label} /></b> · {x.lines.join(' · ')}</p>)}</div>;
 }
 
 /* ---------- Mode séance ---------- */
