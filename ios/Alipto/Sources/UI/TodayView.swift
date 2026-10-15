@@ -12,6 +12,18 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     header(t, pr)
+                    if !store.isSelf {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Eyebrow("Carnet de", color: Palette.accent)
+                                Text(store.name(store.subject)).font(Typo.sans(17, .semibold)).foregroundStyle(Palette.ink)
+                            }
+                            Spacer()
+                            Button("Revenir au mien") { Haptics.tap(); store.subject = Store.SELF }.buttonStyle(SmallButton())
+                        }
+                        .padding(12)
+                        .background(Palette.accentSoft, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
                     WeekStrip(sel: $sel, ns: ns)
                     if !isToday {
                         Button { withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { sel = t } } label: {
@@ -178,6 +190,7 @@ struct DayContent: View {
             if !hero { DayTitle(k: k) }
             if hero && PlanReader(store).meta != nil { HeroCard(k: k) }
             MorningCard(k: k)
+            NightCard(k: k)
             ReadingCard(k: k)
             SessionCard(k: k)
             AfterCard(k: k)

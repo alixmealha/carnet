@@ -25,6 +25,20 @@ struct MoreView: View {
                     }
                     .card()
 
+                    if !store.athletes.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            CardHeader("Carnet affiché")
+                            Text("Regarde la journée d’un athlète que tu suis (en lecture seule).").font(Typo.sans(14)).foregroundStyle(Palette.muted)
+                            Flow(spacing: 6) {
+                                Chip(label: "Moi", on: store.isSelf) { switchTo(Store.SELF) }
+                                ForEach(store.athletes, id: \.self) { a in
+                                    Chip(label: store.name(a), on: store.subject == a) { switchTo(a) }
+                                }
+                            }
+                        }
+                        .card()
+                    }
+
                     VStack(alignment: .leading, spacing: 12) {
                         CardHeader("Synchronisation") {
                             Circle().fill(syncColor).frame(width: 9, height: 9)
@@ -86,6 +100,11 @@ struct MoreView: View {
         }
     }
 
+    private func switchTo(_ who: String) {
+        store.subject = who
+        AppState.shared.tab = "today"
+        toast(who == Store.SELF ? "Ton carnet" : "Carnet de " + store.name(who))
+    }
     private func row(_ k: String, _ v: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(k).font(Typo.sans(15)).foregroundStyle(Palette.muted)

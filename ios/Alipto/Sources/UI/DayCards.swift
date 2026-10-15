@@ -492,3 +492,100 @@ struct RPEPicker: View {
         }
     }
 }
+
+// MARK: sommeil
+
+/// Nuit : durée (− / + par quart d'heure), et les valeurs de la montre si tu en as une (VFC, FC de repos)
+struct NightCard: View {
+    let k: String
+    @State private var store = Store.shared
+    @State private var open = false
+
+    var body: some View {
+        let e = store.journal(k), n = e["nuit"] ?? .emptyObject, tot = Rules.nightTotal(e), ro = !store.isSelf
+        let stages = ["profond", "leger", "rem"].filter { n[$0]?.double != nil }.count >= 2
+        let summary = tot.map { Rules.durLong($0) + ((n["vfc"]?.int).map { " · VFC \($0)" } ?? "") } ?? "à renseigner"
+        VStack(alignment: .leading, spacing: 14) {
+            Button { withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) { open.toggle() } } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Eyebrow("Sommeil")
+                        Text(summary).font(Typo.sans(16, tot == nil ? .regular : .medium)).foregroundStyle(tot == nil ? Palette.muted : Palette.ink)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.muted).rotationEffect(.degrees(open ? 180 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if open {
+                Group {
+                if stages, let tot {
+                    Text("Durée calculée avec les phases de ta montre : " + Rules.durLong(tot) + ".").font(Typo.sans(14)).foregroundStyle(Palette.muted)
+                } else {
+                    HStack(spacing: 0) {
+                        stepButton("minus") { setTotal((tot ?? 450) - 15) }
+                        VStack(spacing: 0) {
+                            Text(tot.map { Rules.durLong($0) } ?? "—").font(Typo.display(36)).foregroundStyle(Palette.ink)
+                                .contentTransition(.numericText(value: Double(tot ?? 0)))
+                            Text(tot == nil ? "appuie sur + ou −" : "durée de sommeil").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                        }
+                        .frame(maxWidth: .infinity)
+                        stepButton("plus") { setTotal((tot ?? 435) + 15) }
+                    }
+                    .padding(6)
+                    .background(Palette.sunk.opacity(0.6), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: tot)
+                }
+                HStack(spacing: 10) {
+                    MetricField(k: k, key: "vfc", label: "VFC (ms)")
+                    MetricField(k: k, key: "fcr", label: "FC repos")
+                    MetricField(k: k, key: "recup", label: "Récup (%)")
+                }
+                Text("Facultatif : les valeurs de ta montre (Garmin, WHOOP, Apple, Polar…). La lecture du jour s’en sert.").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                }
+                .disabled(ro)
+            }
+        }
+        .card()
+    }
+    private func setTotal(_ m: Int) {
+        var n = store.journal(k)["nuit"]?.object ?? [:]
+        n["total"] = .num(Double(max(0, min(16 * 60, m))))
+        store.jset(k, ["nuit": .obj(n)])
+    }
+    private func stepButton(_ icon: String, _ action: @escaping () -> Void) -> some View {
+        Button { Haptics.select(); action() } label: {
+            Image(systemName: icon).font(.system(size: 18, weight: .bold)).foregroundStyle(Palette.ink)
+                .frame(width: 54, height: 54).background(Palette.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(PressStyle())
+    }
+}
+
+/// Valeur entière de la nuit (VFC, FC, récupération), enregistrée à la fin de la saisie
+struct MetricField: View {
+    let k: String, key: String, label: String
+    @State private var text = ""
+    @State private var loaded = false
+    @FocusState private var focused: Bool
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(Typo.sans(12.5, .medium)).foregroundStyle(Palette.muted).lineLimit(1)
+            TextField("—", text: $text).keyboardType(.numberPad).font(Typo.mono(17, .medium))
+                .focused($focused)
+                .padding(.horizontal, 12).frame(minHeight: 44)
+                .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                .onChange(of: focused) { _, f in if !f { commit() } }
+        }
+        .onAppear { if !loaded { text = (Store.shared.journal(k)["nuit"]?[key]?.int).map { String($0) } ?? ""; loaded = true } }
+        .onDisappear(perform: commit)
+    }
+    private func commit() {
+        let s = Store.shared, v = Int(text.filter(\.isNumber))
+        var n = s.journal(k)["nuit"]?.object ?? [:]
+        if n[key]?.int == v { return }
+        if let v { n[key] = .num(Double(v)) } else { n.removeValue(forKey: key) }
+        s.jset(k, ["nuit": n.isEmpty ? nil : .obj(n)])
+    }
+}
