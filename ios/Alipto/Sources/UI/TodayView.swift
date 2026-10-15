@@ -278,6 +278,7 @@ struct HeroCard: View {
             WeekDots(k: k)
         }
         .card(padding: 18, tint: tint)
+        .onAppear { if Launch.demo && Launch.screen == "menu" { menu = true } }
         .sheet(isPresented: $menu) { SessionMenuSheet(k: k).presentationDetents([.medium, .large]).presentationDragIndicator(.visible) }
     }
 }

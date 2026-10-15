@@ -5,7 +5,7 @@ struct SessionMenuSheet: View {
     let k: String
     @Environment(\.dismiss) private var dismiss
     @State private var store = Store.shared
-    @State private var mode: String?
+    @State private var mode: String? = Launch.demo && Launch.screen == "menu" ? "time" : nil
 
     var body: some View {
         let e = store.journal(k), pr = PlanReader(store)

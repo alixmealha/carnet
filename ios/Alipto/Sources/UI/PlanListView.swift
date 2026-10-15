@@ -3,6 +3,7 @@ import SwiftUI
 /// Le plan semaine par semaine ; un jour s'ouvre avec sa fiche complète (forme, séance, après la séance)
 struct PlanListView: View {
     @State private var store = Store.shared
+    @State private var scrolled = false
 
     var body: some View {
         let pr = PlanReader(store), t = D.today
@@ -10,7 +11,7 @@ struct PlanListView: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 18, pinnedViews: []) {
+                    VStack(alignment: .leading, spacing: 18) {
                         VStack(alignment: .leading, spacing: 0) {
                             Eyebrow(pr.meta?["title"]?.string ?? "Ton plan")
                             DisplayTitle("Plan", size: 52)
@@ -25,7 +26,11 @@ struct PlanListView: View {
                 }
                 .scrollIndicators(.hidden)
                 .background(Palette.bg)
-                .onAppear { proxy.scrollTo(D.monday(t), anchor: .top) }
+                .onAppear {
+                    guard !scrolled else { return }
+                    scrolled = true
+                    DispatchQueue.main.async { proxy.scrollTo(D.monday(t), anchor: .top) }
+                }
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: String.self) { k in DayDetail(k: k) }

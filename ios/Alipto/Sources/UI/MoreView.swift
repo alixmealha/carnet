@@ -32,7 +32,10 @@ struct MoreView: View {
                         Text(syncText).font(Typo.sans(15)).foregroundStyle(Palette.muted)
                         if let e = store.lastError, store.phase == .error { Text(e).font(Typo.sans(13.5)).foregroundStyle(Palette.crit) }
                         Button { Task { await store.syncNow(); toast(store.phase == .idle ? "À jour" : "Pas de connexion") } } label: {
-                            HStack { if store.phase == .syncing { ProgressView() }; Text("Synchroniser maintenant") }
+                            HStack {
+                                if store.phase == .syncing { ProgressView() }
+                                Text("Synchroniser maintenant")
+                            }
                         }
                         .buttonStyle(BigButton(kind: .plain))
                         .disabled(store.phase == .syncing || store.demo)

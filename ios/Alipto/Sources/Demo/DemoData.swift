@@ -43,7 +43,8 @@ enum DemoData {
         m["j:" + t] = ["well": ["sommeil": 4, "fatigue": 4, "courbatures": 3, "stress": 4, "humeur": 4]]
         m["profile"] = ["name": "Camille"]
         // aujourd'hui : la séance de force (pour les captures)
-        m["p:" + t] = strengthDay
+        m["p:" + t] = Launch.screen == "climb" ? climbDay : strengthDay
+        if Launch.screen == "morning" { m["j:" + t] = ["flags": ["doigts": true], "gene": ["doigts": 3]] }
         return m
     }
 

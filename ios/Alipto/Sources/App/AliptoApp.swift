@@ -17,7 +17,7 @@ struct AliptoApp: App {
         WindowGroup {
             RootView()
                 .onAppear {
-                    if Launch.screen == "session" { AppState.shared.session = SessionRef(k: D.today) }
+                    if ["session", "rest", "timer", "climb", "finish"].contains(Launch.screen) { AppState.shared.session = SessionRef(k: D.today) }
                 }
         }
     }

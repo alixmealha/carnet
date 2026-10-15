@@ -36,6 +36,10 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, p in
             if p == .active { Store.shared.schedule(0.2) }
         }
+        .onChange(of: Store.shared.phase) { _, p in
+            // session expirée (mot de passe changé, compte retiré) : retour à la connexion
+            if p == .signedout && !Backend.shared.signedIn && !Store.shared.demo { app.signedIn = false }
+        }
     }
 }
 

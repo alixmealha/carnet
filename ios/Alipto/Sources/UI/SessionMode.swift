@@ -64,9 +64,33 @@ struct SessionModeView: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: run.rest == nil)
         .animation(.easeInOut(duration: 0.25), value: run.timer == nil)
         .animation(.easeInOut(duration: 0.25), value: run.climb == nil)
-        .onAppear { run.begin() }
+        .onAppear {
+            run.begin()
+            if Launch.demo { demoState() }
+        }
         .onDisappear { run.stop() }
         .statusBarHidden(run.timer != nil || run.climb != nil)
+    }
+
+    /// Captures automatiques : un état précis de la séance
+    private func demoState() {
+        let steps = run.steps
+        switch Launch.screen {
+        case "rest":
+            if let j = steps.firstIndex(where: { $0.items.first?.id == "tr" }) {
+                run.i = j; run.bump(steps[j].b, steps[j].items[0]); run.startRest(180, "Repos · série 2 ensuite")
+            }
+        case "timer":
+            if let j = steps.firstIndex(where: { $0.items.first?.timer != nil }), let T = steps[j].items[0].timer {
+                run.i = j; run.openTimer(T, steps[j].b, steps[j].items, title: steps[j].items[0].label)
+            }
+        case "climb":
+            if let j = steps.firstIndex(where: { $0.items.first?.unit == "Bloc" }) {
+                run.i = j; run.openClimb(steps[j].b, steps[j].items[0])
+            }
+        case "finish": run.finishing = true
+        default: break
+        }
     }
 
     private func next(_ count: Int) {
