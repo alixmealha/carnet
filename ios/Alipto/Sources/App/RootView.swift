@@ -53,6 +53,9 @@ struct MainTabs: View {
             PlanListView()
                 .tabItem { Label("Plan", systemImage: "calendar") }
                 .tag("plan")
+            StatsView()
+                .tabItem { Label("Suivi", systemImage: "chart.bar.xaxis") }
+                .tag("stats")
             MoreView()
                 .tabItem { Label("Plus", systemImage: "ellipsis.circle") }
                 .tag("more")

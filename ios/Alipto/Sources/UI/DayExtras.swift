@@ -595,14 +595,7 @@ struct ExchangesCard: View {
                 }
                 ForEach(msgs.indices, id: \.self) { i in
                     let m = msgs[i], mine = m["uid"]?.string == me
-                    VStack(alignment: mine ? .trailing : .leading, spacing: 3) {
-                        Text((mine ? "Toi" : (m["name"]?.string ?? "")) + (m["at"]?.double.map { " · " + Date(timeIntervalSince1970: $0 / 1000).formatted(.dateTime.day().month(.abbreviated).hour().minute()) } ?? ""))
-                            .font(Typo.sans(11.5, .medium)).foregroundStyle(Palette.muted)
-                        Text(m["text"]?.string ?? "").font(Typo.sans(15)).foregroundStyle(mine ? Palette.accentInk : Palette.ink)
-                            .padding(.horizontal, 12).padding(.vertical, 9)
-                            .background(mine ? Palette.accent : Palette.sunk, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    }
-                    .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
+                    MessageBubble(who: header(m, mine), text: m["text"]?.string ?? "", mine: mine)
                 }
                 HStack(alignment: .bottom, spacing: 8) {
                     TextField(selfView ? "Écrire à ton coach…" : "Écrire à " + other + "…", text: $text, axis: .vertical).lineLimit(1...5)
@@ -619,12 +612,30 @@ struct ExchangesCard: View {
             .card()
         }
     }
+    private func header(_ m: JSON, _ mine: Bool) -> String {
+        let who = mine ? "Toi" : (m["name"]?.string ?? "")
+        guard let at = m["at"]?.double else { return who }
+        return who + " · " + Date(timeIntervalSince1970: at / 1000).formatted(.dateTime.day().month(.abbreviated).hour().minute())
+    }
     private func send(_ msgs: [JSON]) {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines); guard !t.isEmpty else { return }
         let me = store.me ?? Store.SELF, name = store.profile(Store.SELF)["name"]?.string ?? (store.isSelf ? "Moi" : "Coach")
         let m: JSON = ["uid": .str(me), "name": .str(name), "text": .str(t), "at": .num((Date().timeIntervalSince1970 * 1000).rounded())]
         store.put("c:" + k, ["msgs": .arr(msgs + [m])])
         text = ""; Haptics.success(); toast("Envoyé")
+    }
+}
+
+struct MessageBubble: View {
+    let who: String, text: String, mine: Bool
+    var body: some View {
+        VStack(alignment: mine ? .trailing : .leading, spacing: 3) {
+            Text(who).font(Typo.sans(11.5, .medium)).foregroundStyle(Palette.muted)
+            Text(text).font(Typo.sans(15)).foregroundStyle(mine ? Palette.accentInk : Palette.ink)
+                .padding(.horizontal, 12).padding(.vertical, 9)
+                .background(mine ? Palette.accent : Palette.sunk, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
     }
 }
 
@@ -655,19 +666,8 @@ struct WeekReviewCard: View {
                 }
                 .accessibilityLabel("Masquer le bilan de la semaine")
             }
-            HStack(alignment: .top, spacing: 10) {
-                if let load = r["load"]?.double, load > 0 {
-                    stat("Charge", "\(Int(load)) UA", r["loadCh"]?.double.map { ($0 >= 0 ? "+" : "") + "\(Int($0)) % vs la semaine d’avant" }, Palette.ink)
-                }
-                if let f = r["form"]?.double {
-                    stat("Forme moyenne", Fmt.num(f) + "/25", "\(r["formN"]?.int ?? 0) matin\((r["formN"]?.int ?? 0) > 1 ? "s" : "") notés", Palette.level(r["formCls"]?.string))
-                }
-                if let sl = r["sleep"]?.double { stat("Sommeil moyen", Rules.durLong(Int(sl)), nil, Palette.ink) }
-            }
-            if let missed = r["missed"]?.array, !missed.isEmpty {
-                Text("Pas faites : " + missed.map { D.short($0["k"]?.string ?? "").lowercased() + " (" + ($0["why"]?.string ?? "").lowercased() + (($0["note"]?.string).map { " · « " + $0 + " »" } ?? "") + ")" }.joined(separator: ", "))
-                    .font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
-            }
+            WeekStats(r: r)
+            if let m = missedText(r) { Text(m).font(Typo.sans(13.5)).foregroundStyle(Palette.muted) }
             if let recs = r["recs"]?.array, !recs.isEmpty {
                 ForEach(recs.indices, id: \.self) { i in
                     HStack(spacing: 8) {
@@ -681,8 +681,7 @@ struct WeekReviewCard: View {
             }
             if let next = r["next"]?.array, !next.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Semaine prochaine" + ((r["nextPhase"]?.string).map { " · " + $0.lowercased() } ?? "") + (r["nextLight"]?.truthy == true ? " : on récupère" : ""))
-                        .font(Typo.sans(13.5, .semibold)).foregroundStyle(Palette.ink)
+                    Text(nextTitle(r)).font(Typo.sans(13.5, .semibold)).foregroundStyle(Palette.ink)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
                             ForEach(next.indices, id: \.self) { i in
@@ -701,6 +700,37 @@ struct WeekReviewCard: View {
         }
         .card(tint: Palette.accent)
     }
+    private func missedText(_ r: JSON) -> String? {
+        guard let missed = r["missed"]?.array, !missed.isEmpty else { return nil }
+        let parts: [String] = missed.map { x in
+            var s = D.short(x["k"]?.string ?? "").lowercased() + " (" + (x["why"]?.string ?? "").lowercased()
+            if let n = x["note"]?.string { s += " · « " + n + " »" }
+            return s + ")"
+        }
+        return "Pas faites : " + parts.joined(separator: ", ")
+    }
+    private func nextTitle(_ r: JSON) -> String {
+        var s = "Semaine prochaine"
+        if let p = r["nextPhase"]?.string { s += " · " + p.lowercased() }
+        if r["nextLight"]?.truthy == true { s += " : on récupère" }
+        return s
+    }
+}
+
+private struct WeekStats: View {
+    let r: JSON
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            if let load = r["load"]?.double, load > 0 { stat("Charge", "\(Int(load)) UA", loadSub, Palette.ink) }
+            if let f = r["form"]?.double { stat("Forme moyenne", Fmt.num(f) + "/25", formSub, Palette.level(r["formCls"]?.string)) }
+            if let sl = r["sleep"]?.double { stat("Sommeil moyen", Rules.durLong(Int(sl)), nil, Palette.ink) }
+        }
+    }
+    private var loadSub: String? {
+        guard let c = r["loadCh"]?.double else { return nil }
+        return (c >= 0 ? "+" : "") + "\(Int(c)) % vs la semaine d’avant"
+    }
+    private var formSub: String { let n = r["formN"]?.int ?? 0; return "\(n) matin" + (n > 1 ? "s" : "") + " notés" }
     private func stat(_ t: String, _ v: String, _ sub: String?, _ c: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(t).font(Typo.sans(11.5, .medium)).foregroundStyle(Palette.muted)

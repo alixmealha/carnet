@@ -196,6 +196,7 @@ struct DayContent: View {
             ReadingCard(k: k)
             SessionCard(k: k)
             TestsCard(k: k)
+            NutriDayCard(k: k)
             ExchangesCard(k: k)
             AfterCard(k: k)
         }

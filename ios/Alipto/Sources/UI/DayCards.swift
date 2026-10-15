@@ -336,6 +336,20 @@ struct BlockView: View {
         .opacity(off ? 0.55 : 1)
         .sheet(isPresented: $menu) { BlockMenuSheet(k: k, b: b).presentationDetents([.medium, .large]).presentationDragIndicator(.visible) }
     }
+    private func apartDone(_ p: JSON) -> String {
+        var s = "Fait à part"
+        if let d = p["duree"]?.int { s += " · \(d) min" }
+        if let r = p["rpe"]?.int { s += " · ressenti \(r)" }
+        return s
+    }
+    private func apartTodo(_ p: JSON) -> String {
+        guard let t = p["startedAt"]?.double else { return "À faire à part" }
+        return "À faire à part · commencé à " + Date(timeIntervalSince1970: t / 1000).formatted(date: .omitted, time: .shortened)
+    }
+    private func apartNoteText(_ note: JSON?) -> String? {
+        guard let n = note?["text"]?.string else { return nil }
+        return note?["changed"]?.truthy == true ? n + " · ordre changé par rapport au plan" : n
+    }
     @ViewBuilder private func stateView(_ bs: String?) -> some View {
         if let mf = b.movedFrom, bs == nil {
             Text("Déplacé du " + D.short(mf).lowercased()).font(Typo.sans(13.5, .medium)).foregroundStyle(Palette.muted)
@@ -347,14 +361,12 @@ struct BlockView: View {
             let p = e["apart"]?[b.id] ?? .emptyObject, note = Core.shared.call("plan.apartNote", .str(k), b.raw)
             if p["endedAt"] != nil {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Fait à part" + ((p["duree"]?.int).map { " · \($0) min" } ?? "") + ((p["rpe"]?.int).map { " · ressenti \($0)" } ?? ""))
-                        .font(Typo.sans(14, .semibold)).foregroundStyle(Palette.good)
-                    if let n = note?["text"]?.string { Text(n + (note?["changed"]?.truthy == true ? " · ordre changé par rapport au plan" : "")).font(Typo.sans(13)).foregroundStyle(Palette.muted) }
+                    Text(apartDone(p)).font(Typo.sans(14, .semibold)).foregroundStyle(Palette.good)
+                    if let n = apartNoteText(note) { Text(n).font(Typo.sans(13)).foregroundStyle(Palette.muted) }
                 }
             } else {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("À faire à part" + ((p["startedAt"]?.double).map { " · commencé à " + Date(timeIntervalSince1970: $0 / 1000).formatted(date: .omitted, time: .shortened) } ?? ""))
-                        .font(Typo.sans(14, .semibold)).foregroundStyle(Palette.accent)
+                    Text(apartTodo(p)).font(Typo.sans(14, .semibold)).foregroundStyle(Palette.accent)
                     Text("À un autre moment de la journée : il aura sa propre durée et son ressenti.").font(Typo.sans(13)).foregroundStyle(Palette.muted)
                     if !ro && k == D.today {
                         Button { Haptics.firm(); AppState.shared.session = SessionRef(k: k, part: b.id) } label: {
