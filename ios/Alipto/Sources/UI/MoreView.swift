@@ -96,6 +96,7 @@ struct MoreView: View {
                 .padding(.horizontal, 16).padding(.bottom, 30)
             }
             .background(Palette.bg)
+            .statusBarScrim()
             .toolbar(.hidden, for: .navigationBar)
         }
     }

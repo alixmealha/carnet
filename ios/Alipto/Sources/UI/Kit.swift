@@ -360,3 +360,10 @@ struct FieldBox<Content: View>: View {
         }
     }
 }
+
+extension View {
+    /// Fond sous la barre d'état : le contenu qui défile ne passe pas sous l'heure et la batterie
+    func statusBarScrim() -> some View {
+        safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 0).background(Palette.bg.opacity(0.96)) }
+    }
+}

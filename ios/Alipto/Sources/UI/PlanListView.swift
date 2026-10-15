@@ -26,6 +26,7 @@ struct PlanListView: View {
                 }
                 .scrollIndicators(.hidden)
                 .background(Palette.bg)
+            .statusBarScrim()
                 .onAppear {
                     guard !scrolled else { return }
                     scrolled = true

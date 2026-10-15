@@ -45,6 +45,7 @@ struct TodayView: View {
             }
             .scrollIndicators(.hidden)
             .background(Palette.bg)
+            .statusBarScrim()
             .refreshable { await store.syncNow() }
             .toolbar(.hidden, for: .navigationBar)
         }
