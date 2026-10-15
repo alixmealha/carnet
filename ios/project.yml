@@ -19,6 +19,12 @@ targets:
     platform: iOS
     sources:
       - path: Alipto
+        excludes:
+          - "Resources/Core/**"
+      # logique partagée avec la version web (construite par node ios/core/build.mjs) et base d'aliments
+      - path: Alipto/Resources/Core
+        type: folder
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.alipto.Alipto

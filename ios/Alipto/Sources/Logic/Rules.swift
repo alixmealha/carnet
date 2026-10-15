@@ -76,134 +76,18 @@ enum Rules {
     static func durLong(_ min: Int) -> String { let h = min / 60, m = min % 60; return h > 0 ? "\(h) h " + String(format: "%02d", m) : "\(m) min" }
 }
 
-/// Lecture du jour : forme, sommeil, gênes, charge… avec un feu (vert, orange, rouge) et des conseils.
+/// Lecture du jour (calculée par la logique partagée avec la version web) : feu vert / orange / rouge et conseils
 struct DayReading {
-    struct Line: Identifiable { let id = UUID(); let lvl: String; let title: String; let text: String }
+    struct Line: Identifiable { let id = UUID(); let lvl: String; let title: String; let text: String; let src: [String] }
     let level: String   // good, warn, crit
     let head: String
     let items: [Line]
     let adapt: String?
 
-    private static let LV = ["crit": 0, "warn": 1, "info": 2, "good": 3]
-    private static let WELL_TIPS = [
-        "fatigue": "Fatigue générale : priorise la qualité et coupe le volume.",
-        "courbatures": "Courbatures marquées : évite l’excentrique lourd et les gros volumes sur les mêmes muscles.",
-        "stress": "Stress élevé : la charge mentale s’ajoute à l’entraînement ; garde l’intensité mais raccourcis la séance.",
-        "humeur": "Humeur basse : une séance plaisir ou technique passe mieux qu’une séance très dure.",
-    ]
-    private static func mean(_ a: [Double]) -> Double { a.reduce(0, +) / Double(max(1, a.count)) }
-    private static func sd(_ a: [Double]) -> Double {
-        guard a.count >= 2 else { return 0 }
-        let m = mean(a); return (a.reduce(0) { $0 + ($1 - m) * ($1 - m) } / Double(a.count - 1)).squareRoot()
-    }
-    private static func f1(_ x: Double) -> String { Fmt.num((x * 10).rounded() / 10) }
-
-    private static func painAdvice(_ zone: String, _ ks: Set<String>) -> String {
-        let climb = ks.contains("grimpe") || ks.contains("doigts") || ks.contains("test") || ks.contains("compet")
-        let pull = ks.contains("muscu") || ks.contains("renfo") || climb
-        switch zone {
-        case "doigts": return climb ? " Pas de charge maximale sur les doigts aujourd’hui : ni suspensions max ni réglettes en arqué, grimpe sur grosses prises ou en technique. Une douleur sur le dos d’une articulation de doigt, même brève : arrêt du travail de doigts et avis médical." : " Rien pour les doigts aujourd’hui : revérifie demain matin avant de grimper."
-        case "coude": return pull ? " Réduis les tirages (tractions, rowing, blocages) et évite les pinces serrées." : ""
-        case "epaule": return pull ? " Évite les poussées au-dessus de la tête, le développé couché lourd et les jetés ; garde un travail des rotateurs léger." : ""
-        case "poignet": return " Évite les appuis paume à plat chargés (pompes, dips) et les prises inversées."
-        case "dos": return " Évite les charges lourdes et les exercices qui la réveillent ; mobilité douce."
-        case "hanche": return " Pas de drop-knee forcé ni d’écart en force ; adapte le renfo des jambes."
-        case "genou": return " Évite les réceptions de haut et les crochets talon appuyés ; cardio seulement sans douleur."
-        case "cheville": return " Désescalade plutôt que sauts, réceptions contrôlées."
-        default: return ""
-        }
-    }
-
-    /// Charge d'un jour : ressenti × durée (séance principale et blocs faits à part)
-    static func dayLoad(_ e: JSON) -> Double {
-        var t = 0.0
-        if let r = e["rpe"]?.double, let d = e["duree"]?.double, d > 0 { t += r * d }
-        for p in (e["apart"]?.object ?? [:]).values { if let r = p["rpe"]?.double, let d = p["duree"]?.double, d > 0 { t += r * d } }
-        return t
-    }
-
     static func of(_ k: String, _ s: Store = .shared) -> DayReading? {
-        let pr = PlanReader(s), e = s.journal(k)
-        var items: [Line] = []
-        func add(_ l: String, _ t: String, _ d: String) { items.append(Line(lvl: l, title: t, text: d)) }
-        let ks = Set(pr.kinds(k))
-        // 1. forme du matin
-        if let t = Rules.score(e) {
-            let vd = Rules.verdict(t, s), lv = vd.cls == "ok" ? "good" : vd.cls
-            add(lv, "Forme du matin · \(t)/25 · \(vd.label)", vd.text)
-            let past = (1...28).compactMap { Rules.score(s.journal(D.add(k, -$0))) }.map { Double($0) }
-            if past.count >= 7 && (vd.cls == "good" || vd.cls == "ok") {
-                let m = mean(past), sdv = max(2, sd(past))
-                if Double(t) <= m - sdv { add("warn", "Nettement sous ta moyenne", "Ta moyenne sur 4 semaines est de \(f1(m))/25. C’est l’écart à ta propre habitude qui compte le plus : allège un peu même si le total reste correct.") }
-            }
-            let low = Rules.WELL.compactMap { w -> (Rules.WellItem, Int)? in
-                guard let v = e["well"]?[w.key]?.int, v <= 2 else { return nil }; return (w, v)
-            }.sorted { $0.1 < $1.1 }.first
-            if let low, low.0.key != "sommeil", let tip = WELL_TIPS[low.0.key] { add("info", "\(low.0.label) · \(low.1)/5", tip) }
-            let seq = (0...3).map { Rules.score(s.journal(D.add(k, $0 - 3))) }
-            if seq.allSatisfy({ $0 != nil }) {
-                let q = seq.map { $0! }
-                if q[1] < q[0] && q[2] < q[1] && q[3] < q[2] { add("warn", "Forme en baisse 3 jours de suite", "Gèle la progression : reprends le niveau de la semaine précédente jusqu’à ce que ça remonte.") }
-            }
-        }
-        // 2. sommeil
-        let under18 = s.profile()["under18"]?.truthy ?? false, tgt = under18 ? 480 : 420
-        if let tot = Rules.nightTotal(e) {
-            let prev = Rules.nightTotal(s.journal(D.add(k, -1)))
-            if tot < tgt, let prev, prev < tgt {
-                add("warn", "Deux nuits courtes de suite", Rules.durLong(prev) + " puis " + Rules.durLong(tot) + ". Le manque de sommeil répété baisse la performance et augmente le risque de blessure : garde la séance mais retire les efforts maximaux. Une sieste de 20 à 30 min avant 16 h aide.")
-            } else if tot < tgt {
-                add("info", "Nuit courte · " + Rules.durLong(tot), "Une nuit isolée change peu la performance. Vise " + (under18 ? "8 à 10 h" : "7 à 9 h") + " ; une sieste de moins de 30 min est possible.")
-            }
-        }
-        // 3. FC de repos et récupération de la montre
-        if let fcr = e["nuit"]?["fcr"]?.double {
-            let base = (1...7).compactMap { s.journal(D.add(k, -$0))["nuit"]?["fcr"]?.double }
-            if base.count >= 4 {
-                let m = mean(base), up = fcr - m
-                if up >= 5 {
-                    let y = s.journal(D.add(k, -1))["nuit"]?["fcr"]?.double
-                    add("warn", "FC de repos haute · +\(Int(up.rounded())) bpm", "Au-dessus de ta moyenne de la semaine (\(Int(m.rounded())) bpm). Fatigue, stress, début de maladie, chaleur ou alcool peuvent la faire monter. " + ((y ?? 0) - m >= 5 ? "Deuxième jour de suite : allège la séance." : "Un seul jour : surveille demain."))
-                }
-            }
-        }
-        if let rc = e["nuit"]?["recup"]?.int, rc <= 33 { add("warn", "Récupération basse selon ta montre · \(rc) %", "À croiser avec ta forme du matin : les scores des montres sont peu validés scientifiquement, ta tendance compte plus que le chiffre du jour.") }
-        // 4. gênes
-        for (f, lbl) in Rules.FLAGS where e["flags"]?[f]?.truthy == true {
-            let g = e["gene"]?[f]?.int, spec = painAdvice(f, ks)
-            let g7 = s.journal(D.add(k, -7))["gene"]?[f]?.int
-            let trend = (g != nil && g7 != nil && g! > g7!) ? " Elle est plus haute qu’il y a une semaine : ne l’ignore pas." : ""
-            if let g {
-                if g <= 2 { add("info", "\(lbl) · gêne \(g)/10", "Zone sûre : entraînement normal, en surveillant." + trend) }
-                else if g <= 5 { add("warn", "\(lbl) · gêne \(g)/10", "Acceptable si elle ne dépasse pas 5/10 pendant l’effort, redescend d’ici demain matin et n’augmente pas d’une semaine à l’autre." + spec + trend) }
-                else { add("crit", "\(lbl) · gêne \(g)/10", "Au-dessus de 5/10 : supprime ou modifie ce qui la provoque aujourd’hui. Si ça dure plus de quelques jours, consulte (kiné, médecin)." + spec) }
-            } else { add("info", "\(lbl) sensible", "Note la gêne de 0 à 10 pour suivre son évolution." + spec) }
-        }
-        // 5. charge des derniers jours (au moins 3 semaines de données)
-        let loads = (0..<28).map { dayLoad(s.journal(D.add(k, $0 - 27))) }
-        if let first = loads.firstIndex(where: { $0 > 0 }), first <= 7 {
-            let acute = loads.suffix(7).reduce(0, +), chronic = loads.reduce(0, +) / 4
-            if chronic > 0 {
-                let r = acute / chronic
-                if r > 1.5 { add("warn", "Charge en forte hausse · ratio \(f1(r))", "Les 7 derniers jours pèsent \(f1(r)) fois ta moyenne des 4 semaines. Zone 0,8-1,3 décrite comme favorable (repère discuté) : garde les prochains jours à ce niveau plutôt que d’ajouter.") }
-                else if r > 1.3 { add("info", "Charge en hausse · ratio \(f1(r))", "Progression rapide : ça passe si la forme suit.") }
-            }
-        }
-        let y = D.add(k, -1), ye = s.journal(y)
-        if let p = ye["pain"]?.int, p > 5 { add("warn", "Douleur élevée pendant la kiné d’hier · \(p)/10", "Au-dessus de 5/10, on allège ou on modifie les exercices qui la provoquent. Vérifie ce matin qu’elle est redescendue ; sinon, parles-en à ton kiné.") }
-        if let yt = pr.target(y), let r = yt.rpe, let yr = ye["rpe"]?.int, yr >= r.1 + 2 { add("info", "Séance d’hier plus dure que prévu", "Ressenti \(yr)/10 pour une cible de \(Rules.rng(yt)). Si tu te sens entamé ce matin, commence prudemment.") }
-        // 6. repas
-        if let rp = e["repas"]?.string, rp == "non" || rp == "partiel" {
-            let miss = (0...6).filter { s.journal(D.add(k, -$0))["repas"]?.string == "non" }.count
-            if miss >= 3 { add("warn", "Repas manqués \(miss) fois en 7 jours", "Un apport insuffisant et répété fatigue et fragilise (déficit énergétique, REDs). À surveiller, et à en parler si ça continue.") }
-            else { add("info", "Peu mangé autour de la séance d’hier", "Glucides et protéines dans les heures qui suivent l’effort aident à récupérer.") }
-        }
-        guard !items.isEmpty else { return nil }
-        items.sort { (LV[$0.lvl] ?? 9) < (LV[$1.lvl] ?? 9) }
-        let worst = items[0].lvl
-        let level = worst == "crit" ? "crit" : worst == "warn" ? "warn" : "good"
-        let head = level == "crit" ? "Feu rouge : version décharge ou repos actif" : level == "warn" ? "Feu orange : séance allégée ou adaptée" : "Feu vert : séance telle que prévue"
-        let adapt = level != "good" ? pr.day(k)?["adapt"]?.string : nil
-        return DayReading(level: level, head: head, items: items, adapt: adapt)
+        guard let r = Core.shared.call("insights.dayInsights", .str(k)), let items = r["items"]?.array, !items.isEmpty else { return nil }
+        return DayReading(level: r["level"]?.string ?? "good", head: r["head"]?.string ?? "",
+                          items: items.map { Line(lvl: $0["lvl"]?.string ?? "info", title: $0["t"]?.string ?? "", text: $0["d"]?.string ?? "", src: $0["src"]?.array.compactMap { $0.string } ?? []) },
+                          adapt: r["adapt"]?.string)
     }
 }

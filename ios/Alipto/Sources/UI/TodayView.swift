@@ -36,6 +36,7 @@ struct TodayView: View {
                     if pr.meta == nil && !store.demo {
                         EmptyPlanCard()
                     }
+                    if isToday && pr.meta != nil { WeekReviewCard() }
                     DayContent(k: sel, hero: isToday)
                         .id(sel)
                         .transition(.asymmetric(insertion: .opacity.combined(with: .offset(y: 8)), removal: .opacity))
@@ -194,6 +195,8 @@ struct DayContent: View {
             NightCard(k: k)
             ReadingCard(k: k)
             SessionCard(k: k)
+            TestsCard(k: k)
+            ExchangesCard(k: k)
             AfterCard(k: k)
         }
     }

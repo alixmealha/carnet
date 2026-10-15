@@ -35,6 +35,9 @@ final class Store {
     /// Mode démo (captures, aperçu) : rien n'est envoyé
     private(set) var demo = false
 
+    /// Copie envoyée à la logique partagée (Core) : tout renvoyer, ou seulement les documents modifiés
+    @ObservationIgnored var coreReset = true
+    @ObservationIgnored var coreDirty: Set<String> = []
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var syncTask: Task<Void, Never>?
     @ObservationIgnored private var syncing = false
@@ -56,6 +59,7 @@ final class Store {
     func load() {
         guard !demo, let data = try? Data(contentsOf: fileURL), let s = try? JSONDecoder().decode(Saved.self, from: data) else { return }
         docs = s.docs; me = s.me; athletes = s.athletes; coaches = s.coaches; profiles = s.profiles; myLock = s.myLock
+        coreReset = true
         version += 1
     }
     private func saveSoon() {
@@ -72,13 +76,14 @@ final class Store {
     func wipe() {
         docs = [:]; me = nil; athletes = []; coaches = []; profiles = [:]; myLock = false; subject = Store.SELF
         try? FileManager.default.removeItem(at: fileURL)
+        coreReset = true
         UserDefaults.standard.dictionaryRepresentation().keys.filter { $0.hasPrefix("cursor:") }.forEach { UserDefaults.standard.removeObject(forKey: $0) }
         version += 1
     }
     func loadDemo(_ map: [String: JSON]) {
         demo = true
         docs = Dictionary(uniqueKeysWithValues: map.map { (Store.K(Store.SELF, $0.key), Rec(data: $0.value, updatedAt: Date().timeIntervalSince1970 * 1000, dirty: false, deleted: false)) })
-        phase = .local; version += 1
+        phase = .local; coreReset = true; version += 1
     }
 
     // MARK: lecture / écriture
@@ -92,11 +97,24 @@ final class Store {
         return docs.compactMap { k, r in k.hasPrefix(pre) && !r.deleted ? String(k.dropFirst(o.count + 1)) : nil }.sorted()
     }
     func put(_ id: String, _ data: JSON, owner: String? = nil) {
-        docs[Store.K(owner ?? subject, id)] = Rec(data: data, updatedAt: (Date().timeIntervalSince1970 * 1000).rounded(), dirty: true, deleted: false)
+        let key = Store.K(owner ?? subject, id)
+        docs[key] = Rec(data: data, updatedAt: (Date().timeIntervalSince1970 * 1000).rounded(), dirty: true, deleted: false)
+        coreDirty.insert(key)
         version += 1; saveSoon(); schedule()
     }
     func remove(_ id: String, owner: String? = nil) {
-        docs[Store.K(owner ?? subject, id)] = Rec(data: nil, updatedAt: (Date().timeIntervalSince1970 * 1000).rounded(), dirty: true, deleted: true)
+        let key = Store.K(owner ?? subject, id)
+        docs[key] = Rec(data: nil, updatedAt: (Date().timeIntervalSince1970 * 1000).rounded(), dirty: true, deleted: true)
+        coreDirty.insert(key)
+        version += 1; saveSoon(); schedule()
+    }
+    /// Écritures faites par la logique partagée (elle a déjà sa copie à jour)
+    func putFromCore(_ owner: String, _ id: String, _ data: JSON) {
+        docs[Store.K(owner, id)] = Rec(data: data, updatedAt: (Date().timeIntervalSince1970 * 1000).rounded(), dirty: true, deleted: false)
+        version += 1; saveSoon(); schedule()
+    }
+    func removeFromCore(_ owner: String, _ id: String) {
+        docs[Store.K(owner, id)] = Rec(data: nil, updatedAt: (Date().timeIntervalSince1970 * 1000).rounded(), dirty: true, deleted: true)
         version += 1; saveSoon(); schedule()
     }
     /// Journal du jour (toujours un objet)
@@ -115,8 +133,9 @@ final class Store {
         var p = get("profile", owner: o)?.object ?? [:]
         let uid = o == Store.SELF ? me : o
         if let uid, let row = profiles[uid]?.object {
-            for k in ["name", "role", "sex", "birth_year", "height_cm", "weight_kg", "onboarded"] { if let v = row[k], v != .null { p[k] = v } }
+            for k in ["name", "role", "sex", "birth_year", "height_cm", "weight_kg", "onboarded"] { if let v = row[k], v != .null, v != .str("") { p[k] = v } }
         }
+        if let by = p["birth_year"]?.int { p["under18"] = .bool(Calendar.current.component(.year, from: Date()) - by < 18) }
         return .obj(p)
     }
     func name(_ owner: String) -> String { profile(owner)["name"]?.string ?? (owner == Store.SELF ? "Moi" : "Athlète") }
@@ -183,7 +202,7 @@ final class Store {
                 fresh = athletes.contains { !before.contains($0) }
                 // athlète retiré : ses données ne restent pas sur ce téléphone
                 for a in before where !athletes.contains(a) {
-                    for k in docs.keys where k.hasPrefix(a + "|") { docs.removeValue(forKey: k) }
+                    for k in docs.keys where k.hasPrefix(a + "|") { docs.removeValue(forKey: k); coreDirty.insert(k) }
                     if subject == a { subject = Store.SELF }
                 }
             }
@@ -206,7 +225,7 @@ final class Store {
                     let data: JSON? = del ? nil : row["data"]
                     let loc = docs[key]
                     if loc == nil || ru > loc!.updatedAt || (!loc!.dirty && ru == loc!.updatedAt && loc!.data != data) {
-                        docs[key] = Rec(data: data, updatedAt: ru, dirty: false, deleted: del); changed = true
+                        docs[key] = Rec(data: data, updatedAt: ru, dirty: false, deleted: del); changed = true; coreDirty.insert(key)
                     }
                     if let st = row["synced_at"]?.string, let t = ISOTime.ms(st), t > maxT { maxT = t; maxS = st }
                 }
@@ -231,6 +250,7 @@ final class Store {
             let del = first["deleted"]?.truthy ?? false
             docs[key] = Rec(data: del ? nil : first["data"], updatedAt: ISOTime.ms(first["updated_at"]?.string ?? "") ?? 0, dirty: false, deleted: del)
         } else { docs.removeValue(forKey: key) }
+        coreDirty.insert(key)
         version += 1
     }
     /// Synchro régulière quand l'appli est ouverte

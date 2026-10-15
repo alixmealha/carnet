@@ -200,6 +200,7 @@ struct StepView: View {
     let isLast: Bool
     let onNext: () -> Void
     @State private var sub = 0            // clusters : répétition ; contraste : 0 lourde, 1 explosive
+    @State private var blockMenu = false
 
     var body: some View {
         let s = Store.shared, e = s.journal(run.k), b = step.b, color = Palette.kind(b.kind), w = JournalWriter(s)
@@ -213,14 +214,21 @@ struct StepView: View {
             let it = step.items.first
             let single = !step.group && !step.list && !step.pair && !step.skip
             if single, let it {
-                if let det = it.det { rich(det).font(Typo.sans(16)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
+                if let det = it.det { GlossText(det).font(Typo.sans(16)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
+                DemoLink(it: it, big: true)
                 if let note = it.adjNote ?? (it.adjN0.flatMap { $0 != it.n ? "Séance adaptée : \(it.n) au lieu de \($0)" : nil }) {
                     Text(note).font(Typo.sans(14, .medium)).foregroundStyle(Palette.accent)
                 }
                 if let warn = it.warn { Text(warn).font(Typo.sans(14, .medium)).foregroundStyle(Palette.warn) }
+                if (STRENGTH.contains(b.kind) || it.climbable) && !it.isWarmup,
+                   let lp = Core.shared.call("history.lastPerf", .str(it.label), .str(run.k), it.raw["lib"] ?? .null),
+                   let txt = Core.shared.call("history.perfText", lp)?.string {
+                    Text("Dernière fois · " + txt).font(Typo.sans(13.5, .medium)).foregroundStyle(Palette.muted)
+                }
             } else if let desc = b.desc {
-                rich(desc).font(Typo.sans(15.5)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                GlossText(desc).font(Typo.sans(15.5)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
             }
+            FingerCalcView(k: run.k, b: b)
 
             if step.skip {
                 Text("Pas fait · " + skipLabel(e["skip"]?[b.id]?.string).lowercased()).font(Typo.sans(16, .medium)).foregroundStyle(Palette.muted)
@@ -243,9 +251,20 @@ struct StepView: View {
             } else if let it {
                 singleBody(it, e, color)
             }
-            if !step.skip, let subText = b.sub, !step.list { rich(subText).font(Typo.sans(14)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
+            if !step.skip, let subText = b.sub, !step.list { GlossText(subText).font(Typo.sans(14)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
+            if run.part == nil && !step.skip && !step.isDone(e) {
+                Button { Haptics.tap(); blockMenu = true } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Pas possible maintenant ?").font(Typo.sans(14.5, .semibold)).foregroundStyle(Palette.accent)
+                        Text("Tout le bloc « " + plain(b.title) + " » : à part, un autre jour ou pas fait").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.plain).padding(.top, 6)
+            }
         }
         .onChange(of: step.id) { _, _ in sub = 0 }
+        .sheet(isPresented: $blockMenu) { BlockMenuSheet(k: run.k, b: step.b).presentationDetents([.medium, .large]).presentationDragIndicator(.visible) }
     }
 
     private var nextButton: some View {
@@ -326,6 +345,8 @@ struct StepView: View {
         let b = step.b, key = PlanReader.itemKey(b, it), v = PlanReader.doneN(e, key, it.n), full = v >= it.n
         let T = it.timer, w = JournalWriter()
         LoadStepper(k: run.k, b: b, it: it)
+        SuggestBox(k: run.k, b: b, it: it)
+        if it.isWarmup { WarmupView(k: run.k, b: b, fold: false) { T in run.openTimer(T, b, [], title: T.name.isEmpty ? "Échauffement" : T.name) } }
         if it.n == 1 {
             if full {
                 nextButton
@@ -378,6 +399,7 @@ struct StepView: View {
             .buttonStyle(BigButton())
         } else {
             let cl = it.climbable && it.rest != nil && !STRENGTH.contains(b.kind)
+            if it.climbable { ClimbSuggestBox(k: run.k, b: b, it: it) }
             if cl {
                 Button { Haptics.firm(); run.openClimb(b, it) } label: {
                     Label("Lancer le mode " + (it.unit == "Essai" ? "essais" : it.unit == "Voie" ? "voies" : "blocs"), systemImage: "figure.climbing")
@@ -514,6 +536,7 @@ struct PairBody: View {
                     if on {
                         if let d = x.det { rich(d).font(Typo.sans(14)).foregroundStyle(Palette.muted) }
                         LoadStepper(k: run.k, b: b, it: x)
+                        SuggestBox(k: run.k, b: b, it: x)
                         Pips(n: x.n, v: dn, color: color, size: 40) { nv in w.setDone(run.k, b, x, nv) }
                     }
                 }
@@ -557,6 +580,7 @@ struct PairBody: View {
 struct FinishView: View {
     let run: SessionRunner
     let onClose: () -> Void
+    @State private var menuFor: Block?
     @State private var minutes: Int = 0
     @State private var status: String?
     @State private var ready = false
@@ -574,6 +598,25 @@ struct FinishView: View {
                 Text("\(p.done)/\(p.total) exercices faits." + (run.part != nil ? " Ce bloc compte comme une séance à part dans la charge du jour." : " Le ressenti se note idéalement 30 min après : tu peux aussi le remplir plus tard dans la fiche du jour."))
                     .font(Typo.sans(15.5)).foregroundStyle(Palette.muted)
             }
+            let untouched = run.part != nil ? [] : pr.blocks(run.k).filter { b in
+                !b.isRest && PlanReader.blockState(e, b) == nil &&
+                (b.items.isEmpty ? e["done"]?[b.id + ".*"] == nil : b.items.allSatisfy { PlanReader.doneN(e, PlanReader.itemKey(b, $0), $0.n) == 0 })
+            }
+            if !untouched.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Pas commencé" + (untouched.count > 1 ? "s" : "")).font(Typo.sans(14.5, .semibold)).foregroundStyle(Palette.ink)
+                    ForEach(untouched) { b in
+                        HStack {
+                            GlossText(b.title, gloss: false).font(Typo.sans(15)).foregroundStyle(Palette.ink)
+                            Spacer()
+                            Button("Que faire ?") { menuFor = b }.buttonStyle(SmallButton())
+                        }
+                    }
+                    Text("À un autre moment de la journée, un autre jour, ou pas fait avec la raison.").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                }
+                .padding(12).background(Palette.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            BilanView(k: run.k, part: run.part)
             if run.part == nil {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Statut").font(Typo.sans(14.5, .semibold)).foregroundStyle(Palette.ink)
@@ -598,6 +641,7 @@ struct FinishView: View {
                     } else { s.jset(run.k, ["rpe": v.map { JSON.num(Double($0)) }]) }
                 }
             }
+            if run.part == nil { ActFieldsView(k: run.k) }
             HStack(spacing: 10) {
                 Button("Retour") { run.finishing = false }.buttonStyle(BigButton(kind: .plain)).frame(maxWidth: 120)
                 Button("Enregistrer") {
@@ -616,5 +660,6 @@ struct FinishView: View {
             minutes = max(5, Int((Date().timeIntervalSince(run.started) / 60 / 5).rounded()) * 5)
             if let d = e["duree"]?.int, d > 0, e["endedAt"] != nil { minutes = d }
         }
+        .sheet(item: $menuFor) { b in BlockMenuSheet(k: run.k, b: b).presentationDetents([.medium, .large]) }
     }
 }

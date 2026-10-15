@@ -4,7 +4,7 @@ name: iOS
 on:
   push:
     branches: [main]
-    paths: ['ios/**', '.github/workflows/ios.yml']
+    paths: ['ios/**', 'src/lib/**', 'public/aliments.json', '.github/workflows/ios.yml']
   workflow_dispatch:
     inputs:
       screens:
@@ -26,6 +26,16 @@ jobs:
         run: |
           xcodebuild -version
           sw_vers
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # logique partagée avec la version web : reconstruite depuis src/lib et vérifiée
+      - name: Logique partagée
+        run: |
+          npm ci --no-audit --no-fund >/dev/null
+          node ios/core/build.mjs
+          node ios/core/test.mjs
       - name: Projet (XcodeGen)
         run: |
           brew install xcodegen >/dev/null

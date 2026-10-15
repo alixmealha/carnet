@@ -167,22 +167,25 @@ struct ReadingCard: View {
                         .shadow(color: Palette.level(r.level).opacity(0.6), radius: 4)
                     Text(r.head).font(Typo.sans(16, .semibold)).foregroundStyle(Palette.ink)
                 }
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 14) {
                     ForEach(r.items) { x in
                         HStack(alignment: .top, spacing: 10) {
                             RoundedRectangle(cornerRadius: 2).fill(Palette.level(x.lvl)).frame(width: 3.5)
-                            VStack(alignment: .leading, spacing: 3) {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(x.title).font(Typo.sans(15, .semibold)).foregroundStyle(Palette.ink)
-                                Text(x.text).font(Typo.sans(14)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                                GlossText(x.text).font(Typo.sans(14)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true)
+                                SourcesLine(ids: x.src)
                             }
                         }
                     }
                 }
                 if let a = r.adapt {
-                    (Text("Adaptation prévue au plan. ").font(Typo.sans(14, .semibold)) + rich(a).font(Typo.sans(14)))
-                        .foregroundStyle(Palette.ink)
-                        .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Palette.warn.opacity(0.1), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Adaptation prévue au plan").font(Typo.sans(14, .semibold)).foregroundStyle(Palette.ink)
+                        GlossText(a).font(Typo.sans(14)).foregroundStyle(Palette.ink)
+                    }
+                    .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Palette.warn.opacity(0.1), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
             .card(tint: Palette.level(r.level))
@@ -233,6 +236,7 @@ struct SessionCard: View {
             GoalView(k: k)
             if bl.isEmpty { Text("Rien de prévu ce jour-là.").font(Typo.sans(15)).foregroundStyle(Palette.muted) }
             ForEach(bl) { b in BlockView(k: k, b: b, e: e, ro: ro) }
+            if e["endedAt"] != nil || p.done > 0 { BilanView(k: k, title: "Bilan") }
             if let a = d?["adapt"]?.string, !a.isEmpty {
                 DisclosureGroup {
                     rich(a).font(Typo.sans(14)).foregroundStyle(Palette.ink).padding(.top, 6)
@@ -296,17 +300,29 @@ struct BlockView: View {
     let b: Block
     let e: JSON
     let ro: Bool
+    @State private var menu = false
     var body: some View {
         let bs = PlanReader.blockState(e, b), off = bs == "moved" || bs == "skip"
         let color = Palette.kind(b.isRest ? "rest" : b.kind)
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 3).fill(color).frame(width: 5)
             VStack(alignment: .leading, spacing: 8) {
-                rich(b.title).font(Typo.display(21)).textCase(.uppercase).foregroundStyle(Palette.ink)
-                if let st = stateText(bs) { Text(st).font(Typo.sans(13.5, .medium)).foregroundStyle(Palette.muted) }
+                HStack(alignment: .firstTextBaseline) {
+                    GlossText(b.title, gloss: false).font(Typo.display(21)).textCase(.uppercase).foregroundStyle(Palette.ink)
+                    Spacer(minLength: 4)
+                    if !ro && !b.isRest {
+                        Button { Haptics.tap(); menu = true } label: {
+                            Image(systemName: "ellipsis").font(.system(size: 14, weight: .bold)).foregroundStyle(Palette.muted)
+                                .frame(width: 32, height: 26).background(Palette.sunk.opacity(0.7), in: Capsule())
+                        }
+                        .accessibilityLabel("Options : " + plain(b.title))
+                    }
+                }
+                stateView(bs)
                 if !off {
-                    if let desc = b.desc { rich(desc).font(Typo.sans(14)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
-                    if let sub = b.sub { rich(sub).font(Typo.sans(13.5)).foregroundStyle(Palette.ink).padding(10).frame(maxWidth: .infinity, alignment: .leading).background(Palette.sunk.opacity(0.6), in: RoundedRectangle(cornerRadius: 10)) }
+                    if let desc = b.desc { GlossText(desc).font(Typo.sans(14)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
+                    FingerCalcView(k: k, b: b)
+                    if let sub = b.sub { GlossText(sub).font(Typo.sans(13.5)).foregroundStyle(Palette.ink).padding(10).frame(maxWidth: .infinity, alignment: .leading).background(Palette.sunk.opacity(0.6), in: RoundedRectangle(cornerRadius: 10)) }
                     if b.isRest {
                         ForEach(b.items) { it in (rich(it.label) + Text(it.det.map { " · " + $0 } ?? "")).font(Typo.sans(14.5)).foregroundStyle(Palette.ink) }
                     } else {
@@ -318,14 +334,38 @@ struct BlockView: View {
             }
         }
         .opacity(off ? 0.55 : 1)
+        .sheet(isPresented: $menu) { BlockMenuSheet(k: k, b: b).presentationDetents([.medium, .large]).presentationDragIndicator(.visible) }
     }
-    private func stateText(_ bs: String?) -> String? {
-        if let mf = b.movedFrom, bs == nil { return "Déplacé du " + D.short(mf).lowercased() }
-        switch bs {
-        case "moved": return "Déplacé au " + D.short(e["moved"]?[b.id]?["to"]?.string ?? "").lowercased()
-        case "skip": return "Pas fait · " + skipLabel(e["skip"]?[b.id]?.string).lowercased()
-        case "apart": return e["apart"]?[b.id]?["endedAt"] != nil ? "Fait à part" : "À faire à part, à un autre moment de la journée"
-        default: return nil
+    @ViewBuilder private func stateView(_ bs: String?) -> some View {
+        if let mf = b.movedFrom, bs == nil {
+            Text("Déplacé du " + D.short(mf).lowercased()).font(Typo.sans(13.5, .medium)).foregroundStyle(Palette.muted)
+        } else if bs == "moved" {
+            Text("Déplacé au " + D.short(e["moved"]?[b.id]?["to"]?.string ?? k).lowercased()).font(Typo.sans(13.5, .medium)).foregroundStyle(Palette.muted)
+        } else if bs == "skip" {
+            Text("Pas fait · " + skipLabel(e["skip"]?[b.id]?.string).lowercased()).font(Typo.sans(13.5, .medium)).foregroundStyle(Palette.muted)
+        } else if bs == "apart" {
+            let p = e["apart"]?[b.id] ?? .emptyObject, note = Core.shared.call("plan.apartNote", .str(k), b.raw)
+            if p["endedAt"] != nil {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Fait à part" + ((p["duree"]?.int).map { " · \($0) min" } ?? "") + ((p["rpe"]?.int).map { " · ressenti \($0)" } ?? ""))
+                        .font(Typo.sans(14, .semibold)).foregroundStyle(Palette.good)
+                    if let n = note?["text"]?.string { Text(n + (note?["changed"]?.truthy == true ? " · ordre changé par rapport au plan" : "")).font(Typo.sans(13)).foregroundStyle(Palette.muted) }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("À faire à part" + ((p["startedAt"]?.double).map { " · commencé à " + Date(timeIntervalSince1970: $0 / 1000).formatted(date: .omitted, time: .shortened) } ?? ""))
+                        .font(Typo.sans(14, .semibold)).foregroundStyle(Palette.accent)
+                    Text("À un autre moment de la journée : il aura sa propre durée et son ressenti.").font(Typo.sans(13)).foregroundStyle(Palette.muted)
+                    if !ro && k == D.today {
+                        Button { Haptics.firm(); AppState.shared.session = SessionRef(k: k, part: b.id) } label: {
+                            Label(p["startedAt"] != nil ? "Reprendre" : "Lancer", systemImage: "play.fill")
+                        }
+                        .buttonStyle(SmallButton())
+                    }
+                }
+                .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                .background(Palette.accentSoft.opacity(0.6), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
         }
     }
 }
@@ -361,11 +401,14 @@ struct ItemRow: View {
                         Spacer(minLength: 0)
                         if it.n > 1 { Text("\(v)/\(it.n)").font(Typo.mono(12.5, .medium)).foregroundStyle(Palette.muted) }
                     }
-                    if let det = it.det { rich(det).font(Typo.sans(13.5)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
+                    if let det = it.det { GlossText(det).font(Typo.sans(13.5)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
+                    DemoLink(it: it)
                     if let note = it.adjNote ?? (it.adjN0.flatMap { $0 != it.n ? "Adapté : \(it.n) au lieu de \($0)" : nil }) {
                         Text(note).font(Typo.sans(12.5, .medium)).foregroundStyle(Palette.accent)
                     }
                     if let warn = it.warn { Text(warn).font(Typo.sans(12.5, .medium)).foregroundStyle(Palette.warn) }
+                    LastLine(k: k, b: b, it: it, e: e)
+                    if it.isWarmup { WarmupView(k: k, b: b, fold: true).padding(.top, 4) }
                 }
             }
             if it.n > 1 && it.n <= 30 {
@@ -459,6 +502,7 @@ struct AfterCard: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    ActFieldsView(k: k)
                     JournalTextField(k: k, name: "note", label: "Note du jour", placeholder: "Ce que tu as vraiment fait, les sensations…", multiline: true)
                 }
                 .disabled(ro)
