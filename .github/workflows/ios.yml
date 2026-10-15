@@ -80,7 +80,7 @@ jobs:
           ls shots
       - name: Projet généré
         if: always()
-        run: cd ios && zip -qr Alipto-xcodeproj.zip Alipto.xcodeproj Alipto/Info.plist || true
+        run: cd ios && zip -qr Alipto-xcodeproj.zip Alipto.xcodeproj Alipto/Info.plist Alipto/Alipto.entitlements Widgets/Info.plist Widgets/AliptoWidgets.entitlements || true
       # Résultats (erreurs, captures, projet) sur la branche ios-ci : lisibles avec git, sans téléchargement d'artefact
       - name: Résultats → branche ios-ci
         if: always()

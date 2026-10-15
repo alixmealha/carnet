@@ -25,6 +25,15 @@ targets:
       - path: Alipto/Resources/Core
         type: folder
         buildPhase: resources
+      - path: Shared
+    dependencies:
+      - target: AliptoWidgets
+    entitlements:
+      path: Alipto/Alipto.entitlements
+      properties:
+        com.apple.security.application-groups: [group.app.alipto]
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.alipto.Alipto
@@ -43,6 +52,48 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIApplicationSupportsIndirectInputEvents: true
         ITSAppUsesNonExemptEncryption: false
+        NSSupportsLiveActivities: true
+        NSHealthShareUsageDescription: "Alipto lit ta nuit (durée et phases), ta VFC et ta fréquence cardiaque de repos pour remplir la carte Sommeil et la lecture du jour."
+        NSHealthUpdateUsageDescription: "Alipto n’écrit rien dans Apple Santé."
+        NSMotionUsageDescription: "Le téléphone sert d’inclinomètre pour mesurer les angles des tests de mobilité."
+        UIAppFonts:
+          - BigShouldersDisplay-ExtraBold.ttf
+          - IBMPlexSans-Regular.ttf
+          - IBMPlexSans-Medium.ttf
+          - IBMPlexSans-SemiBold.ttf
+          - IBMPlexSans-Bold.ttf
+          - IBMPlexMono-Regular.ttf
+          - IBMPlexMono-Medium.ttf
+          - IBMPlexMono-SemiBold.ttf
+  # Widgets de l'écran d'accueil et minuteur de repos sur l'écran verrouillé (Live Activity)
+  AliptoWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widgets
+      - path: Shared
+      - path: Alipto/Sources/UI/Theme.swift
+      - path: Alipto/Resources/Fonts
+        buildPhase: resources
+    entitlements:
+      path: Widgets/AliptoWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.app.alipto]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.alipto.Alipto.Widgets
+        PRODUCT_NAME: AliptoWidgets
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Alipto
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: Alipto
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
         UIAppFonts:
           - BigShouldersDisplay-ExtraBold.ttf
           - IBMPlexSans-Regular.ttf

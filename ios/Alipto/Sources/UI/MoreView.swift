@@ -68,6 +68,10 @@ struct MoreView: View {
                     }
                     .card()
 
+                    if Health.shared.available {
+                        HealthCard()
+                    }
+
                     VStack(alignment: .leading, spacing: 12) {
                         CardHeader("Version web")
                         Text("Le plan complet, l’assistant, le suivi, les tests et la nutrition restent sur la version web le temps que l’appli iPhone les reprenne. Mêmes données, tout se synchronise.")
@@ -128,5 +132,42 @@ struct MoreView: View {
             let when = store.lastSync.map { "À jour · " + $0.formatted(date: .omitted, time: .shortened) } ?? "Pas encore synchronisé"
             return p > 0 ? when + " · \(p) en attente" : when
         }
+    }
+}
+
+/// Apple Santé : la nuit, la VFC et la FC de repos dans la carte Sommeil
+struct HealthCard: View {
+    @State private var health = Health.shared
+    @State private var auto = Health.shared.auto
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            CardHeader("Apple Santé") { Image(systemName: "heart.fill").foregroundStyle(Color(hex: 0xff375f)) }
+            Text("Ta nuit (durée et phases), ta VFC et ta fréquence cardiaque de repos remplissent la carte Sommeil et la lecture du jour. Rien n’est écrit dans Santé.")
+                .font(Typo.sans(14)).foregroundStyle(Palette.muted)
+            Toggle(isOn: $auto) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Remplir la nuit tout seul").font(Typo.sans(16, .medium)).foregroundStyle(Palette.ink)
+                    Text("À chaque ouverture de l’appli, sans écraser ce que tu as noté à la main.").font(Typo.sans(13)).foregroundStyle(Palette.muted)
+                }
+            }
+            .tint(Palette.accent)
+            .onChange(of: auto) { _, v in
+                health.auto = v
+                if v { Task { _ = await health.requestAccess(); _ = await health.importNight(D.today) } }
+            }
+            Button {
+                Task {
+                    let ok = await health.importNight(D.today, overwrite: true)
+                    toast(ok ? "Nuit importée" : "Rien dans Apple Santé pour cette nuit")
+                }
+            } label: {
+                HStack {
+                    if health.busy { ProgressView() }
+                    Text(health.asked ? "Importer la nuit dernière" : "Autoriser et importer la nuit dernière")
+                }
+            }
+            .buttonStyle(BigButton(kind: .plain))
+        }
+        .card()
     }
 }

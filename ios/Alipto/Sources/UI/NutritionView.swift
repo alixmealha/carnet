@@ -235,121 +235,27 @@ struct FoodSheet: View {
     @State private var saveName: String?
     @State private var custom = false
     @FocusState private var focus: Bool
+
+    private var C: Core { Nutri.C }
+    private var rec: [JSON] { C.call("nutrition.recents")?.array ?? [] }
+    private var cur: [JSON] { C.call("nutrition.mealsOf", .str(k), .null)?[meal]?.array ?? [] }
+    private var lbl: String { Nutri.meals.first { $0.0 == meal }?.1 ?? "Repas" }
+    private var g: Double { Double(grams.replacingOccurrences(of: ",", with: ".")) ?? 0 }
+
     var body: some View {
-        let C = Nutri.C, nb = Nutri.numbers
-        let rec = C.call("nutrition.recents")?.array ?? []
-        let cur = C.call("nutrition.mealsOf", .str(k), .null)?[meal]?.array ?? []
-        let lbl = Nutri.meals.first { $0.0 == meal }?.1 ?? "Repas"
-        let g = Double(grams.replacingOccurrences(of: ",", with: ".")) ?? 0
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    if !cur.isEmpty {
-                        Flow(spacing: 6) {
-                            ForEach(cur.indices, id: \.self) { i in
-                                HStack(spacing: 6) {
-                                    Text(Nutri.short(cur[i]["n"]?.string ?? "") + " · " + R(cur[i]["g"]?.double ?? 0) + " g").font(Typo.sans(13.5))
-                                    Button { var a = cur; a.remove(at: i); C.call("nutrition.setMeal", .str(k), .str(meal), .arr(a)) } label: { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }
-                                }
-                                .foregroundStyle(Palette.ink).padding(.horizontal, 10).padding(.vertical, 6).background(Palette.sunk, in: Capsule())
-                            }
-                        }
-                    }
+                    currentChips
                     if custom {
-                        CustomFoodForm(name: q) { f in custom = false; pick(f, rec) } onCancel: { custom = false }
+                        CustomFoodForm(name: q, onDone: { f in custom = false; pick(f) }, onCancel: { custom = false })
                     } else if let sel {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(sel["n"]?.string ?? "").font(Typo.sans(17, .semibold)).foregroundStyle(Palette.ink)
-                            HStack(alignment: .bottom, spacing: 10) {
-                                VStack(alignment: .leading, spacing: 5) {
-                                    Text("Quantité (g)").font(Typo.sans(12.5, .medium)).foregroundStyle(Palette.muted)
-                                    TextField("", text: $grams).keyboardType(.decimalPad).font(Typo.mono(20, .semibold))
-                                        .padding(.horizontal, 12).frame(width: 110, height: 48).background(Palette.sunk, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                }
-                                Flow(spacing: 6) { ForEach([30, 50, 100, 150, 200, 250], id: \.self) { x in Chip(label: "\(x) g", on: g == Double(x)) { grams = "\(x)" } } }
-                            }
-                            Text(previewText(sel, g, nb)).font(Typo.mono(12.5)).foregroundStyle(Palette.muted)
-                            HStack(spacing: 10) {
-                                Button("Retour") { self.sel = nil }.buttonStyle(BigButton(kind: .plain)).frame(maxWidth: 120)
-                                Button("Ajouter") {
-                                    guard g > 0 else { return }
-                                    C.call("nutrition.addFood", .str(k), .str(meal), sel, .num(g))
-                                    Haptics.success(); toast(Nutri.short(sel["n"]?.string ?? "") + " · " + R(g) + " g")
-                                    self.sel = nil; q = ""
-                                }
-                                .buttonStyle(BigButton()).disabled(g <= 0)
-                            }
-                        }
-                        .card()
+                        selectedCard(sel)
                     } else {
-                        HStack {
-                            Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
-                            TextField("Rechercher un aliment (riz, pomme, yaourt…)", text: $q).focused($focus).autocorrectionDisabled()
-                        }
-                        .font(Typo.sans(16)).padding(.horizontal, 14).frame(minHeight: 48).background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        if !foods.ready { HStack { ProgressView(); Text("Chargement de la base d’aliments…").font(Typo.sans(13.5)).foregroundStyle(Palette.muted) } }
-                        if !q.trimmingCharacters(in: .whitespaces).isEmpty {
-                            let list = foods.ready ? (C.call("nutrition.searchFoods", .str(q), .arr(rec.compactMap { $0["c"] })) ?.array ?? []) : []
-                            VStack(spacing: 0) {
-                                ForEach(list.indices, id: \.self) { i in foodRow(list[i], nb: nb) { pick(list[i], rec) } }
-                                if foods.ready && list.isEmpty { Text("Aucun aliment trouvé. Essaie un mot plus simple (« poulet », « pâtes »).").font(Typo.sans(13.5)).foregroundStyle(Palette.muted).padding(.vertical, 10) }
-                                if foods.ready {
-                                    Button { custom = true } label: {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text("Créer « " + q.trimmingCharacters(in: .whitespaces) + " »").font(Typo.sans(15, .semibold)).foregroundStyle(Palette.accent)
-                                            Text("produit de marque, complément : avec les valeurs de l’étiquette").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
-                                        }
-                                        .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                        } else {
-                            let saved = C.call("nutrition.savedMeals")?.array ?? []
-                            if !saved.isEmpty {
-                                Eyebrow("Repas enregistrés")
-                                ForEach(saved.indices, id: \.self) { i in
-                                    let s = saved[i]
-                                    HStack {
-                                        Button {
-                                            C.call("nutrition.setMeal", .str(k), .str(meal), .arr(cur + (s["items"]?.array ?? []))); toast((s["name"]?.string ?? "") + " ajouté")
-                                        } label: {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text(s["name"]?.string ?? "").font(Typo.sans(15, .semibold)).foregroundStyle(Palette.ink)
-                                                Text((s["items"]?.array ?? []).map { Nutri.short($0["n"]?.string ?? "") }.joined(separator: ", ")).font(Typo.sans(12.5)).foregroundStyle(Palette.muted).lineLimit(2)
-                                            }
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                        }
-                                        .buttonStyle(.plain)
-                                        Button(role: .destructive) { C.call("nutrition.deleteMealPreset", s["id"] ?? .null) } label: { Image(systemName: "trash") }.foregroundStyle(Palette.crit)
-                                    }
-                                    .padding(.vertical, 6)
-                                }
-                            }
-                            if !rec.isEmpty {
-                                Eyebrow("Récents")
-                                ForEach(rec.prefix(15).indices, id: \.self) { i in
-                                    if let f = C.call("nutrition.foodByCode", rec[i]["c"] ?? .null) {
-                                        foodRow(f, nb: nb, sub: "dernière portion : " + R(rec[i]["g"]?.double ?? 100) + " g") { pick(f, rec) }
-                                    }
-                                }
-                            }
-                            if rec.isEmpty && saved.isEmpty {
-                                Text("Tape le nom d’un aliment : la base Ciqual de l’ANSES contient 3 484 aliments courants. Les portions que tu utilises sont retenues pour la prochaine fois.").font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
-                            }
-                        }
+                        searchField
+                        if !q.trimmingCharacters(in: .whitespaces).isEmpty { results } else { browse }
                     }
-                    if !cur.isEmpty && sel == nil {
-                        if let name = saveName {
-                            HStack(alignment: .bottom) {
-                                TextField("Nom du repas", text: Binding(get: { name }, set: { saveName = $0 })).font(Typo.sans(16)).padding(.horizontal, 12).frame(minHeight: 46).background(Palette.sunk, in: RoundedRectangle(cornerRadius: 12))
-                                Button("OK") { C.call("nutrition.saveMealPreset", .str(name.trimmingCharacters(in: .whitespaces)), .arr(cur)); saveName = nil; toast("Repas enregistré") }
-                                    .buttonStyle(SmallButton()).disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
-                            }
-                        } else {
-                            Button("Enregistrer ce repas pour le réutiliser") { saveName = lbl }.buttonStyle(SmallButton(color: Palette.muted))
-                        }
-                    }
+                    saveRow
                     SourcesLine(ids: ["ciqual2025"])
                 }
                 .padding(16)
@@ -360,8 +266,155 @@ struct FoodSheet: View {
         }
         .onAppear { foods.load(); focus = true }
     }
-    private func previewText(_ sel: JSON, _ g: Double, _ nb: Bool) -> String {
-        guard let p = Nutri.C.call("nutrition.totals", .arr([["c": sel["c"] ?? .null, "g": .num(g)]])) else { return "" }
+
+    @ViewBuilder private var currentChips: some View {
+        let cur = self.cur
+        if !cur.isEmpty {
+            Flow(spacing: 6) {
+                ForEach(cur.indices, id: \.self) { i in
+                    HStack(spacing: 6) {
+                        Text(chipText(cur[i])).font(Typo.sans(13.5))
+                        Button { removeItem(i) } label: { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }
+                    }
+                    .foregroundStyle(Palette.ink).padding(.horizontal, 10).padding(.vertical, 6).background(Palette.sunk, in: Capsule())
+                }
+            }
+        }
+    }
+    private func chipText(_ it: JSON) -> String { Nutri.short(it["n"]?.string ?? "") + " · " + R(it["g"]?.double ?? 0) + " g" }
+    private func removeItem(_ i: Int) { var a = cur; a.remove(at: i); C.call("nutrition.setMeal", .str(k), .str(meal), .arr(a)) }
+
+    private func selectedCard(_ sel: JSON) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(sel["n"]?.string ?? "").font(Typo.sans(17, .semibold)).foregroundStyle(Palette.ink)
+            HStack(alignment: .bottom, spacing: 10) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Quantité (g)").font(Typo.sans(12.5, .medium)).foregroundStyle(Palette.muted)
+                    TextField("", text: $grams).keyboardType(.decimalPad).font(Typo.mono(20, .semibold))
+                        .padding(.horizontal, 12).frame(width: 110, height: 48).background(Palette.sunk, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                Flow(spacing: 6) { ForEach([30, 50, 100, 150, 200, 250], id: \.self) { x in Chip(label: "\(x) g", on: g == Double(x)) { grams = "\(x)" } } }
+            }
+            Text(previewText(sel)).font(Typo.mono(12.5)).foregroundStyle(Palette.muted)
+            HStack(spacing: 10) {
+                Button("Retour") { self.sel = nil }.buttonStyle(BigButton(kind: .plain)).frame(maxWidth: 120)
+                Button("Ajouter") { add(sel) }.buttonStyle(BigButton()).disabled(g <= 0)
+            }
+        }
+        .card()
+    }
+    private func add(_ sel: JSON) {
+        guard g > 0 else { return }
+        C.call("nutrition.addFood", .str(k), .str(meal), sel, .num(g))
+        Haptics.success()
+        toast(Nutri.short(sel["n"]?.string ?? "") + " · " + R(g) + " g")
+        self.sel = nil
+        q = ""
+    }
+
+    private var searchField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "magnifyingglass").foregroundStyle(Palette.muted)
+                TextField("Rechercher un aliment (riz, pomme, yaourt…)", text: $q).focused($focus).autocorrectionDisabled()
+            }
+            .font(Typo.sans(16)).padding(.horizontal, 14).frame(minHeight: 48).background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            if !foods.ready {
+                HStack {
+                    ProgressView()
+                    Text("Chargement de la base d’aliments…").font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var results: some View {
+        let list = searchList()
+        let nb = Nutri.numbers
+        VStack(spacing: 0) {
+            ForEach(list.indices, id: \.self) { i in foodRow(list[i], nb: nb) { pick(list[i]) } }
+            if foods.ready && list.isEmpty {
+                Text("Aucun aliment trouvé. Essaie un mot plus simple (« poulet », « pâtes »).").font(Typo.sans(13.5)).foregroundStyle(Palette.muted).padding(.vertical, 10)
+            }
+            if foods.ready {
+                Button { custom = true } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Créer « " + q.trimmingCharacters(in: .whitespaces) + " »").font(Typo.sans(15, .semibold)).foregroundStyle(Palette.accent)
+                        Text("produit de marque, complément : avec les valeurs de l’étiquette").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+    private func searchList() -> [JSON] {
+        guard foods.ready else { return [] }
+        let codes = rec.compactMap { $0["c"] }
+        return C.call("nutrition.searchFoods", .str(q), .arr(codes))?.array ?? []
+    }
+
+    @ViewBuilder private var browse: some View {
+        let saved = C.call("nutrition.savedMeals")?.array ?? []
+        let rec = self.rec
+        let nb = Nutri.numbers
+        if !saved.isEmpty {
+            Eyebrow("Repas enregistrés")
+            ForEach(saved.indices, id: \.self) { i in savedRow(saved[i]) }
+        }
+        if !rec.isEmpty {
+            Eyebrow("Récents")
+            ForEach(rec.prefix(15).indices, id: \.self) { i in
+                if let f = C.call("nutrition.foodByCode", rec[i]["c"] ?? .null) {
+                    foodRow(f, nb: nb, sub: "dernière portion : " + R(rec[i]["g"]?.double ?? 100) + " g") { pick(f) }
+                }
+            }
+        }
+        if rec.isEmpty && saved.isEmpty {
+            Text("Tape le nom d’un aliment : la base Ciqual de l’ANSES contient 3 484 aliments courants. Les portions que tu utilises sont retenues pour la prochaine fois.").font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
+        }
+    }
+    private func savedRow(_ s: JSON) -> some View {
+        let items = s["items"]?.array ?? []
+        let names = items.map { Nutri.short($0["n"]?.string ?? "") }.joined(separator: ", ")
+        return HStack {
+            Button {
+                C.call("nutrition.setMeal", .str(k), .str(meal), .arr(cur + items))
+                toast((s["name"]?.string ?? "") + " ajouté")
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(s["name"]?.string ?? "").font(Typo.sans(15, .semibold)).foregroundStyle(Palette.ink)
+                    Text(names).font(Typo.sans(12.5)).foregroundStyle(Palette.muted).lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            Button(role: .destructive) { C.call("nutrition.deleteMealPreset", s["id"] ?? .null) } label: { Image(systemName: "trash") }.foregroundStyle(Palette.crit)
+        }
+        .padding(.vertical, 6)
+    }
+
+    @ViewBuilder private var saveRow: some View {
+        if !cur.isEmpty && sel == nil && !custom {
+            if let name = saveName {
+                HStack(alignment: .bottom) {
+                    TextField("Nom du repas", text: Binding(get: { name }, set: { saveName = $0 })).font(Typo.sans(16)).padding(.horizontal, 12).frame(minHeight: 46).background(Palette.sunk, in: RoundedRectangle(cornerRadius: 12))
+                    Button("OK") { savePreset(name) }.buttonStyle(SmallButton()).disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            } else {
+                Button("Enregistrer ce repas pour le réutiliser") { saveName = lbl }.buttonStyle(SmallButton(color: Palette.muted))
+            }
+        }
+    }
+    private func savePreset(_ name: String) {
+        C.call("nutrition.saveMealPreset", .str(name.trimmingCharacters(in: .whitespaces)), .arr(cur))
+        saveName = nil
+        toast("Repas enregistré")
+    }
+    private func previewText(_ sel: JSON) -> String {
+        let nb = Nutri.numbers
+        let item: JSON = ["c": sel["c"] ?? .null, "g": .num(g)]
+        guard let p = C.call("nutrition.totals", .arr([item])) else { return "" }
         var s = nb ? R(p["kcal"]?.double ?? 0) + " kcal · " : ""
         s += "P " + f1(p["p"]?.double ?? 0) + " g · G " + f1(p["g"]?.double ?? 0) + " g · L " + f1(p["l"]?.double ?? 0) + " g"
         if let fib = p["fib"]?.double, fib > 0 { s += " · fibres " + f1(fib) + " g" }
@@ -372,17 +425,17 @@ struct FoodSheet: View {
         if nb, let kc = v["kcal"]?.double { s += R(kc) + " kcal · " }
         return s + "P " + f1(v["p"]?.double ?? 0) + " · G " + f1(v["g"]?.double ?? 0) + " · L " + f1(v["l"]?.double ?? 0) + " pour 100 g"
     }
-    private func pick(_ f: JSON, _ rec: [JSON]) {
+    private func pick(_ f: JSON) {
         let r = rec.first { $0["c"] == f["c"] }
-        sel = f; grams = Fmt.num(r?["g"]?.double ?? 100)
+        sel = f
+        grams = Fmt.num(r?["g"]?.double ?? 100)
     }
     private func foodRow(_ f: JSON, nb: Bool, sub: String? = nil, _ action: @escaping () -> Void) -> some View {
         let v = f["v"] ?? .emptyObject
         return Button(action: action) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(f["n"]?.string ?? "").font(Typo.sans(15)).foregroundStyle(Palette.ink).multilineTextAlignment(.leading)
-                Text(sub ?? per100(v, nb))
-                    .font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                Text(sub ?? per100(v, nb)).font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
             }
             .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 9)
             .overlay(alignment: .bottom) { Rectangle().fill(Palette.rule.opacity(0.4)).frame(height: 0.5) }
@@ -434,7 +487,11 @@ struct NutriWeekView: View {
             if C.call("nutrition.nutriVisible")?.truthy != true {
                 EmptyNote(store.name(store.subject) + " n’a pas partagé son alimentation.")
             } else if !foods.ready {
-                HStack { ProgressView(); Text("Chargement de la base d’aliments…").font(Typo.sans(14)).foregroundStyle(Palette.muted) }.frame(maxWidth: .infinity).padding(.vertical, 30)
+                HStack {
+                    ProgressView()
+                    Text("Chargement de la base d’aliments…").font(Typo.sans(14)).foregroundStyle(Palette.muted)
+                }
+                .frame(maxWidth: .infinity).padding(.vertical, 30)
             } else {
                 let ws = C.call("nutrition.weekSummary") ?? .emptyObject, adv = C.call("nutrition.weekAdvice", ws)?.array ?? []
                 let nb = Nutri.numbers, n = ws["n"]?.int ?? 0

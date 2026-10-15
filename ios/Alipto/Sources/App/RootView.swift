@@ -34,8 +34,13 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.35), value: app.signedIn)
         .tint(Palette.accent)
         .onChange(of: scenePhase) { _, p in
-            if p == .active { Store.shared.schedule(0.2) }
+            if p == .active {
+                Store.shared.schedule(0.2)
+                if Health.shared.auto { Task { _ = await Health.shared.importNight(D.today) } }
+            }
+            if p == .background { WidgetSync.write() }
         }
+        .onChange(of: Store.shared.version) { _, _ in WidgetSync.schedule() }
         .onChange(of: Store.shared.phase) { _, p in
             // session expirée (mot de passe changé, compte retiré) : retour à la connexion
             if p == .signedout && !Backend.shared.signedIn && !Store.shared.demo { app.signedIn = false }

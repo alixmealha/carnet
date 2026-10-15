@@ -138,7 +138,7 @@ struct SessionModeView: View {
 
 extension SessionRunner {
     /// Passer à l'étape suivante annule le repos en cours (sans son ni « then »)
-    func endRestSilently() { rest = nil; Signals.cancel("rest") }
+    func endRestSilently() { rest = nil; Signals.cancel("rest"); LiveRest.finish() }
 }
 
 struct ProgressBar: View {

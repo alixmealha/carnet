@@ -96,7 +96,7 @@ final class SessionRunner {
             }
         }
     }
-    func stop() { loop?.cancel(); loop = nil; Signals.end() }
+    func stop() { loop?.cancel(); loop = nil; Signals.end(); LiveRest.stop() }
 
     // MARK: séries
     func bump(_ b: Block, _ it: Item, by n: Int = 1) {
@@ -113,15 +113,19 @@ final class SessionRunner {
         if hold { Signals.go() } else {
             Signals.schedule("rest", at: until, title: "Repos terminé", body: say.map { $0 + " : c’est reparti" } ?? "C’est reparti")
         }
+        LiveRest.show(title: liveTitle, until: until, label: label, next: say, phase: hold ? "work" : "rest")
     }
     func addRest(_ d: Double) {
         guard var r = rest else { return }
         r.until = r.until.addingTimeInterval(d); r.total = max(1, r.total + d); rest = r
         Signals.schedule("rest", at: r.until, title: "Repos terminé", body: r.say.map { $0 + " : c’est reparti" } ?? "C’est reparti")
+        LiveRest.show(title: liveTitle, until: r.until, label: r.label, next: r.say, phase: r.hold ? "work" : "rest")
     }
+    var liveTitle: String { plain(PlanReader(store).sessionName(k)) }
     func endRest() {
         let r = rest; rest = nil
         Signals.cancel("rest")
+        LiveRest.finish()
         r?.then?()
     }
 
@@ -144,7 +148,7 @@ final class SessionRunner {
         timer = t
     }
     func skipPhase() { guard var t = timer else { return }; t.skip += t.left(Date()) + 0.01; timer = t }
-    func closeTimer() { timer = nil }
+    func closeTimer() { timer = nil; LiveRest.finish("Minuteur terminé") }
 
     // MARK: mode blocs
     func openClimb(_ b: Block, _ it: Item) {
@@ -175,6 +179,7 @@ final class SessionRunner {
             Signals.rest(); c.ph = "rest"; c.t0 = Date(); c.acc = 0; c.pausedAt = nil; c.dur = c.it.rest ?? 60
             let unit = c.it.unit == "Essai" ? "Essai" : c.it.unit == "Voie" ? "Voie" : "Bloc"
             Signals.schedule("rest", at: Date().addingTimeInterval(c.dur), title: "Repos terminé", body: "\(unit) \(cur + 2) : c’est reparti")
+            LiveRest.show(title: c.it.label, until: Date().addingTimeInterval(c.dur), label: "Repos · ensuite " + unit.lowercased() + " \(cur + 2)", next: c.grade, phase: "rest")
         }
         climb = c
     }
@@ -195,7 +200,7 @@ final class SessionRunner {
     }
     func climbGo() {
         guard var c = climb else { return }
-        Signals.go(); Signals.cancel("rest")
+        Signals.go(); Signals.cancel("rest"); LiveRest.finish()
         c.ph = "wall"; c.t0 = Date(); c.acc = 0; c.pausedAt = nil
         climb = c
     }
@@ -252,6 +257,11 @@ final class SessionRunner {
                 case "done": Signals.done(); Signals.say("Terminé")
                 default: break
                 }
+                // écran verrouillé / Dynamic Island : la phase en cours et son décompte
+                if ph.dur > 0 {
+                    let nx = t.phases[(idx + 1)...].first { $0.dur > 0 }
+                    LiveRest.show(title: t.title, until: n.addingTimeInterval(t.left(n)), label: Self.phaseLabel(ph, t.sets), next: nx.map { Self.nextLabel($0) }, phase: ph.isWork ? "work" : "rest", paused: t.pausedAt != nil)
+                } else if ph.type == "done" { LiveRest.finish("Minuteur terminé") }
                 // notification si l'iPhone se verrouille pendant un repos
                 if ["setrest", "sw", "prep", "rest"].contains(ph.type), ph.dur >= 15 {
                     let nx = t.phases[(idx + 1)...].first { $0.dur > 0 }
@@ -272,6 +282,7 @@ final class SessionRunner {
             if left <= 0 {
                 let v = PlanReader.doneN(store.journal(k), PlanReader.itemKey(c.b, c.it), c.it.n)
                 Signals.go(); Signals.say((c.it.unit == "Voie" ? "Voie" : c.it.unit == "Essai" ? "Essai" : "Bloc") + " \(v + 1)")
+                LiveRest.finish()
                 c.ph = "wall"; c.t0 = c.t0.addingTimeInterval(c.acc + c.dur); c.acc = 0
                 climb = c
             } else if sec != c.lastSec {
@@ -280,6 +291,17 @@ final class SessionRunner {
                 climb = c
             }
         }
+    }
+
+    static func phaseLabel(_ ph: Phase, _ sets: Int) -> String {
+        var s = ph.type == "setrest" ? "Repos" : ph.label
+        if let side = ph.side { s += " · " + side }
+        if ph.set > 0 { s += " · série \(ph.set)/\(sets)" }
+        return s
+    }
+    static func nextLabel(_ p: Phase) -> String {
+        guard let side = p.side else { return p.label }
+        return side + " · " + p.label
     }
 
     // MARK: fin

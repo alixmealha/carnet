@@ -599,6 +599,20 @@ struct NightCard: View {
                     MetricField(k: k, key: "recup", label: "Récup (%)")
                 }
                 Text("Facultatif : les valeurs de ta montre (Garmin, WHOOP, Apple, Polar…). La lecture du jour s’en sert.").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                if Health.shared.available && !ro {
+                    Button {
+                        Task {
+                            let ok = await Health.shared.importNight(k, overwrite: true)
+                            if ok { Haptics.success(); toast("Nuit importée d’Apple Santé") } else { toast("Rien dans Apple Santé pour cette nuit") }
+                        }
+                    } label: {
+                        HStack {
+                            if Health.shared.busy { ProgressView() } else { Image(systemName: "heart.fill").foregroundStyle(Color(hex: 0xff375f)) }
+                            Text("Importer d’Apple Santé")
+                        }
+                    }
+                    .buttonStyle(SmallButton(color: Palette.ink))
+                }
                 }
                 .disabled(ro)
             }
