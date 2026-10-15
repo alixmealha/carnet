@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset } from '../lib/store.js';
-import { blocks, itemKey, doneN, progress, itemLoad, fingerCalc, target, KIND, setDoneCount, setLoadsOf, setsText, blockState, setBlockState, apartOf, setApart, SKIP } from '../lib/plan.js';
+import { blocks, itemKey, doneN, progress, itemLoad, fingerCalc, target, KIND, setDoneCount, setLoadsOf, setsText, blockState, setBlockState, apartOf, setApart, SKIP, skipLabel, demoOf } from '../lib/plan.js';
 import { BlockMenu } from '../ui/BlockMenu.jsx';
 import { setAlert, clearAlert } from '../lib/restpush.js';
 import { Warmup } from '../ui/Warmup.jsx';
@@ -404,7 +404,7 @@ function Pips({ k, b, it, color, onTick }) {
 function StepView(props) {
   const { k, step, onMenu, onNext, isLast } = props, { b } = step, e = jget(k);
   if (step.skip) {
-    const r = (SKIP.find(x => x[0] === (e.skip || {})[b.id]) || SKIP[4])[1];
+    const r = skipLabel((e.skip || {})[b.id]);
     return <div>
       <div class="step-k"><i style={'background:var(--k-' + b.kind + ')'} /><Rich text={b.title} /></div>
       <p class="skip-b">Pas fait · {r.toLowerCase()}</p>
@@ -431,6 +431,8 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
     <div class="step-k"><i style={'background:' + color} /><Rich text={b.title} /></div>
     <h2 class={'step-t' + (String(ttl).length > 34 ? ' long' : '')}><Rich text={ttl} /></h2>
     {!step.group && !step.list && !step.pair && it && it.det && <p class="step-d"><Rich text={it.det} g /></p>}
+    {!step.group && !step.list && !step.pair && it && demoOf(it) && <a class="btn demo-b" href={demoOf(it)} target="_blank" rel="noopener noreferrer"><Icon name="play" size={16} />Voir la démo</a>}
+    {!step.group && !step.list && !step.pair && it && it.adj && (it.adj.note || it.adj.n0 !== it.n) && <p class="adj-l" style="font-size:14px">{it.adj.note || 'Séance adaptée : ' + it.n + ' au lieu de ' + it.adj.n0}</p>}
     {!step.group && !step.list && !step.pair && it && it.warn && <p class="warn-l">{it.warn}</p>}
     {!step.group && !step.list && !step.pair && it && (STRENGTH.includes(b.kind) || climbable(b, it)) && it.id !== 'ech' && <LastTime k={k} it={it} />}
     {(step.group || step.list || !it) && b.desc && <p class="step-d"><Rich text={b.desc} g /></p>}
@@ -589,7 +591,7 @@ function Finish({ k, part, minutes, onSave, onBack, onMenu }) {
 
 export function Bilan({ k, part, title }) {
   const bl = sessionBilan(k, part); if (!bl.length) return null;
-  return <div class="bilan">{title && <p class="sub-lbl" style="margin:0 0 4px">{title}</p>}{bl.map(x => <p><b><Rich text={x.label} /></b> · {x.lines.join(' · ')}</p>)}</div>;
+  return <div class="bilan">{title && <p class="sub-lbl" style="margin:0 0 4px">{title}</p>}{bl.map(x => x.rec ? <p class="rec"><b>{x.label}</b>{x.lines.map(l => <span>{l}</span>)}</p> : <p><b><Rich text={x.label} /></b> · {x.lines.join(' · ')}</p>)}</div>;
 }
 
 /* ---------- Mode séance ---------- */

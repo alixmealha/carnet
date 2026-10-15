@@ -869,3 +869,56 @@ html,body{overflow-x:clip}
 .sc-band small{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
 .more-foot{display:flex;gap:12px;align-items:flex-start;padding:4px 2px 0}
 .more-foot p{margin:4px 0 0;font-size:13px;color:var(--muted);line-height:1.45}
+
+/* « ••• » de la séance, séance adaptée ou annulée */
+.ses-m{min-width:40px;min-height:32px;padding:0 6px;margin-left:8px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:16px;font-weight:700;letter-spacing:1px;cursor:pointer}
+.ses-m:active{background:var(--sunk)}
+.hero-top{position:relative}
+.hero-mb{position:absolute;top:-6px;right:-8px;margin:0}
+.adj-b{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.adj-b.off{background:color-mix(in srgb,var(--warn) 9%,var(--surface));border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.adj-b b{font-weight:600;font-size:15px}
+.adj-b span{font-size:13.5px;color:var(--muted);line-height:1.4}
+.adj-b .btn{min-height:32px;padding:0;font-size:14px}
+.adj-l{display:block;font-size:12.5px;color:var(--accent);margin-top:2px}
+.bm-opt.warn b{color:var(--crit)}
+.fit{display:flex;flex-direction:column;gap:10px;padding:2px 2px 6px}
+.fit-in{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.fit-u{padding-bottom:12px;color:var(--muted);font-size:14px}
+.fit-t{margin:0;font-size:14.5px}
+.fit-l{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-top:1px solid var(--rule)}
+.fit-r{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.fit-r span{min-width:0}
+.fit-r em{font-style:normal;color:var(--muted);text-align:right;flex:none;max-width:55%}
+.fit-r.reduce em,.fit-r.short em{color:var(--accent)}
+.fit-r.drop span{text-decoration:line-through;color:var(--muted)}
+.fit-r.drop em{color:var(--crit)}
+
+/* records */
+.bilan p.rec{display:flex;flex-direction:column;gap:2px;padding:8px 10px;margin:0 -4px 6px;border-radius:10px;background:color-mix(in srgb,var(--good) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--good) 35%,transparent)}
+.bilan p.rec b{color:var(--good);font-family:var(--f-mono);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.bilan p.rec span{font-weight:600}
+.recs{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.rec-i{display:flex;flex-direction:column;padding:8px 10px;border-radius:10px;border-left:3px solid var(--good);background:var(--sunk)}
+.rec-i b{font-weight:600;font-size:15px}
+.rec-i span{font-size:13px;color:var(--muted)}
+
+/* bilan de la semaine */
+.wkr{border-color:color-mix(in srgb,var(--accent) 35%,var(--rule))}
+.wkr-h{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.wkr-h .icon-btn{margin:-6px -6px 0 0;flex:none}
+.wkr-t{margin:4px 0 0;font-family:var(--f-display);font-size:26px;line-height:1.05;text-transform:uppercase}
+.wkr-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:12px}
+.wkr-g>div{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:10px;background:var(--sunk);min-width:0}
+.wkr-g small{font-size:11.5px;color:var(--muted)}
+.wkr-g b{font-family:var(--f-mono);font-size:16px;font-weight:600;white-space:nowrap}
+.wkr-g span{font-size:11.5px;color:var(--muted);line-height:1.3}
+.wkr-m{margin:10px 0 0;font-size:13.5px;color:var(--muted);line-height:1.45}
+.wkr-n{margin-top:12px}
+.wkr-days{display:flex;flex-wrap:wrap;gap:6px}
+.wkr-days span{display:flex;gap:6px;align-items:baseline;padding:5px 9px;border-radius:9px;border:1px solid var(--rule);font-size:13px;max-width:100%}
+.wkr-days b{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-weight:500}
+
+/* vidéos de démo */
+.demo-l{display:inline-block;margin-top:4px;font-size:13px;font-weight:600;color:var(--accent);text-decoration:none}
+.demo-b{display:inline-flex;align-items:center;gap:6px;margin-top:8px;min-height:36px;padding:0 12px;font-size:14px;text-decoration:none}

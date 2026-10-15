@@ -1,7 +1,7 @@
 // « Pas possible maintenant ? » : faire un bloc à un autre moment de la journée, un autre jour, ou pas du tout (avec la raison)
 import { useState } from 'preact/hooks';
 import { jget, planLocked, links, isSelf } from '../lib/store.js';
-import { SKIP, blockState, setBlockState, moveBlock, unmoveBlock, day, sessionName, apartOf } from '../lib/plan.js';
+import { SKIP, skipLabel, blockState, setBlockState, moveBlock, unmoveBlock, day, sessionName, apartOf } from '../lib/plan.js';
 import { heavyOf, groupsTxt } from '../lib/builder.js';
 import { addDays, todayKey, fmtShort } from '../lib/dates.js';
 import { Sheet, toast } from './kit.jsx';
@@ -28,7 +28,7 @@ export function BlockMenu({ k, b, onClose, top }) {
     <Sheet title={name} onClose={onClose} cls={top ? 'top' : ''}>
       <div class="stack" style="gap:10px">
         {st && <div class="bm-now">
-          <p style="margin:0">{st === 'apart' ? (apart && apart.endedAt ? 'Fait à part.' : 'À faire à part, à un autre moment de la journée.') : st === 'moved' ? 'Déplacé au ' + fmtShort(e.moved[b.id].to).toLowerCase() + '.' : 'Pas fait · ' + ((SKIP.find(x => x[0] === e.skip[b.id]) || SKIP[4])[1]).toLowerCase() + '.'}</p>
+          <p style="margin:0">{st === 'apart' ? (apart && apart.endedAt ? 'Fait à part.' : 'À faire à part, à un autre moment de la journée.') : st === 'moved' ? 'Déplacé au ' + fmtShort(e.moved[b.id].to).toLowerCase() + '.' : 'Pas fait · ' + (skipLabel(e.skip[b.id])).toLowerCase() + '.'}</p>
           {!(st === 'apart' && apart && apart.endedAt) && <button class="btn" onClick={() => { if (st === 'moved') unmoveBlock(k, b); else setBlockState(k, b, null); done('Remis dans la séance'); }}>Remettre dans la séance</button>}
         </div>}
         {st !== 'apart' && <button type="button" class="bm-opt" onClick={() => { setBlockState(k, b, 'apart'); done(name + ' : à faire à part'); }}>

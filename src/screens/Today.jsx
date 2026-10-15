@@ -1,11 +1,14 @@
 import { useState } from 'preact/hooks';
 import { jget, isSelf, nameOf, getSubject } from '../lib/store.js';
-import { blocks, weekOf, weekLabel, meta, progress, PHASE_LABEL, nextEvent, eventOn, sessionName, day, blockState, apartOf } from '../lib/plan.js';
+import { blocks, weekOf, weekLabel, meta, progress, PHASE_LABEL, nextEvent, eventOn, sessionName, day, blockState, apartOf, skipLabel } from '../lib/plan.js';
 import { score, verdict } from '../lib/rules.js';
 import { dayInsights } from '../lib/insights.js';
 import { todayKey, mondayOf, addDays, DOW_1, dom, fmtRange, diffDays, fmtLong } from '../lib/dates.js';
 import { Icon, Rich, useWide } from '../ui/kit.jsx';
 import { DayView } from './DayView.jsx';
+import { SessionMenu } from '../ui/SessionMenu.jsx';
+import { WeekReview } from '../ui/WeekReview.jsx';
+import { adjSummary } from '../lib/adapt.js';
 
 export function tapesOf(k) {
   const ks = []; for (const b of blocks(k)) if (b.kind !== 'rest' && !ks.includes(b.kind)) ks.push(b.kind); return ks;
@@ -63,10 +66,13 @@ const scrollToId = id => { const el = document.getElementById(id); if (el) windo
 // Le résumé du jour : forme, séance, consigne et semaine, avant les détails
 function Hero({ k, onStart }) {
   const e = jget(k), sc = score(e), v = sc !== null ? verdict(sc) : null, self = isSelf();
-  const active = blocks(k).some(b => b.kind !== 'rest' && !['apart', 'moved'].includes(blockState(e, b))), d = day(k) || {}, pr = progress(k);
+  const active = !e.cancel && blocks(k).some(b => b.kind !== 'rest' && !['apart', 'moved', 'skip'].includes(blockState(e, b))), d = day(k) || {}, pr = progress(k);
+  const real = blocks(k).filter(b => b.kind !== 'rest'), hasSes = real.length > 0, allMoved = hasSes && real.every(b => blockState(e, b) === 'moved');
+  const adj = adjSummary(k), [menu, setMenu] = useState(false);
   const aparts = blocks(k).filter(b => blockState(e, b) === 'apart' && !apartOf(e, b.id).endedAt);
   const r = sc !== null ? dayInsights(k) : null, wk = weekCount(k);
-  const meta2 = [d.duree && d.duree !== '—' ? d.duree : null, pr.total ? pr.done + '/' + pr.total + ' fait' : null].filter(Boolean).join(' · ');
+  const meta2 = e.cancel ? skipLabel(e.cancel.r) + (e.cancel.note ? ' · « ' + e.cancel.note + ' »' : '')
+    : [d.duree && d.duree !== '—' ? d.duree : null, adj ? (adj.mode === 'time' ? 'adaptée à ' + jget(k).adj.min + ' min' : 'allégée') : null, pr.total ? pr.done + '/' + pr.total + ' fait' : null].filter(Boolean).join(' · ');
   return (
     <section class={'card hero' + (r ? ' ' + r.level : '')}>
       <div class="hero-top">
@@ -75,16 +81,18 @@ function Hero({ k, onStart }) {
           <span class="ring-c">{sc !== null ? <><b>{sc}</b><small>/25</small></> : <><b>?</b><small>forme</small></>}</span>
         </button>
         <div class="hero-txt">
-          <div class="eyebrow">{active ? 'Séance du jour' : 'Aujourd’hui'}</div>
-          <b class="hero-t"><Rich text={active ? sessionName(k) : 'Repos'} /></b>
+          <div class="eyebrow">{e.cancel ? (e.cancel.started ? 'Séance arrêtée' : 'Séance annulée') : active ? 'Séance du jour' : 'Aujourd’hui'}</div>
+          <b class="hero-t"><Rich text={allMoved ? 'Séance déplacée' : hasSes ? sessionName(k) : 'Repos'} /></b>
           {meta2 && <span class="hero-m">{meta2}</span>}
         </div>
+        {self && onStart && hasSes && !allMoved && <button type="button" class="ses-m hero-mb" aria-label="Options de la séance" onClick={() => setMenu(true)}>•••</button>}
       </div>
       {r ? <button type="button" class="hero-r" onClick={() => scrollToId('reading')}><i />{r.head}<span class="chev r" aria-hidden="true" /></button>
-        : self ? <button type="button" class="hero-r todo" onClick={() => scrollToId('morning')}><i />Remplis ta forme du matin : la séance s’ajuste<span class="chev r" aria-hidden="true" /></button>
+        : self ? <button type="button" class="hero-r todo" onClick={() => scrollToId('morning')}><i />{active ? 'Remplis ta forme du matin : la séance s’ajuste' : 'Note ta forme du matin : elle compte aussi les jours sans séance'}<span class="chev r" aria-hidden="true" /></button>
         : <p class="hero-r todo"><i />{nameOf(getSubject())} n’a pas encore rempli sa forme du matin</p>}
       {active && self && onStart && <button class="btn big primary" onClick={() => onStart(k)}><Icon name="play" size={20} />{e.startedAt && !e.endedAt ? 'Reprendre la séance' : pr.done ? 'Continuer la séance' : 'Démarrer la séance'}</button>}
       {self && onStart && aparts.map(b => <div class="hero-ap"><span>À part aujourd’hui · <b><Rich text={b.title} /></b></span><button class="btn" onClick={() => onStart(k, b.id)}>{apartOf(e, b.id).startedAt ? 'Reprendre' : 'Lancer'}</button></div>)}
+      {menu && <SessionMenu k={k} onClose={() => setMenu(false)} />}
       {wk.planned > 0 && <div class="hero-wk" aria-label={'Semaine : ' + wk.done + ' séances faites sur ' + wk.planned}>
         <span>Cette semaine</span>
         <span class="wk-d">{wk.days.map((x, i) => <i class={x} title={DOW_1[i]} />)}</span>
@@ -108,6 +116,7 @@ export function Today({ onStart, onEdit, onOpenTest }) {
       <div class="stack">
         <WeekStrip sel={sel} onSel={setSel} />
         {!isToday && <button class="btn ghost" style="align-self:center" onClick={() => setSel(t)}>Revenir à aujourd’hui</button>}
+        {isToday && m && <WeekReview />}
         <DayView k={sel} onStart={onStart} onEdit={onEdit} onOpenTest={onOpenTest} noHeader={isToday} split={wide} hero={isToday && m ? <Hero k={sel} onStart={onStart} /> : null} />
       </div>
     </div>

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset, get, put, isSelf, links, myProfile, subjectSettings, SELF, getSubject, nameOf } from '../lib/store.js';
-import { blocks, target, weekOf, weekLabel, itemKey, doneN, progress, itemLoad, fingerCalc, testIdsOf, PHASE_LABEL, meta, day, eventOn, setDoneCount, setLoadsOf, setsText, blockState, apartOf, apartNote, SKIP } from '../lib/plan.js';
+import { blocks, target, weekOf, weekLabel, itemKey, doneN, progress, itemLoad, fingerCalc, testIdsOf, PHASE_LABEL, meta, day, eventOn, setDoneCount, setLoadsOf, setsText, blockState, apartOf, apartNote, SKIP, skipLabel, restoreSession, demoOf } from '../lib/plan.js';
 import { BlockMenu } from '../ui/BlockMenu.jsx';
+import { SessionMenu } from '../ui/SessionMenu.jsx';
+import { adjSummary, clearAdjust } from '../lib/adapt.js';
 import { Bilan } from './Session.jsx';
 import { WELL, FLAGS, REPAS, RPE, STATUS, SIV, score, verdict, rpeCmp, rng, NSTAGE, NMET, parseDur, durShort, durLong, nightTotal, vfcAvg } from '../lib/rules.js';
 import { dayInsights } from '../lib/insights.js';
@@ -145,7 +147,7 @@ function Night({ k, ro }) {
 const LVC = { crit: 'var(--crit)', warn: 'var(--warn)', info: 'var(--accent)', good: 'var(--good)' };
 function Reading({ k }) {
   const r = dayInsights(k);
-  if (!r) return <section class="card"><h3 class="h3">Lecture du jour</h3><p class="small" style="margin:0">Remplis la forme du matin (et ton sommeil si tu l’as) : la séance s’ajuste ici, avec l’explication.</p></section>;
+  if (!r) return null;
   return (
     <section id="reading" class={'card reading ' + r.level}>
       <h3 class="h3">Lecture du jour</h3>
@@ -201,7 +203,7 @@ export function ItemRow({ k, b, it, e, color }) {
   return (
     <div class={'it' + (full ? ' done' : '')}>
       <button type="button" class="ck" aria-pressed={full ? 'true' : 'false'} aria-label={it.label} onClick={() => setDone(full ? 0 : it.n)}>✓</button>
-      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed || varied ? ' chg' : '')}>{varied ? setsText(sl, ld.u) : ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}{e.falls && e.falls[key] ? ' · ' + e.falls[key] + ' chute' + (e.falls[key] > 1 ? 's' : '') : ''}</em>}</b>{it.det && <span><Rich text={it.det} g /></span>}{it.warn && <span class="warn-l">{it.warn}</span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} />{it.id === 'ech' && <Warmup k={k} b={b} fold />}</div>
+      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed || varied ? ' chg' : '')}>{varied ? setsText(sl, ld.u) : ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}{e.falls && e.falls[key] ? ' · ' + e.falls[key] + ' chute' + (e.falls[key] > 1 ? 's' : '') : ''}</em>}</b>{it.det && <span><Rich text={it.det} g /></span>}{demoOf(it) && <a class="demo-l" href={demoOf(it)} target="_blank" rel="noopener noreferrer" onClick={ev => ev.stopPropagation()}>▶ Démo</a>}{it.adj && (it.adj.note || it.adj.n0 !== it.n) && <span class="adj-l">{it.adj.note || 'Adapté : ' + it.n + ' au lieu de ' + it.adj.n0}</span>}{it.warn && <span class="warn-l">{it.warn}</span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} />{it.id === 'ech' && <Warmup k={k} b={b} fold />}</div>
       {it.n > 1 && <div class="pips" role="group" aria-label={it.label + ' : ' + v + ' sur ' + it.n}>
         {Array.from({ length: it.n }, (_, i) => i + 1).map(i => <button type="button" class="pip" style={'--c:' + color} aria-pressed={i <= v ? 'true' : 'false'} aria-label={(it.unit || 'Série') + ' ' + i} onClick={() => setDone(v === i ? i - 1 : i)}>{i}</button>)}
       </div>}
@@ -216,7 +218,7 @@ function BlockState({ k, b, e, onStart, ro }) {
   const bs = blockState(e, b);
   if (b.movedFrom && !bs) return <p class="blk-st">Déplacé du {fmtShort(b.movedFrom).toLowerCase()}</p>;
   if (bs === 'moved') return <p class="blk-st">Déplacé au {fmtShort(e.moved[b.id].to).toLowerCase()}</p>;
-  if (bs === 'skip') return <p class="blk-st">Pas fait · {((SKIP.find(x => x[0] === e.skip[b.id]) || SKIP[4])[1]).toLowerCase()}</p>;
+  if (bs === 'skip') return <p class="blk-st">Pas fait · {(skipLabel(e.skip[b.id])).toLowerCase()}</p>;
   if (bs !== 'apart') return null;
   const p = apartOf(e, b.id), note = apartNote(k, b);
   if (p.endedAt) return <div class="blk-ap">
@@ -231,12 +233,24 @@ function BlockState({ k, b, e, onStart, ro }) {
 }
 function SessionCard({ k, onStart, onEdit, ro }) {
   const e = jget(k), bl = blocks(k), pr = progress(k), d = day(k) || {}, w = weekOf(k);
-  const [menuB, setMenuB] = useState(null);
-  const active = bl.some(b => b.kind !== 'rest' && !['apart', 'moved'].includes(blockState(e, b)));
+  const [menuB, setMenuB] = useState(null), [menuS, setMenuS] = useState(false);
+  const active = !e.cancel && bl.some(b => b.kind !== 'rest' && !['apart', 'moved', 'skip'].includes(blockState(e, b)));
+  const hasSes = bl.some(b => b.kind !== 'rest'), adj = adjSummary(k);
   return (
-    <section class="card">
-      <h3 class="h3">Séance du jour <em>{pr.total ? pr.done + '/' + pr.total + ' fait' : ''}{onEdit && <button class="btn ghost" style="min-height:28px;padding:0 0 0 10px;font-size:13px" onClick={() => onEdit(k)}>Modifier</button>}</em></h3>
+    <section class="card" id="session">
+      <h3 class="h3">Séance du jour <em>{pr.total ? pr.done + '/' + pr.total + ' fait' : ''}{onEdit && <button class="btn ghost" style="min-height:28px;padding:0 0 0 10px;font-size:13px" onClick={() => onEdit(k)}>Modifier</button>}{!ro && onStart && hasSes && <button type="button" class="ses-m" aria-label="Options de la séance" onClick={() => setMenuS(true)}>•••</button>}</em></h3>
       <div class="stack">
+        {e.cancel && <div class="adj-b off">
+          <b>{e.cancel.started ? 'Séance arrêtée' : 'Séance annulée'} · {skipLabel(e.cancel.r).toLowerCase()}</b>
+          {e.cancel.note && <span>« {e.cancel.note} »</span>}
+          {!ro && <button class="btn ghost" onClick={() => { restoreSession(k); toast('Séance rétablie'); }}>Rétablir la séance</button>}
+        </div>}
+        {adj && !e.cancel && <div class="adj-b">
+          <b>{adj.head}</b>
+          {adj.dropped.length > 0 && <span>Retiré : {adj.dropped.map(plainT).join(', ')}</span>}
+          {adj.tip && <span>{adj.tip}</span>}
+          {!ro && <button class="btn ghost" onClick={() => { clearAdjust(k); toast('Retour à la séance prévue'); }}>Revenir à la séance prévue</button>}
+        </div>}
         {d.title && <div><h4 class="ses-title"><Rich text={d.title} /></h4>{(d.duree || d.essais) && <p class="small" style="margin:2px 0 0">{[d.duree && d.duree !== '—' ? 'Durée ' + d.duree : null, d.essais && d.essais !== '—' ? 'Essais ' + d.essais : null].filter(Boolean).join(' · ')}</p>}</div>}
         <Goal k={k} />
         {w && w.why && <details class="fold why-f"><summary><span class="small" style="margin:0;font-weight:600;color:var(--accent)">Pourquoi cette semaine</span></summary><p class="small" style="color:var(--ink)"><Rich text={w.why} g /></p></details>}
@@ -268,6 +282,7 @@ function SessionCard({ k, onStart, onEdit, ro }) {
         {d.adapt && <details class="fold why-f"><summary><span class="small" style="margin:0;font-weight:600;color:var(--warn)">Si besoin d’adapter</span></summary><p class="small" style="color:var(--ink)"><Rich text={d.adapt} /></p></details>}
         {(e.endedAt || pr.done > 0) && <Bilan k={k} title="Bilan" />}
         {menuB && <BlockMenu k={k} b={menuB} onClose={() => setMenuB(null)} />}
+        {menuS && <SessionMenu k={k} onClose={() => setMenuS(false)} />}
         {active && onStart && !ro && <button class="btn big primary" onClick={() => onStart(k)}><Icon name="play" size={20} />{e.startedAt && !e.endedAt ? 'Reprendre la séance' : pr.done ? 'Continuer la séance' : 'Démarrer la séance'}</button>}
       </div>
     </section>
@@ -350,10 +365,22 @@ export function After({ k, ro }) {
   useEffect(() => () => clearTimeout(timer.current), []);
   const onNote = v => { setNote(v); clearTimeout(timer.current); timer.current = setTimeout(() => jset(k, { note: v || null }), 500); };
   const commitDur = () => { const n = dur === '' ? null : Math.max(0, Math.round(+dur)); jset(k, { duree: n === null || isNaN(n) ? null : n }); };
-  const d = parseInt(dur, 10);
+  const d = parseInt(dur, 10), pr = progress(k), today = todayKey();
+  const filled = !!e.status && typeof e.rpe === 'number';
+  const [open, setOpen] = useState(() => !filled && (!!e.startedAt || pr.done > 0 || (k < today && !!e.status)));
+  if (!open) {
+    const st = STATUS.find(x => x[0] === e.status), load = typeof e.rpe === 'number' && e.duree > 0 ? e.rpe * e.duree : null;
+    const parts = [st ? st[1] : null, typeof e.rpe === 'number' ? 'ressenti ' + e.rpe + '/10' : null, e.duree > 0 ? e.duree + ' min' : null, load ? load.toLocaleString('fr-FR') + ' UA' : null].filter(Boolean);
+    return <button type="button" id="after" class="card sum" onClick={() => setOpen(true)} aria-label="Ouvrir l’après-séance">
+      <span class="sum-k">Après la séance</span>
+      <span class="sum-v">{parts.length ? <span>{parts.join(' · ')}</span> : <span class="muted">{k > today ? 'À remplir après la séance' : k === today ? 'À remplir à la fin de ta séance' : 'Pas rempli'}</span>}</span>
+      {e.note && <span class="sum-f">« {e.note.length > 80 ? e.note.slice(0, 79) + '…' : e.note} »</span>}
+      <span class="sum-e">{ro ? 'Voir' : parts.length ? 'Modifier' : 'Remplir'}</span>
+    </button>;
+  }
   return (
-    <section class="card">
-      <h3 class="h3">Après la séance</h3>
+    <section class="card" id="after">
+      <h3 class="h3">Après la séance <em><button class="btn ghost" style="min-height:28px;padding:0;font-size:13px" onClick={() => setOpen(false)}>Replier</button></em></h3>
       <fieldset class="ro stack" disabled={ro}>
         <TextSeg value={e.status} onChange={v => jset(k, { status: v })} options={STATUS} label="Statut de la séance" />
         <div>
@@ -378,7 +405,7 @@ export function DayView({ k, onNav, onStart, onEdit, onOpenTest, noHeader, hero,
   const header = !noHeader && <DayHeader k={k} onNav={onNav} />;
   const morning = <Morning k={k} ro={ro} key={'m' + k} />, night = <Night k={k} ro={ro} key={'n' + k} />, reading = <Reading k={k} />;
   const session = <SessionCard k={k} onStart={onStart} onEdit={onEdit} ro={ro} />, tests = <TestsCard k={k} onOpenTest={onOpenTest} />;
-  const exchanges = <Exchanges k={k} key={'c' + k} />, after = <After k={k} ro={ro} />, nutri = <NutriDay k={k} key={'n' + k} />;
+  const exchanges = <Exchanges k={k} key={'c' + k} />, after = <After k={k} ro={ro} key={'a' + k} />, nutri = <NutriDay k={k} key={'n' + k} />;
   if (split) return (
     <div class="stack">
       {header}

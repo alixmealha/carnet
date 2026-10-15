@@ -7,6 +7,7 @@ import { climbLevel, oneRM, LIFT_OF_LIB } from './levels.js';
 import { libMatch, norm } from './library.js';
 import { bodyWeightAt } from './tests.js';
 import { mmss, fmtShort, addDays } from './dates.js';
+import { recordsOn } from './records.js';
 
 export const discOf = it => it.disc || (it.unit === 'Voie' ? 'voie' : 'bloc');
 const UNIT = { Bloc: 'bloc', Voie: 'voie', Essai: 'essai' };
@@ -72,6 +73,8 @@ export function sessionBilan(k, part) {
     }
   }
   const sb = strengthBilan(k, part); if (sb.length) out.push({ label: 'Muscu', lines: sb });
+  // records du jour (séance principale), en tête du bilan
+  if (!part) { const rec = recordsOn(k); if (rec.length) out.unshift({ label: rec.length > 1 ? 'Records' : 'Record', lines: rec.map(r => r.txt + ' (avant : ' + r.prev + ')'), rec: true }); }
   return out;
 }
 

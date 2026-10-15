@@ -71,16 +71,21 @@ export function dayLabel(k) {
 const STATUS = { faite: 'séance faite', adaptee: 'séance adaptée', sautee: 'séance sautée' };
 const cut = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
+const REASON = { fatigue: 'fatigue', malade: 'malade', gene: 'gêne ou douleur', temps: 'pas le temps', materiel: 'pas le matériel', autre: 'autre raison' };
 export function sessionMessage(name, uid, day, e) {
   const parts = [dayLabel(day)];
+  // séance annulée (ou arrêtée) depuis le menu « ••• » : la raison en premier
+  if (e.cancel && e.cancel.r) parts.push(REASON[e.cancel.r] || 'autre raison');
   const well = e.well ? Object.values(e.well).filter(v => typeof v === 'number') : [];
   if (well.length >= 3) parts.push('forme ' + well.reduce((a, b) => a + b, 0) + '/' + well.length * 5);
   if (typeof e.rpe === 'number') parts.push('ressenti ' + e.rpe + '/10');
   if (e.siv && typeof e.siv.i === 'number' && typeof e.siv.v === 'number') parts.push('I ' + e.siv.i + ' · V ' + e.siv.v);
   if (typeof e.duree === 'number' && e.duree > 0) parts.push(e.duree + ' min');
   let body = parts.join(' · ');
-  if (e.note) body += '\n« ' + cut(e.note, 110) + ' »';
-  return { title: name + ' · ' + (STATUS[e.status] || 'séance validée'), body, url: './?a=' + uid + '&d=' + day, tag: uid + ':j:' + day };
+  const note = e.cancel && e.cancel.note ? e.cancel.note : e.note;
+  if (note) body += '\n« ' + cut(note, 110) + ' »';
+  const title = e.cancel ? (e.cancel.started ? 'séance arrêtée' : 'séance annulée') : STATUS[e.status] || 'séance validée';
+  return { title: name + ' · ' + title, body, url: './?a=' + uid + '&d=' + day, tag: uid + ':j:' + day };
 }
 
 /* ---------- Accès à la base (clé service, côté serveur uniquement) ---------- */

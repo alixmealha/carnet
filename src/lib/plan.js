@@ -8,7 +8,47 @@ export const KIND_ORDER = ['grimpe', 'doigts', 'muscu', 'renfo', 'epaule', 'kine
 
 export const meta = () => get('plan');
 export const day = k => get('p:' + k) || null;
-export const blocks = k => { const d = day(k); return d && d.blocks ? d.blocks : []; };
+export const rawBlocks = k => { const d = day(k); return d && d.blocks ? d.blocks : []; };
+// Séance adaptée (moins de temps que prévu, ou allégée) : l'adaptation est gardée dans le journal du jour (adj)
+// et appliquée ici, pour que la fiche, le mode séance et le suivi voient la même séance. Le plan n'est pas modifié :
+// on revient à la séance prévue en retirant adj (et ça marche aussi quand le coach a verrouillé le plan).
+const _adjCache = new Map();
+export const blocks = k => {
+  const bl = rawBlocks(k), a = jget(k).adj;
+  if (!a || !a.items) return bl;
+  const c = _adjCache.get(k); if (c && c.bl === bl && c.a === a) return c.out;
+  const out = applyAdj(bl, a); _adjCache.set(k, { bl, a, out }); return out;
+};
+function adjItem(it, n, note) {
+  const c = Object.assign({}, it, { adj: { n0: it.n, note: note || null } });
+  if (n == null || n === it.n) return c;
+  c.n = n;
+  // « 20 blocs 6a » → « 12 blocs 6a »
+  const lead = String(it.n) + ' ';
+  if (typeof it.label === 'string' && it.label.startsWith(lead)) c.label = n + ' ' + it.label.slice(lead.length);
+  if (it.timer) c.timer = Object.assign({}, it.timer, it.timer.markEach === 'rep' ? { reps: n } : it.timer.sets ? { sets: n } : {});
+  if (Array.isArray(it.repsBySet)) c.repsBySet = it.repsBySet.slice(0, n);
+  return c;
+}
+function applyAdj(bl, a) {
+  const out = [];
+  for (const b of bl) {
+    const g = a.items['b:' + b.id];
+    if (g && g.drop) continue;
+    const items = [];
+    for (const it of b.items || []) {
+      const x = a.items[b.id + '.' + it.id];
+      if (x && x.drop) continue;
+      if (g && b.timer && it.id !== 'ech') { items.push(adjItem(it, g.n, null)); continue; }
+      items.push(x ? adjItem(it, x.n, x.note) : it);
+    }
+    if ((b.items || []).length && !items.length) continue;
+    const nb = Object.assign({}, b, { items });
+    if (g && b.timer && g.n != null) nb.timer = Object.assign({}, b.timer, { sets: g.n });
+    out.push(nb);
+  }
+  return out;
+}
 export const target = k => { const d = day(k); return d && d.target ? d.target : null; };
 export const kinds = k => new Set(blocks(k).map(b => b.kind));
 export const isRestDay = k => blocks(k).every(b => b.kind === 'rest');
@@ -34,7 +74,25 @@ export function progress(k, part) {
 }
 
 /* ---------- Bloc sorti de la séance : à un autre moment du jour, un autre jour, ou pas fait ---------- */
-export const SKIP = [['materiel', 'Pas le matériel'], ['temps', 'Pas le temps'], ['fatigue', 'Fatigue'], ['gene', 'Gêne ou douleur'], ['autre', 'Autre raison']];
+export const SKIP = [['fatigue', 'Fatigue'], ['malade', 'Malade'], ['gene', 'Gêne ou douleur'], ['temps', 'Pas le temps'], ['materiel', 'Pas le matériel'], ['autre', 'Autre raison']];
+export const skipLabel = v => (SKIP.find(x => x[0] === v) || SKIP[SKIP.length - 1])[1];
+// Annuler toute la séance (ou l'arrêter là si elle est commencée), avec la raison et un mot : le coach les voit
+export function cancelSession(k, r, note) {
+  const e = jget(k), skip = Object.assign({}, e.skip), ids = [];
+  for (const b of rawBlocks(k)) { if (b.kind === 'rest' || blockState(e, b)) continue; skip[b.id] = r; ids.push(b.id); }
+  const started = progress(k).done > 0 || Object.values(e.done || {}).some(v => v > 0);
+  const patch = { skip, status: started ? 'adaptee' : 'sautee', cancel: { r, note: note || null, at: Date.now(), ids, started } };
+  if (note && !e.note) patch.note = note;
+  jset(k, patch);
+}
+export function restoreSession(k) {
+  const e = jget(k), c = e.cancel; if (!c) return;
+  const skip = Object.assign({}, e.skip); for (const id of c.ids || []) if (skip[id] === c.r) delete skip[id];
+  const patch = { skip: Object.keys(skip).length ? skip : null, cancel: null };
+  if (e.status === (c.started ? 'adaptee' : 'sautee')) patch.status = null;
+  if (c.note && e.note === c.note) patch.note = null;
+  jset(k, patch);
+}
 export function blockState(e, b) {
   if (!e || !b) return null;
   if (e.apart && e.apart[b.id]) return 'apart';
@@ -216,6 +274,16 @@ export function newPlan() {
 }
 // Trace de modification : qui a touché la séance ou le plan, et quand (affichée à l'athlète et au coach)
 export const stamp = () => (cloud && links.me ? { uid: links.me, name: myProfile().name || '', at: Date.now() } : undefined);
+// Vidéos de démo des exercices (lien Instagram, TikTok, YouTube…), gardées dans le plan par nom d'exercice
+const dkey = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\[[a-z]+\]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+export const okUrl = u => /^https:\/\/[^\s]+\.[^\s]+$/i.test(String(u || '').trim());
+export function demoOf(it) { const m = meta(), d = m && m.demos; if (!d || !it) return null; return d[dkey(it.label)] || (it.lib && d['lib:' + it.lib]) || null; }
+export function setDemo(label, url, lib) {
+  const m = meta(); if (!m) return;
+  const demos = Object.assign({}, m.demos), k = dkey(label), u = String(url || '').trim();
+  if (okUrl(u)) { demos[k] = u; if (lib) demos['lib:' + lib] = u; } else { delete demos[k]; if (lib) delete demos['lib:' + lib]; }
+  savePlan(Object.assign({}, m, { demos }));
+}
 export function savePlan(m) {
   const ws = m.weeks.slice().sort((a, b) => a.start < b.start ? -1 : 1);
   put('plan', Object.assign({}, m, { weeks: ws, start: ws.length ? ws[0].start : m.start, end: ws.length ? ws[ws.length - 1].end : m.end, edited: stamp() }));

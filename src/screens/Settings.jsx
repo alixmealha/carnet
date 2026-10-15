@@ -65,8 +65,21 @@ function Notifications() {
         {st === 'on' ? <button class="btn" disabled={busy} onClick={off}>Désactiver sur cet appareil</button>
           : <button class="btn primary" disabled={busy || st === 'unsupported'} onClick={on}>Activer les notifications</button>}
       </div>
+      {st === 'on' && <Reminders athlete={!coachSide || hasCarnet()} coach={coachSide} />}
     </Sec>
   );
+}
+
+// Rappel du matin et bilan du dimanche : envoyés par la fonction « rappels » (toutes les 15 min) selon ces réglages
+function Reminders({ athlete, coach }) {
+  const s = settings(), rm = Object.assign({ on: false, at: '08:00' }, s.remind);
+  const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris'; } catch (_) { return 'Europe/Paris'; } };
+  const set = patch => setSettings(Object.assign({ tz: tz() }, patch));
+  return <div class="list" style="margin-top:12px">
+    {athlete && <Switch label="Rappel de la forme du matin" sub="Seulement si elle n’est pas encore remplie" on={rm.on} onChange={v => set({ remind: Object.assign({}, rm, { on: v }) })} />}
+    {athlete && rm.on && <label class="set"><span>Heure du rappel<small>À 15 minutes près</small></span><input type="time" class="in mono" style="width:auto;min-width:110px" step="900" value={rm.at} onChange={e => e.target.value && set({ remind: Object.assign({}, rm, { at: e.target.value }) })} /></label>}
+    <Switch label="Bilan de la semaine" sub={'Le dimanche à 19 h' + (coach ? (athlete ? ' : le tien et celui de tes athlètes' : ' : les séances de tes athlètes') : ' : séances, charge, records et semaine suivante')} on={s.weekly !== false} onChange={v => set({ weekly: v })} />
+  </div>;
 }
 
 /* ---------- Athlète : mon coach et codes de partage ---------- */

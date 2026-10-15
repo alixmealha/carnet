@@ -6,6 +6,7 @@ import { score, verdict, nightTotal, durLong, durShort, ZONES, RPE, STATUS } fro
 import { todayKey, addDays, rangeKeys, fmtShort, fmtDay, dom, MON_S, fmtNum, dow } from '../lib/dates.js';
 import { Chart, niceMax, linePath } from '../ui/charts.jsx';
 import { TextSeg, Fold, Src } from '../ui/kit.jsx';
+import { allRecords } from '../lib/records.js';
 import { weekInsights, dayLoad } from '../lib/insights.js';
 import { TestsView } from './Tests.jsx';
 import { climber } from '../lib/sports.js';
@@ -260,6 +261,23 @@ function Bilan() {
   );
 }
 
+/* ---------- Tes progrès : records récents, meilleures charges, cotations ---------- */
+function Progress() {
+  const R = allRecords(), recent = R.list.filter(x => x.k >= addDays(todayKey(), -60)).reverse();
+  if (!R.best.length && !R.grades.length) return null;
+  const best = R.best.slice().sort((a, b) => (a.k < b.k ? 1 : -1)).slice(0, 6);
+  return (
+    <Card id="progress" title="Tes progrès" open summary={recent.length ? recent.length + ' record' + (recent.length > 1 ? 's' : '') + ' en 2 mois · le dernier : ' + fmtShort(recent[0].k).toLowerCase() : 'Meilleures charges et cotations'}>
+      {recent.length > 0 && <div class="recs">{recent.slice(0, 5).map(r => <div class="rec-i"><b>{r.txt}</b><span>{fmtShort(r.k)} · avant : {r.prev}</span></div>)}</div>}
+      <div class="tw"><table class="t"><tbody>
+        {R.grades.map(g => <tr><td>{g.disc === 'bloc' ? 'Bloc le plus dur' : 'Voie la plus dure'}</td><td class="num">{g.g}</td><td class="muted">{fmtDay(g.k)}</td></tr>)}
+        {best.map(b => <tr><td>{b.name}</td><td class="num">{(b.u === '+kg' && b.v >= 0 ? '+' : '') + fmtNum(b.v)} kg{b.reps ? ' × ' + b.reps : ''}</td><td class="muted">{fmtDay(b.k)}</td></tr>)}
+      </tbody></table></div>
+      <p class="small">Un record compte à partir de la deuxième séance d’un exercice. Cotations : enchaînées sans chute en mode blocs.</p>
+    </Card>
+  );
+}
+
 export function Stats({ onOpen, onOpenTest, testFocus }) {
   const ws = weeksStats(), ci = currentWeekIndex(ws), m = meta();
   const [view, setView] = useState(() => { try { return localStorage.getItem('carnet-stats-view') || 'dash'; } catch (_) { return 'dash'; } });
@@ -272,6 +290,7 @@ export function Stats({ onOpen, onOpenTest, testFocus }) {
         <div class="stack">
           <Tiles ws={ws} />
           <div class="stack dash-cols">
+          <Progress />
           <Bilan />
           <Alerts ws={ws} onOpen={onOpen} />
           {climber() && <PlanVsReal ws={ws} ci={ci} />}
