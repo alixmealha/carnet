@@ -1,0 +1,78 @@
+name: iOS
+# Appli iPhone : génère le projet Xcode (XcodeGen), compile pour le simulateur, prend des captures d'écran
+# (mode démo, clair et sombre) et fournit le projet généré. Aucune signature ni secret ici.
+on:
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+    inputs:
+      screens:
+        description: 'Écrans à capturer (séparés par des espaces)'
+        required: false
+        default: ''
+concurrency:
+  group: ios
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Versions
+        run: |
+          xcodebuild -version
+          sw_vers
+      - name: Projet (XcodeGen)
+        run: |
+          brew install xcodegen >/dev/null
+          cd ios && xcodegen generate
+      - name: Compilation (simulateur)
+        run: |
+          set -o pipefail
+          cd ios
+          xcodebuild -project Alipto.xcodeproj -scheme Alipto -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build > build.log 2>&1 || { grep -E "error:|warning: .*Swift|fatal" build.log | head -80; tail -40 build.log; exit 1; }
+          grep -E "warning:" build.log | grep -v "appintents" | sort -u | head -40 || true
+      - name: Captures
+        run: |
+          cd ios
+          mkdir -p shots
+          DEV=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          c=[x for r,l in d.items() if 'iOS' in r for x in l if x['name'].startswith('iPhone')]
+          pref=[x for x in c if x['name'] in ('iPhone 16 Pro','iPhone 16','iPhone 17 Pro','iPhone 17')]
+          print((pref or c)[0]['udid'])")
+          echo "Appareil : $DEV"
+          xcrun simctl boot "$DEV" || true
+          xcrun simctl bootstatus "$DEV" -b
+          xcrun simctl status_bar "$DEV" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
+          APP=$(find build/Build/Products -name "Alipto.app" -maxdepth 3 | head -1)
+          xcrun simctl install "$DEV" "$APP"
+          SCREENS="${{ github.event.inputs.screens }}"
+          [ -z "$SCREENS" ] && SCREENS=$(cat shots.txt 2>/dev/null || echo "today")
+          for scheme in light dark; do
+            xcrun simctl ui "$DEV" appearance $scheme
+            for s in $SCREENS; do
+              xcrun simctl launch --terminate-running-process "$DEV" app.alipto.Alipto -demo 1 -screen "$s" >/dev/null
+              sleep 5
+              xcrun simctl io "$DEV" screenshot "shots/$scheme-$s.png" >/dev/null 2>&1
+            done
+          done
+          xcrun simctl spawn "$DEV" log show --last 3m --predicate 'process == "Alipto"' --style compact 2>/dev/null | grep -iE "fault|error|alipto:" | tail -40 > shots/log.txt || true
+          ls shots
+      - name: Projet généré
+        if: always()
+        run: cd ios && zip -qr Alipto-xcodeproj.zip Alipto.xcodeproj Alipto/Info.plist || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios
+          path: |
+            ios/shots
+            ios/build.log
+            ios/Alipto-xcodeproj.zip
+          retention-days: 7
