@@ -11,6 +11,8 @@ on:
         description: 'Écrans à capturer (séparés par des espaces)'
         required: false
         default: ''
+permissions:
+  contents: write
 concurrency:
   group: ios
   cancel-in-progress: true
@@ -34,8 +36,10 @@ jobs:
           cd ios
           xcodebuild -project Alipto.xcodeproj -scheme Alipto -configuration Debug -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build > build.log 2>&1 || { grep -E "error:|warning: .*Swift|fatal" build.log | head -80; tail -40 build.log; exit 1; }
-          grep -E "warning:" build.log | grep -v "appintents" | sort -u | head -40 || true
+            CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=NO build > build.log 2>&1 || BUILD_FAILED=1
+          grep -E "error:|warning:" build.log | grep -v "appintents" | sort -u > problems.txt || true
+          head -100 problems.txt
+          [ -z "$BUILD_FAILED" ] || exit 1
       - name: Captures
         run: |
           cd ios
@@ -67,12 +71,17 @@ jobs:
       - name: Projet généré
         if: always()
         run: cd ios && zip -qr Alipto-xcodeproj.zip Alipto.xcodeproj Alipto/Info.plist || true
-      - uses: actions/upload-artifact@v4
+      # Résultats (erreurs, captures, projet) sur la branche ios-ci : lisibles avec git, sans téléchargement d'artefact
+      - name: Résultats → branche ios-ci
         if: always()
-        with:
-          name: ios
-          path: |
-            ios/shots
-            ios/build.log
-            ios/Alipto-xcodeproj.zip
-          retention-days: 7
+        run: |
+          mkdir -p ci-out
+          cp -r ios/shots ci-out/ 2>/dev/null || true
+          cp ios/problems.txt ci-out/ 2>/dev/null || true
+          tail -300 ios/build.log > ci-out/build-tail.log 2>/dev/null || true
+          cp ios/Alipto-xcodeproj.zip ci-out/ 2>/dev/null || true
+          echo "${{ github.sha }} ${{ job.status }} $(date -u +%FT%TZ)" > ci-out/STATUS
+          cd ci-out
+          git init -q && git checkout -q -b ios-ci && git add -A
+          git -c user.name=ci -c user.email=ci@users.noreply.github.com commit -qm "CI ${{ github.sha }}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ios-ci
