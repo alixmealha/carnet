@@ -45,6 +45,11 @@ struct LevelsForm: View {
                     }
                 }
             }
+            if let hx = f["hyrox"], !hx.isNull {
+                LevelGroup(title: "Hyrox", sub: nil, note: "Charges officielles des stations (traîneau compris), selon ta catégorie et le sexe indiqué dans ton profil.") {
+                    HyroxField(x: hx) { v in set("hdiv", v.map { JSON.str($0) }, nil) }
+                }
+            }
             if !editable {
                 Text("Repères de l’athlète : lui seul peut les modifier.").font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
             }
@@ -128,6 +133,29 @@ private struct LevelNum: View {
             NumberField(label: label, value: value, integer: integer, placeholder: "—", onCommit: onCommit)
             if value == nil && !hint.isEmpty {
                 Text(hint).font(Typo.sans(11.5)).foregroundStyle(Palette.muted).lineLimit(2)
+            }
+        }
+    }
+}
+
+private struct HyroxField: View {
+    let x: JSON
+    let onPick: (String?) -> Void
+    var body: some View {
+        let v = x["v"]?.string ?? "open"
+        VStack(alignment: .leading, spacing: 5) {
+            Text(x["l"]?.string ?? "").font(Typo.sans(12.5, .medium)).foregroundStyle(Palette.muted)
+            Menu {
+                Button { onPick(nil) } label: { if v == "open" { Label("Open", systemImage: "checkmark") } else { Text("Open") } }
+                Button { onPick("pro") } label: { if v == "pro" { Label("Pro", systemImage: "checkmark") } else { Text("Pro") } }
+            } label: {
+                HStack {
+                    Text(v == "pro" ? "Pro" : "Open").font(Typo.mono(16, .medium)).foregroundStyle(Palette.ink)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 11, weight: .semibold)).foregroundStyle(Palette.muted)
+                }
+                .padding(.horizontal, 12).frame(minHeight: 46)
+                .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
             }
         }
     }

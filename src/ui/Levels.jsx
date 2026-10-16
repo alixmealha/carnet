@@ -2,7 +2,7 @@
 import { useState } from 'preact/hooks';
 import { isSelf } from '../lib/store.js';
 import { SCALE } from '../lib/grades.js';
-import { CLIMB_KEYS, LIFTS, levelsDoc, setLevel, oneRM, climbLevel, vmaOf, fcmaxOf, srcTxt, csOf, vo2Of, ftpOf, runProfile } from '../lib/levels.js';
+import { CLIMB_KEYS, LIFTS, levelsDoc, setLevel, oneRM, climbLevel, vmaOf, fcmaxOf, srcTxt, csOf, cssOf, swimPace, vo2Of, ftpOf, runProfile } from '../lib/levels.js';
 import { sportsOf } from '../lib/sports.js';
 import { Gloss } from './Gloss.jsx';
 
@@ -16,7 +16,8 @@ export function levelGroups(sports, need) {
   return {
     climb: need ? need.climb : all || s.includes('escalade'),
     lifts: need ? need.lifts : (all || s.some(x => ['muscu', 'hyrox', 'combat', 'collectif', 'escalade'].includes(x))) ? (s.length && s.every(x => x === 'escalade') ? ['pull', 'dips'] : Object.keys(LIFTS)) : [],
-    cardio: need ? need.cardio : all || s.some(x => ['course', 'trail', 'velo', 'natation', 'hyrox', 'collectif', 'combat'].includes(x))
+    cardio: need ? need.cardio : all || s.some(x => ['course', 'trail', 'velo', 'natation', 'hyrox', 'collectif', 'combat'].includes(x)),
+    hyrox: need ? !!need.hyrox : all || s.includes('hyrox')
   };
 }
 
@@ -26,7 +27,7 @@ export function LevelsForm({ need, lv: lvIn, onSet }) {
   const lv = lvIn || levelsDoc();
   const g = levelGroups(sportsOf(), need);
   const set = (key, val, sub) => { if (onSet) onSet(key, val, sub); else setLevel(key, val, sub); };
-  const cl = climbLevel(null, lvIn), vma = vmaOf(null, lvIn), fc = fcmaxOf(null, lvIn), cs = csOf(), vo2 = vo2Of(null, lvIn), ftp = ftpOf(null, lvIn), rp = runProfile(null, lvIn);
+  const cl = climbLevel(null, lvIn), vma = vmaOf(null, lvIn), fc = fcmaxOf(null, lvIn), cs = csOf(), css = cssOf(), vo2 = vo2Of(null, lvIn), ftp = ftpOf(null, lvIn), rp = runProfile(null, lvIn);
   return <div class="stack" style="gap:14px">
     {g.climb && <div>
       <p class="sub-lbl" style="margin:0 0 6px">Escalade <small>bloc en Fontainebleau, voie en cotation française</small></p>
@@ -50,8 +51,15 @@ export function LevelsForm({ need, lv: lvIn, onSet }) {
         <NumField label="FC max (bpm)" value={lv.fcmax} int hint={fc && fc.src !== 'déclarée' ? fc.v + ' · ' + fc.src : ''} onCommit={v => set('fcmax', v)} />
         <NumField label="FTP vélo (W)" value={lv.ftp} int hint={ftp && ftp.src !== 'déclarée' ? ftp.v + ' W · ' + srcTxt(ftp) : ''} onCommit={v => set('ftp', v)} />
       </div>
-      <p class="small" style="margin:6px 0 0">{cs ? 'Vitesse critique ' + fmt(cs.v) + ' km/h · D′ ≈ ' + cs.dp + ' m (test du ' + srcTxt(cs).replace('test le ', '') + '). ' : 'Vitesse critique : passe le test 3 min + 12 min dans Suivi → Tests. '}{rp ? rp.txt : ''}</p>
+      <p class="small" style="margin:6px 0 0">{cs ? 'Vitesse critique ' + fmt(cs.v) + ' km/h · D′ ≈ ' + cs.dp + ' m (test du ' + srcTxt(cs).replace('test le ', '') + '). ' : 'Vitesse critique : passe le test 3 min + 12 min dans Suivi → Tests. '}{css ? 'CSS natation ' + fmt(Math.round(css.ms * 100) / 100) + ' m/s (' + swimPace(css, 100) + ' /100 m). ' : ''}{rp ? rp.txt : ''}</p>
       <p class="small" style="margin:6px 0 0"><Gloss text="La VMA donne tes allures (endurance, 30/30, 3 min), la vitesse critique celles du seuil ; la FTP donne tes watts à vélo ; la FC max, tes zones de fréquence cardiaque." /></p>
+    </div>}
+    {g.hyrox && <div>
+      <p class="sub-lbl" style="margin:0 0 6px">Hyrox</p>
+      <label class="fld">Catégorie (les charges des stations en découlent)
+        <select class="in" value={lv.hdiv || 'open'} onChange={e => set('hdiv', e.target.value === 'open' ? null : e.target.value)}>
+          <option value="open">Open</option><option value="pro">Pro</option></select></label>
+      <p class="small" style="margin:6px 0 0"><Gloss text="Charges officielles (traîneau compris), selon ta catégorie et le sexe indiqué dans ton profil." /></p>
     </div>}
     {!self && !onSet && <p class="small">Repères de l’athlète : lui seul peut les modifier.</p>}
   </div>;

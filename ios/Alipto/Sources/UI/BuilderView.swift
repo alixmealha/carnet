@@ -177,7 +177,15 @@ private struct StepDots: View {
 private func goalsList(_ cfg: JSON, climbOnlyIfEmpty: Bool = true) -> [JSON] {
     let sp = cfg["sports"]?.array.compactMap { $0.string } ?? []
     let cl = sp.contains("escalade") || (climbOnlyIfEmpty && sp.isEmpty)
-    return Core.shared.constant("library.GOALS").array.filter { cl || $0["sp"]?.string != "escalade" }
+    let hx = sp.contains("hyrox") || (climbOnlyIfEmpty && sp.isEmpty)
+    return Core.shared.constant("library.GOALS").array.filter { g in
+        if g["hidden"]?.truthy == true { return false }
+        switch g["sp"]?.string {
+        case "escalade"?: return cl
+        case "hyrox"?: return hx
+        default: return true
+        }
+    }
 }
 private func goalById(_ id: String?) -> JSON? {
     guard let id else { return nil }

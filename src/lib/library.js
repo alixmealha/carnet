@@ -113,6 +113,32 @@ export const LIB = [
   E('volume', 'Volume de voies faciles', 'grimpe', { q: ['aero', 'conti', 'tech'], sp: ['escalade'], eq: ['salle-esc'], t: 'essai', ld: 'bw', pat: 'climb-aero', c: 'Beaucoup de voies 2 à 3 niveaux sous ton max, en soignant les placements.' }),
   E('technique', 'Technique', 'grimpe', { q: ['tech'], sp: ['escalade'], eq: ['salle-esc', 'pan'], t: 'essai', ld: 'bw', pat: 'climb-tech', c: 'Un thème par séance : pieds précis, lecture, chutes, dynamique.' }),
   E('blocage', 'Blocages bras à 90°', 'muscu', { q: ['force'], sp: ['escalade'], g: ['tirage'], eq: ['traction'], t: 'iso', hold: '5-10 s', ld: 'bw', lvl: 2, pat: 'pull-iso', c: 'Coude à 90°, 5 à 10 s, une ou deux mains selon le niveau.' }),
+  // ---- Course : intervalles (Helgerud 2007, Gist 2014)
+  E('run-1515', 'Course 15/15', 'cardio', { q: ['aero'], sp: ['course', 'trail', 'hyrox', 'collectif'], g: ['cardio'], eq: ['exterieur'], t: 'int', ld: 'bw', pat: 'run-vo2', c: '15 s vite (90-95 % de la FC max), 15 s de trot lent, en séries de 10 à 14 répétitions.', src: ['helgerud2007'] }),
+  E('run-4x4', 'Course 4 × 4 min', 'cardio', { q: ['aero'], sp: ['course', 'trail', 'hyrox', 'collectif'], g: ['cardio'], eq: ['exterieur'], t: 'int', ld: 'bw', pat: 'run-vo2', c: '4 min à 90-95 % de la FC max, 3 min de trot lent (environ 70 %).', src: ['helgerud2007'] }),
+  E('sprint-30s', 'Sprints de 30 s', 'cardio', { q: ['aero', 'endu_f'], g: ['cardio'], eq: ['exterieur', 'velo'], t: 'int', ld: 'bw', lvl: 2, pat: 'sprint-30', c: '4 à 6 sprints de 30 s à fond, environ 4 min de récupération facile.', src: ['gist2014'] }),
+  // ---- Vélo : 30/15 (Rønnestad 2015), seuil
+  E('velo-3015', 'Vélo 30/15', 'velo', { q: ['aero'], sp: ['velo'], g: ['cardio'], eq: ['velo'], t: 'int', ld: 'bw', lvl: 2, pat: 'bike-vo2', c: '30 s très fort, 15 s facile, 13 répétitions par série, 2 à 3 séries.', src: ['ronnestad2015'] }),
+  E('velo-z4', 'Vélo au seuil', 'velo', { q: ['aero'], sp: ['velo'], g: ['cardio'], eq: ['velo'], t: 'int', ld: 'bw', pat: 'bike-thr', c: '2 × 20 min en zone 4, soit 91 à 105 % de la FTP, 5 min faciles entre les blocs.' }),
+  // ---- Natation : CSS, allure de course, volume réduit
+  E('nage-css', 'Natation au seuil CSS', 'velo', { q: ['aero', 'endu_f'], sp: ['natation'], g: ['cardio'], eq: ['piscine'], t: 'int', ld: 'bw', pat: 'swim-css', c: '100 m à l’allure de ta vitesse critique (CSS), départ fixe, environ 15 s de repos.', src: ['wakayoshi1992'] }),
+  E('nage-usrpt', 'Natation ultra-court à l’allure de course', 'velo', { q: ['aero', 'endu_f'], sp: ['natation'], g: ['cardio'], eq: ['piscine'], t: 'int', ld: 'bw', lvl: 2, pat: 'swim-usrpt', c: '25 m à l’allure de ton record sur 100 m, 35 s de récupération.', src: ['williamson2020'] }),
+  E('nage-sup', 'Natation supramaximale', 'velo', { q: ['endu_f', 'vit'], sp: ['natation'], g: ['cardio'], eq: ['piscine'], t: 'int', ld: 'bw', lvl: 2, pat: 'swim-sup', c: '25 m plus vite que ton allure de course, 1 min 30 de récupération.', src: ['johansen2010'] }),
+  // ---- Hyrox : stations aux charges de la catégorie
+  E('hx-run', 'Course 1 km Hyrox', 'cardio', { q: ['aero'], sp: ['hyrox'], g: ['cardio'], eq: ['exterieur'], t: 'cont', ld: 'bw', pat: 'hx-run', c: '1 km à l’allure de course visée, enchaîné avec la station.', src: ['brandt2025'] }),
+  E('hx-ski', 'SkiErg Hyrox', 'velo', { q: ['aero', 'endu_f'], sp: ['hyrox'], g: ['cardio'], eq: ['machines'], t: 'cont', ld: 'bw', pat: 'hx-ski', c: '1 000 m en course ; tirage avec le dos et les jambes, pas seulement les bras.' }),
+  E('hx-push', 'Poussée de traîneau', 'muscu', { q: ['endu_f', 'force'], sp: ['hyrox'], g: ['jambes'], eq: ['machines', 'salle'], t: 'reps', ld: 'kg', pat: 'hx-push', c: '50 m en course ; buste incliné, petits pas rapides, bras tendus.' }),
+  E('hx-pull', 'Tirage de traîneau', 'muscu', { q: ['endu_f', 'force'], sp: ['hyrox'], g: ['dos'], eq: ['machines', 'salle'], t: 'reps', ld: 'kg', pat: 'hx-pull', c: '50 m en course ; recule en tirant main sur main, dos gainé.' }),
+  E('hx-burpee', 'Burpees sauts en longueur', 'muscu', { q: ['endu_f'], sp: ['hyrox'], g: ['cardio'], eq: ['rien'], t: 'reps', ld: 'bw', pat: 'hx-burpee', c: '80 m en course : burpee, puis saut en longueur, on enchaîne.' }),
+  E('hx-row', 'Rameur Hyrox', 'velo', { q: ['aero', 'endu_f'], sp: ['hyrox'], g: ['cardio'], eq: ['machines'], t: 'cont', ld: 'bw', pat: 'hx-row', c: '1 000 m en course ; allure régulière, jambes puis dos puis bras.' }),
+  E('hx-farmer', 'Farmer’s carry', 'muscu', { q: ['endu_f', 'force'], sp: ['hyrox'], g: ['dos'], eq: ['halteres'], t: 'reps', ld: 'kg', pat: 'hx-farmer', c: '200 m en course ; deux charges, épaules basses, pas courts et rapides.' }),
+  E('hx-lunge', 'Fentes avec sac', 'muscu', { q: ['endu_f'], sp: ['hyrox'], g: ['jambes'], eq: ['halteres', 'salle'], t: 'reps', ld: 'kg', pat: 'hx-lunge', c: '100 m en course ; sac sur les épaules, genou arrière qui touche le sol.' }),
+  E('hx-wall', 'Wall balls', 'muscu', { q: ['endu_f'], sp: ['hyrox'], g: ['jambes'], eq: ['halteres', 'salle'], t: 'reps', ld: 'kg', pat: 'hx-wall', c: '100 répétitions en course ; squat complet, lancer à la cible sans pause longue.' }),
+  // ---- Doigts : protocoles à un pourcentage du max (Devise 2022)
+  E('hang-1main', 'Suspensions une main 6 s', 'doigts', { q: ['force', 'doigts'], sp: ['escalade'], g: ['doigts'], eq: ['poutre'], t: 'hang', ld: '+kg', lvl: 3, heavy: true, u18: false, pat: 'finger-max', c: '6 suspensions de 6 s par main, mains alternées, à 100 % de ta force max, réglette de 12 mm.', src: ['devise2022'] }),
+  E('hang-106', 'Suspensions 10/6', 'doigts', { q: ['endu_f', 'force', 'doigts'], sp: ['escalade'], g: ['doigts'], eq: ['poutre'], t: 'hang', ld: '+kg', lvl: 2, u18: false, pat: 'finger-endu', c: '10 s suspendu, 6 s de pause, à 60 ou 80 % de ta force max.', src: ['devise2022'] }),
+  E('hang-bfr', 'Suspensions avec brassards', 'doigts', { q: ['endu_f', 'prev'], sp: ['escalade'], g: ['doigts'], eq: ['poutre', 'bfr'], t: 'hang', ld: '+kg', lvl: 2, u18: false, pat: 'finger-endu', c: '7 s / 3 s pendant 1 min à 30 % de la force max, brassard serré à 40-80 % de la pression qui bloque le sang.', src: ['patterson2019'] }),
+  E('ext-doigts', 'Extension des doigts à l’élastique', 'renfo', { q: ['prev'], sp: ['escalade'], eq: ['elastique'], pat: 'avantbras', c: 'Doigts en extension contre un élastique, charge légère à modérée, 2 séances par semaine.' }),
   // ---- Mobilité
   E('mob-hanches', 'Mobilité des hanches', 'recup', { q: ['mobi'], t: 'mob', ld: 'bw', pat: 'mobi', c: '90/90, fente basse, papillon : 1 min par position.' }),
   E('mob-epaules', 'Mobilité des épaules', 'recup', { q: ['mobi'], t: 'mob', ld: 'bw', pat: 'mobi', c: 'Passages de bâton, ouvertures thoraciques au sol.' }),
@@ -145,10 +171,13 @@ export const GOALS = [
   { id: 'doigts', l: 'Force des doigts', d: 'Tenir des prises plus petites', sys: 'neuro', sp: 'escalade' },
   { id: 'bloc', l: 'Puissance en bloc', d: 'Passer les mouvements durs', sys: 'alac', sp: 'escalade' },
   { id: 'resist', l: 'Résistance', d: 'Ne plus « bouteiller » dans les voies', sys: 'lact', sp: 'escalade' },
-  { id: 'conti', l: 'Continuité', d: 'Grimper longtemps sans fatigue', sys: 'aero', sp: 'escalade' },
+  { id: 'conti', l: 'Continuité', d: 'Grimper longtemps sans fatigue', sys: 'aero', sp: 'escalade', hidden: true },
   { id: 'compet', l: 'Compétition de bloc', d: 'Passer des blocs nouveaux, vite et sous pression', sys: 'alac', sp: 'escalade' },
+  { id: 'hyrox', l: 'Hyrox', d: 'Courir 8 × 1 km et enchaîner les 8 stations', sys: 'aero', sp: 'hyrox' },
   { id: 'prev', l: 'Prévention', d: 'Se blesser moins : épaules, doigts, dos, genoux', sys: 'prev' }
 ];
+// Objectifs proposés : sans ceux masqués (continuité retirée), ceux d'escalade et d'Hyrox selon les sports
+export const goalsFor = (cl, hx) => GOALS.filter(g => !g.hidden && (g.sp === 'escalade' ? cl : g.sp === 'hyrox' ? hx : true));
 export const GOAL_BY_ID = Object.fromEntries(GOALS.map(g => [g.id, g]));
 export const SYSTEMS = {
   neuro: { l: 'Force neuromusculaire', d: 'Charges lourdes (environ 80 % du max et plus), 1 à 6 répétitions, 2 à 5 min de récupération : le système nerveux apprend à recruter plus de fibres.', src: ['acsm2009', 'nsca2016'] },
@@ -166,7 +195,7 @@ export function quiz(cl) {
       { id: 'force', l: cl ? 'Les prises sont trop petites ou les mouvements trop durs, même frais' : 'La force : charges lourdes, duels, contacts', w: cl ? { doigts: 3, bloc: 1 } : { force: 3, puiss: 1 } },
       { id: 'expl', l: cl ? 'Il manque de l’explosivité : jetés, mouvements dynamiques' : 'L’explosivité : sauts, démarrages, lancers', w: cl ? { bloc: 3, puiss: 1 } : { puiss: 3, vit: 1 } },
       { id: 'lact', l: cl ? 'Les avant-bras « bouteillent » au bout de 20 à 40 mouvements' : 'Ça brûle et je lâche après 30 s à 2 min d’effort intense', w: cl ? { resist: 3 } : { endu_f: 3 } },
-      { id: 'aero', l: cl ? 'Je fatigue sur les longues voies ou les longues séances' : 'Je m’essouffle ou je ralentis quand ça dure', w: cl ? { conti: 3, aero: 1 } : { aero: 3 } },
+      { id: 'aero', l: cl ? 'Je fatigue sur les longues voies ou les longues séances' : 'Je m’essouffle ou je ralentis quand ça dure', w: cl ? { resist: 2, aero: 1 } : { aero: 3 } },
       { id: 'vit', l: 'La vitesse : les premiers mètres, les sprints répétés', w: { vit: 3, puiss: 1 }, hide: cl },
       { id: 'hyper', l: 'Je veux surtout prendre du muscle', w: { hyper: 3 } },
       { id: 'blesse', l: 'Je me blesse souvent ou j’ai des douleurs qui reviennent', w: { prev: 3 } }
@@ -174,7 +203,7 @@ export function quiz(cl) {
     { id: 'duree', q: 'L’effort le plus important de ton sport dure…', opts: [
       { id: 'court', l: 'Moins de 10 s (un mouvement, un sprint, un saut)', w: { force: 1, puiss: 1, vit: 1, doigts: 1, bloc: 1 } },
       { id: 'moyen', l: 'De 20 s à 2 min', w: { endu_f: 1, resist: 1 } },
-      { id: 'long', l: 'Plusieurs minutes ou plus', w: { aero: 1, conti: 1 } },
+      { id: 'long', l: 'Plusieurs minutes ou plus', w: { aero: 1, resist: 1 } },
       { id: 'mixte', l: 'Un peu de tout', w: {} }
     ] },
     { id: 'pref', q: 'Ce qui te motive le plus en ce moment…', opts: [
@@ -187,6 +216,6 @@ export function quiz(cl) {
 export function quizResult(answers, cl) {
   const sc = {};
   for (const q of quiz(cl)) { const o = q.opts.find(x => x.id === answers[q.id]); if (o) for (const [g, v] of Object.entries(o.w)) sc[g] = (sc[g] || 0) + v; }
-  const ok = GOALS.filter(g => cl || g.sp !== 'escalade').map(g => g.id);
+  const ok = GOALS.filter(g => !g.hidden && g.sp !== 'hyrox' && (cl || g.sp !== 'escalade')).map(g => g.id);
   return Object.entries(sc).filter(([g]) => ok.includes(g)).sort((a, b) => b[1] - a[1]).map(x => x[0]);
 }

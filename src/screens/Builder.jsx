@@ -3,7 +3,7 @@ import { useMemo, useState } from 'preact/hooks';
 import { getSubject, profileOf, isSelf, nameOf, getFor, putFor, SELF, links } from '../lib/store.js';
 import { uid } from '../lib/plan.js';
 import { sportsOf } from '../lib/sports.js';
-import { GOALS, GOAL_BY_ID, SYSTEMS, EQUIP, LIB_BY_ID, quiz, quizResult } from '../lib/library.js';
+import { GOALS, goalsFor, GOAL_BY_ID, SYSTEMS, EQUIP, LIB_BY_ID, quiz, quizResult } from '../lib/library.js';
 import { generate, writeProgram, conflicts, LEVELS, DURS, nextMonday, alternatives, groupsTxt, sessionSummary, SESSION_LBL, FORMATS, fmtFamily, fmtOf, fmtReco, weekPlanTypes, buildSession } from '../lib/builder.js';
 import { LevelsForm } from '../ui/Levels.jsx';
 import { missingFor, LVL_LBL } from '../lib/needs.js';
@@ -33,7 +33,7 @@ function initial() {
   const eq = [...new Set(sp.flatMap(s => DEFAULT_EQ[s] || []))];
   return Object.assign({ goal: null, goal2: null, days: [0, 2, 4], fixed: [], fixedLbl: '', dur: 60, lvl: 2, equip: eq, weeks: 8, start: nextMonday(), event: null, eventLbl: '' },
     saved ? { days: saved.days, fixed: saved.fixed || [], fixedLbl: saved.fixedLbl || '', dur: saved.dur, lvl: saved.lvl, equip: saved.equip, weeks: saved.weeks } : {},
-    { sports: sp, u18: !!p.under18, swap: {}, fmt: (saved && saved.fmt) || {} },
+    { sports: sp, sex: p.sex, u18: !!p.under18, swap: {}, fmt: (saved && saved.fmt) || {} },
     // coach qui prépare le programme d'un athlète : repères de l'athlète, complétables pour ce programme seulement
     isSelf() ? {} : { lv: clone(levelsDoc(o)) });
 }
@@ -48,7 +48,7 @@ function DayChips({ value, onChange, disabled }) {
 /* ---------- Étape : objectif ---------- */
 function GoalStep({ cfg, set, onQuiz, onModel }) {
   const cl = (cfg.sports || []).includes('escalade') || !(cfg.sports || []).length;
-  const list = GOALS.filter(g => cl || g.sp !== 'escalade'), ms = models();
+  const hx = (cfg.sports || []).includes('hyrox') || !(cfg.sports || []).length, list = goalsFor(cl, hx), ms = models();
   return <div class="stack">
     {ms.length > 0 && <div><p class="sub-lbl" style="margin-top:0">Mes modèles</p>
       <div class="list">{ms.map(m => <div class="li noarrow"><button type="button" class="li-in" onClick={() => onModel(m)}><span style="min-width:0">{m.name}<small>{GOAL_BY_ID[m.cfg.goal].l}{m.cfg.goal2 ? ' + ' + GOAL_BY_ID[m.cfg.goal2].l.toLowerCase() : ''} · {m.cfg.days.length} j/sem. · {m.cfg.dur} min</small></span></button>
@@ -107,18 +107,19 @@ function DaysStep({ cfg, set }) {
 }
 
 /* ---------- Étape : niveau et formats ---------- */
-const FAM_LBL = { int: 'Séance d’intervalles (course)', intV: 'Séance d’intervalles (vélo)', conti: 'Séance de volume', resist: 'Séance de résistance', bloc: 'Séance de puissance', doigts: 'Séance de doigts', compet: 'Séance de compétition', force: 'Muscu · force', hyper: 'Muscu · masse', puiss: 'Muscu · puissance' };
+const FAM_LBL = { int: 'Séance d’intervalles (course)', intV: 'Séance d’intervalles (vélo)', intN: 'Séance d’intervalles (natation)', conti: 'Séance de volume', resist: 'Séance de résistance', bloc: 'Séance de puissance', doigts: 'Séance de doigts', compet: 'Séance de compétition', force: 'Muscu · force', hyper: 'Muscu · masse', puiss: 'Muscu · puissance' };
 const RECO_WHY = {
   conti: (r, c) => r === 'voies' ? 'Tu as renseigné un niveau en voie : le volume se fait en voie.' : 'Beaucoup de mouvements à intensité basse : la base aérobie des avant-bras et de la technique.',
   resist: r => r === 'voies' ? 'Ton objectif est la résistance en voie : on la travaille dans des voies.' : 'Le 4 × 4 fait durer l’effort 2 à 3 min, la durée de la filière lactique.',
   bloc: () => 'Les blocs à ta limite recrutent au maximum, frais à chaque essai.',
-  doigts: r => r === 'hangs' ? 'Avec une poutre, la charge des suspensions se règle au kilo près.' : 'Sans poutre (ou avant 18 ans), les petites prises en bloc font progresser sans risque.',
+  doigts: r => r === 'f80' ? 'Le 10/6 à 80 % de ta force max est le meilleur compromis force et endurance de l’étude de Devise (2022) : environ +12 % de force en 4 semaines.' : r === 'hangs' ? 'Avec une poutre, la charge des suspensions se règle au kilo près.' : 'Sans poutre (ou avant 18 ans), les petites prises en bloc font progresser sans risque.',
   compet: () => 'Le format des qualifications : blocs nouveaux, temps limité, repos imposé.',
   force: () => 'Repos complets entre les séries : la base la plus simple pour progresser en force.',
   hyper: (r, c) => r === 'supersets' ? 'Séance de ' + c.dur + ' min : les supersets gardent le volume en moins de temps.' : 'Un exercice à la fois, repos complets : le plus simple pour bien charger.',
   puiss: r => r === 'contraste' ? 'Avec une barre et de l’expérience : la série lourde potentialise la série explosive.' : 'Charges légères lancées vite : la base, sans matériel lourd.',
-  int: () => 'Alterner 30/30 et 3 min varie le stimulus près de la VO2max ; le seuil se cale sur ta vitesse critique quand tu l’as testée.',
-  intV: () => 'Le 4 × 4 min est le format le plus étudié pour la VO2max ; le sweet spot construit l’endurance juste sous la FTP.'
+  int: () => 'Alterner 30/30 et 3 min varie le stimulus près de la VO2max ; le 4 × 4 min et le 15/15 font encore mieux sur la VO2max (Helgerud 2007) ; le seuil se cale sur ta vitesse critique quand tu l’as testée.',
+  intV: () => 'Le 4 × 4 min est le format le plus étudié pour la VO2max ; le 30/15 de Rønnestad (2015) a donné plus de VO2max à effort égal ; le sweet spot et le seuil construisent l’endurance autour de la FTP.',
+  intN: () => 'La vitesse critique (CSS) se mesure avec un 400 m et un 200 m : les séries à son allure travaillent le seuil aérobie, et le volume réduit à haute intensité ne fait pas perdre de performance.'
 };
 function LevelStep({ cfg, set }) {
   const types = [...new Set(weekPlanTypes(cfg))], wk = { step: 1, meso: 0, phase: 'volume' };
@@ -127,7 +128,7 @@ function LevelStep({ cfg, set }) {
   const lifts = new Set(), sample = {};
   for (const t of types) { const ss = buildSession(t, cfg, wk, new Set(), {}); sample[t] = ss; for (const b of ss.blocks) for (const it of b.items || []) { const l = LIFT_OF_LIB[it.lib]; if (l && it.rx && it.rx.role === 'main') lifts.add(l); } }
   if (fams.includes('puiss')) ['squat', 'bench', 'pull'].forEach(l => lifts.add(l));
-  const need = { climb: types.some(t => ['conti', 'resist', 'bloc', 'doigts', 'compet'].includes(t)), lifts: [...lifts], cardio: types.some(t => ['ef', 'int', 'long', 'lact', 'sprint', 'circuit'].includes(t)) };
+  const need = { climb: types.some(t => ['conti', 'resist', 'bloc', 'doigts', 'compet'].includes(t)), lifts: [...lifts], cardio: types.some(t => ['ef', 'int', 'long', 'lact', 'sprint', 'circuit', 'hxc', 'hxs', 'hxsim'].includes(t)), hyrox: types.some(t => ['hxc', 'hxs', 'hxsim'].includes(t)) };
   const self = isSelf();
   const setLv = (key, val, sub) => { const lv = clone(cfg.lv || {}); if (sub) { lv[key] = Object.assign({}, lv[key]); if (val == null) delete lv[key][sub]; else lv[key][sub] = val; } else if (val == null) delete lv[key]; else lv[key] = val; set({ lv }); };
   return <div class="stack">

@@ -735,6 +735,33 @@
       proto: ["\xC9chauffement 10 min.", "D\xE9part \xE0 8 km/h, +1 km/h chaque minute.", "VMA = vitesse du dernier palier complet (+ fraction du palier entam\xE9)."]
     },
     {
+      id: "vameval",
+      cat: "aerobie",
+      name: "VAMEVAL (piste, bips)",
+      sides: false,
+      measures: V("km/h"),
+      equip: "Piste avec plots tous les 20 m, bande sonore VAMEVAL (bips) ou application.",
+      proto: ["\xC9chauffement 15 min avec quelques acc\xE9l\xE9rations.", "D\xE9part \xE0 8 km/h, +0,5 km/h chaque minute : \xE0 chaque bip, tu es \xE0 la hauteur d\u2019un plot.", "Arr\xEAt apr\xE8s deux plots manqu\xE9s de plus de 3 m.", "VMA = vitesse du dernier palier tenu (si tu as couru la moiti\xE9 du palier suivant, ajoute 0,25)."],
+      tips: "Sur piste, le r\xE9sultat est plus fiable que sur tapis. Refais le test toutes les 6 \xE0 8 semaines : les allures des intervalles en d\xE9pendent.",
+      src: ["billat2001"]
+    },
+    {
+      id: "css",
+      cat: "aerobie",
+      name: "Vitesse critique en natation (400 m + 200 m)",
+      sides: false,
+      measures: [M("t400", "Temps du 400 m", "s", "down"), M("t200", "Temps du 200 m", "s", "down")],
+      equip: "Bassin de 25 ou 50 m, chronom\xE8tre.",
+      proto: ["\xC9chauffement 400 m avec quelques acc\xE9l\xE9rations de 25 m.", "400 m le plus vite possible, allure r\xE9guli\xE8re. Note le temps en secondes (6 min 30 s = 390).", "R\xE9cup\xE9ration compl\xE8te : id\xE9alement un autre jour (au moins 30 min sinon).", "200 m le plus vite possible. Note le temps en secondes.", "CSS = 200 m \xF7 (temps du 400 \u2212 temps du 200), en m/s ; allure au 100 m = 100 \xF7 CSS."],
+      tips: "Un \xE9cart de moins de 0,07 \xE0 0,12 m/s entre deux tests n\u2019est pas un vrai changement. Refais-le toutes les 8 \xE0 10 semaines.",
+      src: ["wakayoshi1992"],
+      derive: (v) => {
+        if (!(v.t400 > 0 && v.t200 > 0 && v.t400 > v.t200 * 2)) return null;
+        const c = 200 / (v.t400 - v.t200), s = Math.round(100 / c);
+        return "CSS " + (Math.round(c * 100) / 100).toString().replace(".", ",") + " m/s \xB7 " + Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0") + " /100 m";
+      }
+    },
+    {
       id: "run-5k",
       cat: "aerobie",
       name: "5 km chrono",
@@ -887,6 +914,7 @@
     LIB_BY_ID: () => LIB_BY_ID,
     SYSTEMS: () => SYSTEMS,
     equipSet: () => equipSet,
+    goalsFor: () => goalsFor,
     libMatch: () => libMatch,
     norm: () => norm,
     quiz: () => quiz,
@@ -1007,6 +1035,32 @@
     E("volume", "Volume de voies faciles", "grimpe", { q: ["aero", "conti", "tech"], sp: ["escalade"], eq: ["salle-esc"], t: "essai", ld: "bw", pat: "climb-aero", c: "Beaucoup de voies 2 \xE0 3 niveaux sous ton max, en soignant les placements." }),
     E("technique", "Technique", "grimpe", { q: ["tech"], sp: ["escalade"], eq: ["salle-esc", "pan"], t: "essai", ld: "bw", pat: "climb-tech", c: "Un th\xE8me par s\xE9ance : pieds pr\xE9cis, lecture, chutes, dynamique." }),
     E("blocage", "Blocages bras \xE0 90\xB0", "muscu", { q: ["force"], sp: ["escalade"], g: ["tirage"], eq: ["traction"], t: "iso", hold: "5-10 s", ld: "bw", lvl: 2, pat: "pull-iso", c: "Coude \xE0 90\xB0, 5 \xE0 10 s, une ou deux mains selon le niveau." }),
+    // ---- Course : intervalles (Helgerud 2007, Gist 2014)
+    E("run-1515", "Course 15/15", "cardio", { q: ["aero"], sp: ["course", "trail", "hyrox", "collectif"], g: ["cardio"], eq: ["exterieur"], t: "int", ld: "bw", pat: "run-vo2", c: "15 s vite (90-95 % de la FC max), 15 s de trot lent, en s\xE9ries de 10 \xE0 14 r\xE9p\xE9titions.", src: ["helgerud2007"] }),
+    E("run-4x4", "Course 4 \xD7 4 min", "cardio", { q: ["aero"], sp: ["course", "trail", "hyrox", "collectif"], g: ["cardio"], eq: ["exterieur"], t: "int", ld: "bw", pat: "run-vo2", c: "4 min \xE0 90-95 % de la FC max, 3 min de trot lent (environ 70 %).", src: ["helgerud2007"] }),
+    E("sprint-30s", "Sprints de 30 s", "cardio", { q: ["aero", "endu_f"], g: ["cardio"], eq: ["exterieur", "velo"], t: "int", ld: "bw", lvl: 2, pat: "sprint-30", c: "4 \xE0 6 sprints de 30 s \xE0 fond, environ 4 min de r\xE9cup\xE9ration facile.", src: ["gist2014"] }),
+    // ---- Vélo : 30/15 (Rønnestad 2015), seuil
+    E("velo-3015", "V\xE9lo 30/15", "velo", { q: ["aero"], sp: ["velo"], g: ["cardio"], eq: ["velo"], t: "int", ld: "bw", lvl: 2, pat: "bike-vo2", c: "30 s tr\xE8s fort, 15 s facile, 13 r\xE9p\xE9titions par s\xE9rie, 2 \xE0 3 s\xE9ries.", src: ["ronnestad2015"] }),
+    E("velo-z4", "V\xE9lo au seuil", "velo", { q: ["aero"], sp: ["velo"], g: ["cardio"], eq: ["velo"], t: "int", ld: "bw", pat: "bike-thr", c: "2 \xD7 20 min en zone 4, soit 91 \xE0 105 % de la FTP, 5 min faciles entre les blocs." }),
+    // ---- Natation : CSS, allure de course, volume réduit
+    E("nage-css", "Natation au seuil CSS", "velo", { q: ["aero", "endu_f"], sp: ["natation"], g: ["cardio"], eq: ["piscine"], t: "int", ld: "bw", pat: "swim-css", c: "100 m \xE0 l\u2019allure de ta vitesse critique (CSS), d\xE9part fixe, environ 15 s de repos.", src: ["wakayoshi1992"] }),
+    E("nage-usrpt", "Natation ultra-court \xE0 l\u2019allure de course", "velo", { q: ["aero", "endu_f"], sp: ["natation"], g: ["cardio"], eq: ["piscine"], t: "int", ld: "bw", lvl: 2, pat: "swim-usrpt", c: "25 m \xE0 l\u2019allure de ton record sur 100 m, 35 s de r\xE9cup\xE9ration.", src: ["williamson2020"] }),
+    E("nage-sup", "Natation supramaximale", "velo", { q: ["endu_f", "vit"], sp: ["natation"], g: ["cardio"], eq: ["piscine"], t: "int", ld: "bw", lvl: 2, pat: "swim-sup", c: "25 m plus vite que ton allure de course, 1 min 30 de r\xE9cup\xE9ration.", src: ["johansen2010"] }),
+    // ---- Hyrox : stations aux charges de la catégorie
+    E("hx-run", "Course 1 km Hyrox", "cardio", { q: ["aero"], sp: ["hyrox"], g: ["cardio"], eq: ["exterieur"], t: "cont", ld: "bw", pat: "hx-run", c: "1 km \xE0 l\u2019allure de course vis\xE9e, encha\xEEn\xE9 avec la station.", src: ["brandt2025"] }),
+    E("hx-ski", "SkiErg Hyrox", "velo", { q: ["aero", "endu_f"], sp: ["hyrox"], g: ["cardio"], eq: ["machines"], t: "cont", ld: "bw", pat: "hx-ski", c: "1 000 m en course ; tirage avec le dos et les jambes, pas seulement les bras." }),
+    E("hx-push", "Pouss\xE9e de tra\xEEneau", "muscu", { q: ["endu_f", "force"], sp: ["hyrox"], g: ["jambes"], eq: ["machines", "salle"], t: "reps", ld: "kg", pat: "hx-push", c: "50 m en course ; buste inclin\xE9, petits pas rapides, bras tendus." }),
+    E("hx-pull", "Tirage de tra\xEEneau", "muscu", { q: ["endu_f", "force"], sp: ["hyrox"], g: ["dos"], eq: ["machines", "salle"], t: "reps", ld: "kg", pat: "hx-pull", c: "50 m en course ; recule en tirant main sur main, dos gain\xE9." }),
+    E("hx-burpee", "Burpees sauts en longueur", "muscu", { q: ["endu_f"], sp: ["hyrox"], g: ["cardio"], eq: ["rien"], t: "reps", ld: "bw", pat: "hx-burpee", c: "80 m en course : burpee, puis saut en longueur, on encha\xEEne." }),
+    E("hx-row", "Rameur Hyrox", "velo", { q: ["aero", "endu_f"], sp: ["hyrox"], g: ["cardio"], eq: ["machines"], t: "cont", ld: "bw", pat: "hx-row", c: "1 000 m en course ; allure r\xE9guli\xE8re, jambes puis dos puis bras." }),
+    E("hx-farmer", "Farmer\u2019s carry", "muscu", { q: ["endu_f", "force"], sp: ["hyrox"], g: ["dos"], eq: ["halteres"], t: "reps", ld: "kg", pat: "hx-farmer", c: "200 m en course ; deux charges, \xE9paules basses, pas courts et rapides." }),
+    E("hx-lunge", "Fentes avec sac", "muscu", { q: ["endu_f"], sp: ["hyrox"], g: ["jambes"], eq: ["halteres", "salle"], t: "reps", ld: "kg", pat: "hx-lunge", c: "100 m en course ; sac sur les \xE9paules, genou arri\xE8re qui touche le sol." }),
+    E("hx-wall", "Wall balls", "muscu", { q: ["endu_f"], sp: ["hyrox"], g: ["jambes"], eq: ["halteres", "salle"], t: "reps", ld: "kg", pat: "hx-wall", c: "100 r\xE9p\xE9titions en course ; squat complet, lancer \xE0 la cible sans pause longue." }),
+    // ---- Doigts : protocoles à un pourcentage du max (Devise 2022)
+    E("hang-1main", "Suspensions une main 6 s", "doigts", { q: ["force", "doigts"], sp: ["escalade"], g: ["doigts"], eq: ["poutre"], t: "hang", ld: "+kg", lvl: 3, heavy: true, u18: false, pat: "finger-max", c: "6 suspensions de 6 s par main, mains altern\xE9es, \xE0 100 % de ta force max, r\xE9glette de 12 mm.", src: ["devise2022"] }),
+    E("hang-106", "Suspensions 10/6", "doigts", { q: ["endu_f", "force", "doigts"], sp: ["escalade"], g: ["doigts"], eq: ["poutre"], t: "hang", ld: "+kg", lvl: 2, u18: false, pat: "finger-endu", c: "10 s suspendu, 6 s de pause, \xE0 60 ou 80 % de ta force max.", src: ["devise2022"] }),
+    E("hang-bfr", "Suspensions avec brassards", "doigts", { q: ["endu_f", "prev"], sp: ["escalade"], g: ["doigts"], eq: ["poutre", "bfr"], t: "hang", ld: "+kg", lvl: 2, u18: false, pat: "finger-endu", c: "7 s / 3 s pendant 1 min \xE0 30 % de la force max, brassard serr\xE9 \xE0 40-80 % de la pression qui bloque le sang.", src: ["patterson2019"] }),
+    E("ext-doigts", "Extension des doigts \xE0 l\u2019\xE9lastique", "renfo", { q: ["prev"], sp: ["escalade"], eq: ["elastique"], pat: "avantbras", c: "Doigts en extension contre un \xE9lastique, charge l\xE9g\xE8re \xE0 mod\xE9r\xE9e, 2 s\xE9ances par semaine." }),
     // ---- Mobilité
     E("mob-hanches", "Mobilit\xE9 des hanches", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "90/90, fente basse, papillon : 1 min par position." }),
     E("mob-epaules", "Mobilit\xE9 des \xE9paules", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "Passages de b\xE2ton, ouvertures thoraciques au sol." }),
@@ -1035,10 +1089,12 @@
     { id: "doigts", l: "Force des doigts", d: "Tenir des prises plus petites", sys: "neuro", sp: "escalade" },
     { id: "bloc", l: "Puissance en bloc", d: "Passer les mouvements durs", sys: "alac", sp: "escalade" },
     { id: "resist", l: "R\xE9sistance", d: "Ne plus \xAB bouteiller \xBB dans les voies", sys: "lact", sp: "escalade" },
-    { id: "conti", l: "Continuit\xE9", d: "Grimper longtemps sans fatigue", sys: "aero", sp: "escalade" },
+    { id: "conti", l: "Continuit\xE9", d: "Grimper longtemps sans fatigue", sys: "aero", sp: "escalade", hidden: true },
     { id: "compet", l: "Comp\xE9tition de bloc", d: "Passer des blocs nouveaux, vite et sous pression", sys: "alac", sp: "escalade" },
+    { id: "hyrox", l: "Hyrox", d: "Courir 8 \xD7 1 km et encha\xEEner les 8 stations", sys: "aero", sp: "hyrox" },
     { id: "prev", l: "Pr\xE9vention", d: "Se blesser moins : \xE9paules, doigts, dos, genoux", sys: "prev" }
   ];
+  var goalsFor = (cl, hx) => GOALS.filter((g) => !g.hidden && (g.sp === "escalade" ? cl : g.sp === "hyrox" ? hx : true));
   var GOAL_BY_ID = Object.fromEntries(GOALS.map((g) => [g.id, g]));
   var SYSTEMS = {
     neuro: { l: "Force neuromusculaire", d: "Charges lourdes (environ 80 % du max et plus), 1 \xE0 6 r\xE9p\xE9titions, 2 \xE0 5 min de r\xE9cup\xE9ration : le syst\xE8me nerveux apprend \xE0 recruter plus de fibres.", src: ["acsm2009", "nsca2016"] },
@@ -1054,7 +1110,7 @@
         { id: "force", l: cl ? "Les prises sont trop petites ou les mouvements trop durs, m\xEAme frais" : "La force : charges lourdes, duels, contacts", w: cl ? { doigts: 3, bloc: 1 } : { force: 3, puiss: 1 } },
         { id: "expl", l: cl ? "Il manque de l\u2019explosivit\xE9 : jet\xE9s, mouvements dynamiques" : "L\u2019explosivit\xE9 : sauts, d\xE9marrages, lancers", w: cl ? { bloc: 3, puiss: 1 } : { puiss: 3, vit: 1 } },
         { id: "lact", l: cl ? "Les avant-bras \xAB bouteillent \xBB au bout de 20 \xE0 40 mouvements" : "\xC7a br\xFBle et je l\xE2che apr\xE8s 30 s \xE0 2 min d\u2019effort intense", w: cl ? { resist: 3 } : { endu_f: 3 } },
-        { id: "aero", l: cl ? "Je fatigue sur les longues voies ou les longues s\xE9ances" : "Je m\u2019essouffle ou je ralentis quand \xE7a dure", w: cl ? { conti: 3, aero: 1 } : { aero: 3 } },
+        { id: "aero", l: cl ? "Je fatigue sur les longues voies ou les longues s\xE9ances" : "Je m\u2019essouffle ou je ralentis quand \xE7a dure", w: cl ? { resist: 2, aero: 1 } : { aero: 3 } },
         { id: "vit", l: "La vitesse : les premiers m\xE8tres, les sprints r\xE9p\xE9t\xE9s", w: { vit: 3, puiss: 1 }, hide: cl },
         { id: "hyper", l: "Je veux surtout prendre du muscle", w: { hyper: 3 } },
         { id: "blesse", l: "Je me blesse souvent ou j\u2019ai des douleurs qui reviennent", w: { prev: 3 } }
@@ -1062,7 +1118,7 @@
       { id: "duree", q: "L\u2019effort le plus important de ton sport dure\u2026", opts: [
         { id: "court", l: "Moins de 10 s (un mouvement, un sprint, un saut)", w: { force: 1, puiss: 1, vit: 1, doigts: 1, bloc: 1 } },
         { id: "moyen", l: "De 20 s \xE0 2 min", w: { endu_f: 1, resist: 1 } },
-        { id: "long", l: "Plusieurs minutes ou plus", w: { aero: 1, conti: 1 } },
+        { id: "long", l: "Plusieurs minutes ou plus", w: { aero: 1, resist: 1 } },
         { id: "mixte", l: "Un peu de tout", w: {} }
       ] },
       { id: "pref", q: "Ce qui te motive le plus en ce moment\u2026", opts: [
@@ -1078,7 +1134,7 @@
       const o = q.opts.find((x) => x.id === answers[q.id]);
       if (o) for (const [g, v] of Object.entries(o.w)) sc[g] = (sc[g] || 0) + v;
     }
-    const ok = GOALS.filter((g) => cl || g.sp !== "escalade").map((g) => g.id);
+    const ok = GOALS.filter((g) => !g.hidden && g.sp !== "hyrox" && (cl || g.sp !== "escalade")).map((g) => g.id);
     return Object.entries(sc).filter(([g]) => ok.includes(g)).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
   }
 
@@ -2000,12 +2056,15 @@
   var levels_exports = {};
   __export(levels_exports, {
     CLIMB_KEYS: () => CLIMB_KEYS,
+    HYROX_W: () => HYROX_W,
     LIFTS: () => LIFTS,
     LIFT_OF_LIB: () => LIFT_OF_LIB,
     climbLevel: () => climbLevel,
     csOf: () => csOf,
+    cssOf: () => cssOf,
     fcmaxOf: () => fcmaxOf,
     ftpOf: () => ftpOf,
+    hyroxDiv: () => hyroxDiv,
     levelsDoc: () => levelsDoc,
     loadForPct: () => loadForPct,
     oneRM: () => oneRM,
@@ -2014,6 +2073,7 @@
     runProfile: () => runProfile,
     setLevel: () => setLevel,
     srcTxt: () => srcTxt,
+    swimPace: () => swimPace,
     vmaOf: () => vmaOf,
     vo2Of: () => vo2Of
   });
@@ -2182,7 +2242,7 @@
   }
   function vmaOf(o, cfgLv) {
     const lv = cfgLv || levelsDoc(o), cand = [];
-    for (const h of history("vma")) if (h.vals && typeof h.vals.v === "number") cand.push({ k: h.k, v: h.vals.v, src: "test" });
+    for (const id of ["vma", "vameval"]) for (const h of history(id)) if (h.vals && typeof h.vals.v === "number") cand.push({ k: h.k, v: h.vals.v, src: "test" });
     if (typeof lv.vma === "number") cand.push({ k: (lv.at || {}).vma || "2000-01-01", v: lv.vma, src: "d\xE9clar\xE9e" });
     return newest(cand);
   }
@@ -2215,6 +2275,32 @@
     return null;
   }
   var paceCs = (cs, pct2) => paceAt(cs.v, pct2);
+  function cssOf() {
+    const h = history("css");
+    for (let i = h.length - 1; i >= 0; i--) {
+      const v = h[i].vals || {};
+      if (v.t400 > 0 && v.t200 > 0 && v.t400 > v.t200 * 2) {
+        const ms = 200 / (v.t400 - v.t200);
+        return { ms, p100: 100 / ms, k: h[i].k, src: "test" };
+      }
+    }
+    return null;
+  }
+  function swimPace(css, pct2) {
+    if (!css) return null;
+    const s = Math.round(css.p100 * 100 / pct2);
+    return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  }
+  var HYROX_W = {
+    openF: { push: 102, pull: 78, farmer: 16, lunge: 10, wall: 4 },
+    openM: { push: 152, pull: 103, farmer: 24, lunge: 20, wall: 6 },
+    proF: { push: 152, pull: 103, farmer: 24, lunge: 20, wall: 6 },
+    proM: { push: 202, pull: 153, farmer: 32, lunge: 30, wall: 9 }
+  };
+  function hyroxDiv(sex, cfgLv) {
+    const lv = cfgLv || levelsDoc(), d = lv.hdiv === "pro" ? "pro" : "open", f = sex === "F", key = d + (f ? "F" : "M");
+    return { key, l: (d === "pro" ? "Pro" : "Open") + (f ? " femmes" : " hommes"), w: HYROX_W[key] };
+  }
   function vo2Of(o, cfgLv) {
     const lv = cfgLv || levelsDoc(o), cand = [];
     for (const h of history("vo2max")) if (h.vals && typeof h.vals.v === "number") cand.push({ k: h.k, v: h.vals.v, src: "test" });
@@ -3489,6 +3575,7 @@
   var builder_exports = {};
   __export(builder_exports, {
     DURS: () => DURS,
+    FMT_SOURCES: () => FMT_SOURCES,
     FORMATS: () => FORMATS,
     GROUP_LBL: () => GROUP_LBL,
     KIND: () => KIND,
@@ -3513,6 +3600,93 @@
     weekPlanTypes: () => weekPlanTypes,
     writeProgram: () => writeProgram
   });
+
+  // src/lib/sources.js
+  var sources_exports = {};
+  __export(sources_exports, {
+    SOURCES: () => SOURCES,
+    src: () => src
+  });
+  var SOURCES = {
+    saw2016: { s: "Saw et al., 2016", r: "Saw AE, Main LC, Gastin PB. Monitoring the athlete training response: subjective self-reported measures trump commonly used objective measures: a systematic review. Br J Sports Med. 2016;50(5):281\u2013291.", n: "Sur 56 \xE9tudes, les questionnaires de ressenti r\xE9agissent mieux et plus vite \xE0 la charge que les mesures objectives : le bien-\xEAtre baisse quand la charge monte et remonte quand elle baisse." },
+    mclean2010: { s: "McLean et al., 2010", r: "McLean BD, Coutts AJ, Kelly V, McGuigan MR, Cormack SJ. Neuromuscular, endocrine, and perceptual fatigue responses during different length between-match microcycles in professional rugby league players. Int J Sports Physiol Perform. 2010;5(3):367\u2013383.", n: "Questionnaire de bien-\xEAtre en 5 items (fatigue, sommeil, courbatures, stress, humeur) not\xE9s de 1 \xE0 5, sensible \xE0 la r\xE9cup\xE9ration entre deux matchs." },
+    hooper1995: { s: "Hooper & Mackinnon, 1995", r: "Hooper SL, Mackinnon LT. Monitoring overtraining in athletes: recommendations. Sports Med. 1995;20(5):321\u2013327.", n: "Suivi quotidien du sommeil, de la fatigue, du stress et des courbatures pour rep\xE9rer le surentra\xEEnement." },
+    walsh2021: { s: "Walsh et al., 2021", r: "Walsh NP, Halson SL, Sargent C, et al. Sleep and the athlete: narrative review and 2021 expert consensus recommendations. Br J Sports Med. 2021;55(7):356\u2013368.", n: "Moins de 7 h par nuit de fa\xE7on habituelle est un marqueur de sommeil insuffisant chez l\u2019athl\xE8te ; siestes de moins de 30 min, entre 13 h et 16 h ; allonger la nuit (fen\xEAtre de 9 \xE0 10 h) avant une p\xE9riode charg\xE9e." },
+    hirsh2015: { s: "Hirshkowitz et al., 2015", r: "Hirshkowitz M, Whiton K, Albert SM, et al. National Sleep Foundation\u2019s sleep time duration recommendations: methodology and results summary. Sleep Health. 2015;1(1):40\u201343.", n: "7 \xE0 9 h pour les adultes, 8 \xE0 10 h pour les 14-17 ans." },
+    milewski2014: { s: "Milewski et al., 2014", r: "Milewski MD, Skaggs DL, Bishop GA, et al. Chronic lack of sleep is associated with increased sports injuries in adolescent athletes. J Pediatr Orthop. 2014;34(2):129\u2013133.", n: "Chez 112 sportifs de 12 \xE0 18 ans, dormir moins de 8 h par nuit est associ\xE9 \xE0 1,7 fois plus de risque de blessure (association, pas preuve de cause)." },
+    plews2013: { s: "Plews et al., 2013", r: "Plews DJ, Laursen PB, Stanley J, Kilding AE, Buchheit M. Training adaptation and heart rate variability in elite endurance athletes: opening the door to effective monitoring. Sports Med. 2013;43(9):773\u2013781.", n: "La moyenne glissante sur 7 jours du ln rMSSD suit mieux l\u2019adaptation \xE0 l\u2019entra\xEEnement que la valeur d\u2019un seul jour." },
+    plews2014: { s: "Plews et al., 2014", r: "Plews DJ, Laursen PB, Le Meur Y, et al. Monitoring training with heart-rate variability: how much compliance is needed for valid assessment? Int J Sports Physiol Perform. 2014;9(5):783\u2013790.", n: "Au moins 3 mesures sur 7 jours pour une moyenne glissante valable." },
+    ais2023: { s: "AIS, 2023", r: "Bellenger C, Siegel R, Stanley J, McGibbon K. Best practice guidelines for the measurement, analysis and interpretation of resting heart rate and heart rate variability in athletes. Australian Institute of Sport; 2023.", n: "Comparer la moyenne sur 7 jours du ln rMSSD \xE0 sa propre base sur 60 jours ; changement significatif au-del\xE0 de 0,5 \xD7 le coefficient de variation individuel. Les \xAB diagnostics \xBB des applis ont peu d\u2019appui scientifique : regarder la tendance." },
+    buchheit2014: { s: "Buchheit, 2014", r: "Buchheit M. Monitoring training status with HR measures: do all roads lead to Rome? Front Physiol. 2014;5:73.", n: "FC de repos et VFC s\u2019interpr\xE8tent ensemble, par rapport aux valeurs habituelles de l\u2019athl\xE8te et au contexte d\u2019entra\xEEnement." },
+    foster1998: { s: "Foster, 1998", r: "Foster C. Monitoring training in athletes with reference to overtraining syndrome. Med Sci Sports Exerc. 1998;30(7):1164\u20131168.", n: "Monotonie = charge quotidienne moyenne \xF7 \xE9cart type sur la semaine ; contrainte = charge hebdo \xD7 monotonie. Les maladies suivent souvent les pics de charge et de contrainte ; une monotonie au-dessus de 2 est le rep\xE8re couramment utilis\xE9." },
+    foster2001: { s: "Foster et al., 2001", r: "Foster C, Florhaug JA, Franklin J, et al. A new approach to monitoring exercise training. J Strength Cond Res. 2001;15(1):109\u2013115.", n: "Charge de s\xE9ance = ressenti (0-10) not\xE9 environ 30 min apr\xE8s \xD7 dur\xE9e en minutes." },
+    gabbett2016: { s: "Gabbett, 2016", r: "Gabbett TJ. The training\u2014injury prevention paradox: should athletes be training smarter and harder? Br J Sports Med. 2016;50(5):273\u2013280.", n: "Ratio charge aigu\xEB (7 j) / chronique (28 j) : zone 0,8-1,3 d\xE9crite comme favorable, au-del\xE0 de 1,5 risque de blessure accru ; une charge chronique \xE9lev\xE9e bien construite prot\xE8ge." },
+    impellizzeri2020: { s: "Impellizzeri et al., 2020", r: "Impellizzeri FM, Tenan MS, Kempton T, Novak A, Coutts AJ. Acute:chronic workload ratio: conceptual issues and fundamental pitfalls. Int J Sports Physiol Perform. 2020;15(6):907\u2013913.", n: "Le ratio aigu/chronique a des limites m\xE9thodologiques importantes : \xE0 utiliser comme rep\xE8re de progressivit\xE9, pas comme pr\xE9dicteur de blessure." },
+    silbernagel2007: { s: "Silbernagel et al., 2007", r: "Silbernagel KG, Thome\xE9 R, Eriksson BI, Karlsson J. Continued sports activity, using a pain-monitoring model, during rehabilitation in patients with Achilles tendinopathy. Am J Sports Med. 2007;35(6):897\u2013906.", n: "Mod\xE8le de surveillance de la douleur : jusqu\u2019\xE0 5/10 pendant l\u2019effort, retour au niveau habituel le lendemain matin, pas d\u2019augmentation d\u2019une semaine \xE0 l\u2019autre." },
+    schoffl2015: { s: "Sch\xF6ffl et al., 2015", r: "Sch\xF6ffl V, Popp D, K\xFCpper T, Sch\xF6ffl I. Injury trends in rock climbers: evaluation of a case series of 911 injuries between 2009 and 2012. Wilderness Environ Med. 2015;26(1):62\u201367.", n: "Les doigts (poulies en t\xEAte) sont la premi\xE8re localisation des blessures en escalade, devant l\u2019\xE9paule." },
+    mcnulty2020: { s: "McNulty et al., 2020", r: "McNulty KL, Elliott-Sale KJ, Dolan E, et al. The effects of menstrual cycle phase on exercise performance in eumenorrheic women: a systematic review and meta-analysis. Sports Med. 2020;50(10):1813\u20131827.", n: "Performance peut-\xEAtre tr\xE8s l\xE9g\xE8rement r\xE9duite en d\xE9but de phase folliculaire (effet trivial, ES \u22120,06), avec une grande variabilit\xE9 : approche individuelle plut\xF4t que r\xE8gles g\xE9n\xE9rales." },
+    mountjoy2023: { s: "Mountjoy et al., 2023", r: "Mountjoy M, Ackerman KE, Bailey DM, et al. 2023 International Olympic Committee\u2019s (IOC) consensus statement on Relative Energy Deficiency in Sport (REDs). Br J Sports Med. 2023;57(17):1073\u20131097.", n: "Un apport \xE9nerg\xE9tique insuffisant par rapport \xE0 l\u2019entra\xEEnement d\xE9grade sant\xE9 et performance ; cycles irr\xE9guliers ou absents, blessures et fatigue r\xE9p\xE9t\xE9es sont des signaux d\u2019alerte." },
+    kerksick2017: { s: "Kerksick et al., 2017", r: "Kerksick CM, Arent S, Schoenfeld BJ, et al. International Society of Sports Nutrition position stand: nutrient timing. J Int Soc Sports Nutr. 2017;14:33.", n: "Glucides et prot\xE9ines (environ 0,25-0,4 g/kg) dans les heures qui suivent l\u2019effort favorisent la r\xE9cup\xE9ration." },
+    balas2012: { s: "Bal\xE1\u0161 et al., 2012", r: "Bal\xE1\u0161 J, Pecha O, Martin AJ, Cochrane D. Hand\u2013arm strength and endurance as predictors of climbing performance. Eur J Sport Sci. 2012;12(1):16\u201325.", n: "La force et l\u2019endurance des fl\xE9chisseurs des doigts, rapport\xE9es au poids, font partie des meilleurs pr\xE9dicteurs du niveau en escalade." },
+    michailov2018: { s: "Michailov et al., 2018", r: "Michailov ML, Bal\xE1\u0161 J, Tanev SK, et al. Reliability and validity of finger strength and endurance measurements in rock climbing. Res Q Exerc Sport. 2018;89(2):246\u2013254.", n: "Les tests de force des doigts sur r\xE9glette sont fiables \xE0 condition de standardiser la prise, la r\xE9glette et la position." },
+    giles2019: { s: "Giles et al., 2019", r: "Giles D, Chidley JB, Taylor N, et al. The determination of finger-flexor critical force in rock climbers. Int J Sports Physiol Perform. 2019;14(7):972\u2013979.", n: "Test de 4 min en 7 s / 3 s \xE0 effort maximal : la force moyenne des derni\xE8res contractions donne la force critique, li\xE9e au niveau en escalade." },
+    laffaye2014: { s: "Laffaye et al., 2014", r: "Laffaye G, Collin JM, Levernier G, Padulo J. Upper-limb power test in rock-climbing. Int J Sports Med. 2014;35(8):670\u2013675.", n: "Le \xAB power slap \xBB (hauteur atteinte d\u2019un bras depuis une suspension) mesure la puissance du haut du corps de fa\xE7on fiable." },
+    claudino2017: { s: "Claudino et al., 2017", r: "Claudino JG, Cronin J, Mez\xEAncio B, et al. The countermovement jump to monitor neuromuscular status: a meta-analysis. J Sci Med Sport. 2017;20(4):397\u2013402.", n: "Le CMJ (moyenne de plusieurs sauts) est un bon indicateur de l\u2019\xE9tat neuromusculaire." },
+    bennell1998: { s: "Bennell et al., 1998", r: "Bennell K, Talbot R, Wajswelner H, et al. Intra-rater and inter-rater reliability of a weight-bearing lunge measure of ankle dorsiflexion. Aust J Physiother. 1998;44(3):175\u2013180.", n: "Le test genou-mur (wall test) en charge est tr\xE8s fiable pour suivre la flexion dorsale de cheville." },
+    byram2010: { s: "Byram et al., 2010", r: "Byram IR, Bushnell BD, Dugger K, et al. Preseason shoulder strength measurements in professional baseball pitchers: identifying players at risk for injury. Am J Sports Med. 2010;38(7):1375\u20131382.", n: "Une faiblesse des rotateurs externes par rapport aux internes est associ\xE9e \xE0 plus de blessures d\u2019\xE9paule." },
+    acsm2009: { s: "ACSM, 2009", r: "American College of Sports Medicine. American College of Sports Medicine position stand. Progression models in resistance training for healthy adults. Med Sci Sports Exerc. 2009;41(3):687\u2013708.", n: "D\xE9butant : 60-70 % du max pour 8 \xE0 12 r\xE9p\xE9titions ; avanc\xE9 : 80-100 % pour la force. Augmenter la charge de 2 \xE0 10 % quand on d\xE9passe de 1 \xE0 2 r\xE9p\xE9titions l\u2019objectif. Au moins 2 \xE0 3 min de repos sur les exercices lourds, 48 h entre deux s\xE9ances lourdes des m\xEAmes muscles." },
+    nsca2016: { s: "NSCA, 2016", r: "Haff GG, Triplett NT, eds. Essentials of Strength Training and Conditioning. 4th ed. National Strength and Conditioning Association. Champaign, IL: Human Kinetics; 2016.", n: "Force : 6 r\xE9p\xE9titions ou moins \xE0 85 % et plus, 2 \xE0 5 min de repos. Rapports effort:r\xE9cup\xE9ration selon la fili\xE8re : 1:12 \xE0 1:20 (alactique, moins de 10 s), 1:3 \xE0 1:5 (lactique, 15 s \xE0 2 min), 1:1 \xE0 1:3 (a\xE9robie)." },
+    schoenfeld2016: { s: "Schoenfeld et al., 2016", r: "Schoenfeld BJ, Pope ZK, Benik FM, et al. Longer interset rest periods enhance muscle strength and hypertrophy in resistance-trained men. J Strength Cond Res. 2016;30(7):1805\u20131812.", n: "Chez des pratiquants entra\xEEn\xE9s, 3 min de repos entre les s\xE9ries donnent plus de force et de masse que 1 min." },
+    schoenfeld2017: { s: "Schoenfeld et al., 2017", r: "Schoenfeld BJ, Ogborn D, Krieger JW. Dose-response relationship between weekly resistance training volume and increases in muscle mass: a systematic review and meta-analysis. J Sports Sci. 2017;35(11):1073\u20131082.", n: "Chaque s\xE9rie hebdomadaire en plus s\u2019accompagne de plus d\u2019hypertrophie ; au moins 10 s\xE9ries par muscle et par semaine font mieux que moins de 5." },
+    helms2016: { s: "Helms et al., 2016", r: "Helms ER, Cronin J, Storey A, Zourdos MC. Application of the repetitions in reserve-based rating of perceived exertion scale for resistance training. Strength Cond J. 2016;38(4):42\u201349.", n: "La r\xE9serve (r\xE9p\xE9titions qu\u2019on aurait encore pu faire) permet de r\xE9gler la charge au jour le jour selon la forme." },
+    williams2017: { s: "Williams et al., 2017", r: "Williams TD, Tolusso DV, Fedewa MV, Esco MR. Comparison of periodized and non-periodized resistance training on maximal strength: a meta-analysis. Sports Med. 2017;47(10):2083\u20132100.", n: "Un entra\xEEnement p\xE9riodis\xE9 (blocs qui varient) am\xE9liore davantage la force maximale qu\u2019un entra\xEEnement non p\xE9riodis\xE9." },
+    stoggl2014: { s: "St\xF6ggl & Sperlich, 2014", r: "St\xF6ggl T, Sperlich B. Polarized training has greater impact on key endurance variables than threshold, high intensity, or high volume training. Front Physiol. 2014;5:33.", n: "Chez des athl\xE8tes d\u2019endurance, environ 80 % de facile et 20 % d\u2019intense font mieux sur 9 semaines que le travail au seuil, le tout intense ou le gros volume." },
+    bosquet2007: { s: "Bosquet et al., 2007", r: "Bosquet L, Montpetit J, Arvisais D, Mujika I. Effects of tapering on performance: a meta-analysis. Med Sci Sports Exerc. 2007;39(8):1358\u20131365.", n: "Aff\xFBtage le plus efficace : environ 2 semaines, volume r\xE9duit de 41 \xE0 60 %, intensit\xE9 et fr\xE9quence maintenues." },
+    bell2023: { s: "Bell et al., 2023", r: "Bell L, Strafford BW, Coleman M, Androulakis Korakakis P, Nolan D. Integrating deloading into strength and physique sports training programmes: an international Delphi consensus approach. Sports Med Open. 2023;9.", n: "Consensus d\u2019experts : la d\xE9charge est une p\xE9riode de baisse volontaire de la charge (surtout du volume), souvent toutes les 4 \xE0 6 semaines ; les preuves directes restent limit\xE9es." },
+    lopezrivera2012: { s: "L\xF3pez-Rivera & Gonz\xE1lez-Badillo, 2012", r: "L\xF3pez-Rivera E, Gonz\xE1lez-Badillo JJ. The effects of two maximum grip strength training methods using the same effort duration and different edge depth on grip endurance in elite climbers. Sports Technol. 2012;5(3-4):100\u2013110.", n: "Suspensions de 10 s avec une marge d\u2019environ 3 s, 3 min de repos : protocole de force maximale des doigts chez des grimpeurs confirm\xE9s." },
+    tufano2017: { s: "Tufano et al., 2017", r: "Tufano JJ, Brown LE, Haff GG. Theoretical and practical aspects of different cluster set structures: a systematic review. J Strength Cond Res. 2017;31(3):848\u2013867.", n: "Des pauses courtes \xE0 l\u2019int\xE9rieur de la s\xE9rie maintiennent la vitesse et la puissance des r\xE9p\xE9titions, et permettent des charges un peu plus lourdes pour le m\xEAme nombre de r\xE9p\xE9titions." },
+    robbins2010: { s: "Robbins et al., 2010", r: "Robbins DW, Young WB, Behm DG, Payne WR. Agonist-antagonist paired set resistance training: a brief review. J Strength Cond Res. 2010;24(10):2873\u20132882.", n: "Alterner agonistes et antagonistes (pouss\xE9e / tirage) garde le volume et la charge en r\xE9duisant nettement la dur\xE9e de la s\xE9ance." },
+    seitz2016: { s: "Seitz & Haff, 2016", r: "Seitz LB, Haff GG. Factors modulating post-activation potentiation of jump, sprint, throw, and upper-body ballistic performances: a systematic review with meta-analysis. Sports Med. 2016;46(2):231\u2013240.", n: "Une s\xE9rie lourde am\xE9liore un peu les sauts et lancers qui suivent, surtout chez les plus forts et apr\xE8s plusieurs minutes de r\xE9cup\xE9ration." },
+    billat2001: { s: "Billat, 2001", r: "Billat LV. Interval training for performance: a scientific and empirical practice. Special recommendations for middle- and long-distance running. Part I: aerobic interval training. Sports Med. 2001;31(1):13\u201331.", n: "Intervalles courts (30 s / 30 s) autour de la vitesse maximale a\xE9robie pour accumuler du temps pr\xE8s de la VO2max." },
+    tanaka2001: { s: "Tanaka et al., 2001", r: "Tanaka H, Monahan KD, Seals DR. Age-predicted maximal heart rate revisited. J Am Coll Cardiol. 2001;37(1):153\u2013156.", n: "FC max estim\xE9e \u2248 208 \u2212 0,7 \xD7 \xE2ge, plus juste que 220 \u2212 \xE2ge ; une mesure r\xE9elle reste pr\xE9f\xE9rable." },
+    poole2016: { s: "Poole et al., 2016", r: "Poole DC, Burnley M, Vanhatalo A, Rossiter HB, Jones AM. Critical power: an important fatigue threshold in exercise physiology. Med Sci Sports Exerc. 2016;48(11):2320\u20132334.", n: "La puissance (ou vitesse) critique s\xE9pare le domaine \xAB lourd \xBB, tenable longtemps, du domaine \xAB s\xE9v\xE8re \xBB, o\xF9 l\u2019\xE9puisement arrive vite ; D\u2032 est la r\xE9serve de travail au-dessus." },
+    jones2017: { s: "Jones & Vanhatalo, 2017", r: "Jones AM, Vanhatalo A. The \u201Ccritical power\u201D concept: applications to sports performance with a focus on intermittent high-intensity exercise. Sports Med. 2017;47(Suppl 1):65\u201378.", n: "Vitesse critique et D\u2032 se calculent \xE0 partir de 2 \xE0 4 efforts maximaux de 2 \xE0 15 min, et servent \xE0 r\xE9gler l\u2019intensit\xE9 des s\xE9ances." },
+    allen2010: { s: "Allen & Coggan, 2010", r: "Allen H, Coggan A. Training and racing with a power meter. 2nd ed. Boulder (CO): VeloPress; 2010.", n: "FTP estim\xE9e \xE0 95 % de la puissance moyenne d\u2019un effort de 20 min ; zones d\u2019entra\xEEnement en % de la FTP." },
+    harvey1998: { s: "Harvey, 1998", r: "Harvey D. Assessment of the flexibility of elite athletes using the modified Thomas test. Br J Sports Med. 1998;32(1):68\u201370.", n: "Le test de Thomas modifi\xE9 \xE9value la longueur des fl\xE9chisseurs de hanche et du droit f\xE9moral." },
+    draper2009: { s: "Draper et al., 2009", r: "Draper N, Brent S, Hodgson C, Blackwell G. Flexibility assessment and the role of flexibility as a determinant of performance in rock climbing. Int J Perform Anal Sport. 2009;9(1):67\u201389.", n: "Tests de souplesse propres \xE0 l\u2019escalade (mont\xE9e de pied, \xE9cart) ; la souplesse de hanche rapport\xE9e \xE0 la taille est li\xE9e au niveau." },
+    acsm2021: { s: "ACSM, 2021", r: "American College of Sports Medicine. ACSM\u2019s guidelines for exercise testing and prescription. 11th ed. Philadelphia: Wolters Kluwer; 2021.", n: "Protocole du sit and reach : meilleur de plusieurs essais, apr\xE8s un \xE9chauffement l\xE9ger." },
+    remilieux: { s: "Julien Remilieux", r: "Julien Remilieux, entra\xEEneur d\u2019escalade : \xE9chauffement des doigts 7 \xD7 7/3 (pratique d\u2019entra\xEEnement, document d\u2019origine \xE0 retrouver).", n: "7 suspensions de 7 s avec 3 s de pause, charge qui monte progressivement et pr\xE9hensions vari\xE9es, avant les s\xE9ances intenses de doigts." },
+    jeffreys2007: { s: "Jeffreys, 2007", r: "Jeffreys I. Warm-up revisited: the ramp method of optimizing warm-ups. Prof Strength Cond. 2007;(6):12\u201318.", n: "\xC9chauffement RAMP : monter en temp\xE9rature (Raise), activer et mobiliser (Activate, Mobilise), puis potentialiser (Potentiate) en montant vers l\u2019intensit\xE9 de la s\xE9ance." },
+    mcgowan2015: { s: "McGowan et al., 2015", r: "McGowan CJ, Pyne DB, Thompson KG, Rattray B. Warm-up strategies for sport and exercise: mechanisms and applications. Sports Med. 2015;45(11):1523\u20131546.", n: "L\u2019\xE9chauffement am\xE9liore la performance par la temp\xE9rature musculaire et la potentialisation ; il doit rester assez court pour ne pas fatiguer." },
+    buchheit2013: { s: "Buchheit & Laursen, 2013", r: "Buchheit M, Laursen PB. High-intensity interval training, solutions to the programming puzzle. Part II: anaerobic energy, neuromuscular load and practical applications. Sports Med. 2013;43(10):927\u2013954.", n: "Le format des intervalles (dur\xE9e, intensit\xE9, r\xE9cup\xE9ration) r\xE8gle la part a\xE9robie, ana\xE9robie et neuromusculaire de la s\xE9ance." },
+    helgerud2007: { s: "Helgerud et al., 2007", r: "Helgerud J, H\xF8ydal K, Wang E, et al. Aerobic high-intensity intervals improve VO2max more than moderate training. Med Sci Sports Exerc. 2007;39(4):665\u2013671.", n: "4 \xD7 4 min \xE0 90-95 % de la FC max, 3 min de r\xE9cup\xE9ration active : plus de gain de VO2max qu\u2019un entra\xEEnement mod\xE9r\xE9." },
+    vandyk2019: { s: "van Dyk et al., 2019", r: "van Dyk N, Behan FP, Whiteley R. Including the Nordic hamstring exercise in injury prevention programmes halves the rate of hamstring injuries: a systematic review and meta-analysis of 8459 athletes. Br J Sports Med. 2019;53(21):1362\u20131370.", n: "Ajouter le Nordic hamstring aux programmes de pr\xE9vention divise environ par deux les blessures des ischio-jambiers." },
+    thomas2016: { s: "Thomas, Erdman & Burke, 2016", r: "Thomas DT, Erdman KA, Burke LM. American College of Sports Medicine Joint Position Statement. Nutrition and Athletic Performance. Med Sci Sports Exerc. 2016;48(3):543\u2013568.", n: "Glucides selon la charge : 3-5 g/kg (l\xE9ger), 5-7 (environ 1 h par jour), 6-10 (1 \xE0 3 h), 8-12 (plus de 4 h). Prot\xE9ines 1,2 \xE0 2,0 g/kg, lipides 20 \xE0 35 % de l\u2019\xE9nergie. Avant l\u2019effort : 1 \xE0 4 g/kg de glucides 1 \xE0 4 h avant ; pendant plus de 75 min : 30 \xE0 60 g/h ; apr\xE8s : environ 0,3 g/kg de prot\xE9ines." },
+    morton2018: { s: "Morton et al., 2018", r: "Morton RW, Murphy KT, McKellar SR, et al. A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. Br J Sports Med. 2018;52(6):376\u2013384.", n: "Au-del\xE0 d\u2019environ 1,6 g/kg par jour de prot\xE9ines, plus de gain de masse mesurable en moyenne ; la borne haute (2,2 g/kg) couvre presque tout le monde." },
+    anses2021: { s: "ANSES, 2021", r: "Anses. Avis relatif \xE0 l\u2019actualisation des r\xE9f\xE9rences nutritionnelles en vitamines et min\xE9raux pour la population g\xE9n\xE9rale. Maisons-Alfort : Anses ; 2021.", n: "RNP : apport qui couvre le besoin de presque toute la population ; AS : apport moyen jug\xE9 satisfaisant quand le besoin n\u2019est pas connu. Adultes : fer 11 mg (16 si r\xE8gles abondantes), calcium 950 mg (1 000 avant 25 ans), magn\xE9sium 380 / 300 mg, vitamine D 15 \xB5g, B12 4 \xB5g, vitamine C 110 mg, folates 330 \xB5g." },
+    ciqual2025: { s: "Ciqual, 2025", r: "Anses. 2025. Table de composition nutritionnelle des aliments Ciqual (valeurs manquantes compl\xE9t\xE9es par : Anses. 2020. Table Ciqual pour le calcul des apports nutritionnels CALNUT).", n: "3 484 aliments g\xE9n\xE9riques et 74 constituants. Les produits de marque peuvent s\u2019en \xE9carter." },
+    frankenfield2005: { s: "Frankenfield et al., 2005", r: "Frankenfield D, Roth-Yousey L, Compher C. Comparison of predictive equations for resting metabolic rate in healthy nonobese and obese adults: a systematic review. J Am Diet Assoc. 2005;105(5):775\u2013789.", n: "L\u2019\xE9quation de Mifflin-St Jeor est la plus fiable des \xE9quations test\xE9es : \xE0 \xB110 % du m\xE9tabolisme mesur\xE9 chez la majorit\xE9 des adultes." },
+    herrmann2024: { s: "Herrmann et al., 2024", r: "Herrmann SD, Willis EA, Ainsworth BE, et al. 2024 Adult Compendium of Physical Activities: a third update of the energy costs of human activities. J Sport Health Sci. 2024;13(1):6\u201312.", n: "Co\xFBt \xE9nerg\xE9tique des activit\xE9s en METs (escalade 5,8 \xE0 8,0 ; musculation 3,5 \xE0 6,0 ; course selon la vitesse ; basket 7,5 \xE0 8,0\u2026)." },
+    maughan2018: { s: "CIO, 2018", r: "Maughan RJ, Burke LM, Dvorak J, et al. IOC consensus statement: dietary supplements and the high-performance athlete. Br J Sports Med. 2018;52(7):439\u2013455.", n: "Peu de compl\xE9ments ont un bon niveau de preuve (caf\xE9ine, cr\xE9atine, nitrates, b\xEAta-alanine, bicarbonate) ; les compl\xE9ments \xAB m\xE9dicaux \xBB (fer, vitamine D) se d\xE9cident sur bilan ; risque de contamination par des produits dopants." },
+    turner2003: { s: "Turner & Robling, 2003", r: "Turner CH, Robling AG. Designing exercise regimens to increase bone strength. Exerc Sport Sci Rev. 2003;31(1):45\u201350.", n: "L\u2019os r\xE9pond aux charges dynamiques, rapides et vari\xE9es ; sa sensibilit\xE9 baisse vite au fil des r\xE9p\xE9titions, si bien que quelques dizaines d\u2019impacts par s\xE9ance suffisent, et que des s\xE9ances courtes r\xE9parties dans la journ\xE9e font mieux qu\u2019une longue." },
+    bohm2015: { s: "Bohm et al., 2015", r: "Bohm S, Mersmann F, Arampatzis A. Human tendon adaptation in response to mechanical loading: a systematic review and meta-analysis of exercise intervention studies on healthy adults. Sports Med Open. 2015;1(1):7.", n: "Le tendon s\u2019adapte surtout \xE0 des charges \xE9lev\xE9es (environ 85-90 % de la contraction maximale), tenues assez longtemps (environ 3 s par contraction), sur au moins 12 semaines ; l\u2019isom\xE9trie et le travail lent marchent aussi bien que l\u2019excentrique." },
+    patterson2019: { s: "Patterson et al., 2019", r: "Patterson SD, Hughes L, Warmington S, et al. Blood flow restriction exercise: considerations of methodology, application, and safety. Front Physiol. 2019;10:533.", n: "Position d\u2019experts sur le BFR : 20 \xE0 40 % du max, souvent 75 r\xE9p\xE9titions en 4 s\xE9ries (30, 15, 15, 15), 30 \xE0 60 s de repos, brassard \xE0 40-80 % de la pression d\u2019occlusion, 2 \xE0 3 fois par semaine. Liste les contre-indications et demande un d\xE9pistage avant de commencer." },
+    lixandrao2018: { s: "Lixandr\xE3o et al., 2018", r: "Lixandr\xE3o ME, Ugrinowitsch C, Berton R, et al. Magnitude of muscle strength and mass adaptations between high-load resistance training versus low-load resistance training associated with blood-flow restriction: a systematic review and meta-analysis. Sports Med. 2018;48(2):361\u2013378.", n: "Le BFR \xE0 charge l\xE9g\xE8re donne une hypertrophie comparable \xE0 celle des charges lourdes, mais des gains de force plus faibles." },
+    hughes2017: { s: "Hughes et al., 2017", r: "Hughes L, Paton B, Rosenblatt B, Gissane C, Patterson SD. Blood flow restriction training in clinical musculoskeletal rehabilitation: a systematic review and meta-analysis. Br J Sports Med. 2017;51(13):1003\u20131011.", n: "En r\xE9\xE9ducation, le BFR \xE0 charge l\xE9g\xE8re fait gagner plus de force que la charge l\xE9g\xE8re seule, avec une contrainte articulaire plus faible que les charges lourdes." },
+    wakayoshi1992: { s: "Wakayoshi et al., 1992", r: "Wakayoshi K, Ikuta K, Yoshida T, et al. Determination and validity of critical velocity as an index of swimming performance in the competitive swimmer. Eur J Appl Physiol. 1992;64(2):153\u2013157.", n: "La vitesse critique de nage se calcule avec deux distances (200 et 400 m) : pente de la droite distance-temps. Elle est proche du seuil lactique et sert \xE0 r\xE9gler les s\xE9ries." },
+    devise2022: { s: "Devise et al., 2022", r: "Devise M, Lechaptois C, Berton E, Vigouroux L. Effects of different hangboard training intensities on finger flexor endurance, strength, and rate of force development in rock climbers. 2022.", n: "Sur 54 grimpeurs : une main \xE0 100 % de la force max am\xE9liore la force (+14 %), le 10/6 \xE0 80 % est le meilleur compromis (+12 % de force, temps tenu \xE0 80 % doubl\xE9), le 10/6 \xE0 60 % am\xE9liore surtout l\u2019endurance." },
+    ronnestad2015: { s: "R\xF8nnestad et al., 2015", r: "R\xF8nnestad BR, Hansen J, Vegge G, T\xF8nnessen E, Slettal\xF8kken G. Short intervals induce superior training adaptations compared with long intervals in cyclists \u2013 an effort-matched approach. Scand J Med Sci Sports. 2015;25(2):143\u2013151.", n: "Intervalles 30 s / 15 s : VO2max +8,7 % en 10 semaines, contre +2,6 % pour des intervalles longs de 5 min \xE0 effort \xE9gal." },
+    gist2014: { s: "Gist et al., 2014", r: "Gist NH, Fedewa MV, Dishman RK, Cureton KJ. Sprint interval training effects on aerobic capacity: a systematic review and meta-analysis. Sports Med. 2014;44(2):269\u2013279.", n: "Sprints de 30 s \xE0 fond : VO2max +8 % en 2 \xE0 10 semaines, autant que l\u2019endurance classique, en bien moins de temps." },
+    brandt2025: { s: "Brandt et al., 2025", r: "Brandt et al. Physiological determinants of HYROX performance. 2025.", n: "En Hyrox, la course repr\xE9sente environ 59 % du temps total et la VO2max est le meilleur pr\xE9dicteur du chrono." },
+    schumann2021: { s: "Schumann et al., 2021", r: "Schumann M, Feuerbacher JF, S\xFCnkeler M, et al. Compatibility of concurrent aerobic and strength training for skeletal muscle size and function: an updated systematic review and meta-analysis. Sports Med.", n: "L\u2019endurance ne freine ni la masse ni la force max. Elle freine l\u2019explosivit\xE9 quand les deux s\xE9ances sont \xE0 moins de 20 min d\u2019\xE9cart ; avec au moins 3 h entre les deux, l\u2019effet n\u2019est plus net." },
+    sodal2023: { s: "S\xF8dal et al., 2023", r: "S\xF8dal et al. Drop sets versus traditional sets for muscle hypertrophy: a systematic review and meta-analysis. 2023.", n: "S\xE9ries d\xE9gressives : m\xEAme prise de masse que les s\xE9ries classiques, en deux \xE0 trois fois moins de temps." },
+    johansen2010: { s: "Johansen et al., 2010", r: "Johansen et al. Training at reduced volume and increased intensity in elite swimmers. 2010.", n: "Chez des nageurs \xE9lites, diviser le volume par deux en gardant au moins 4 s\xE9ries supramaximales par semaine am\xE9liore la vitesse maximale (+5 %) sans perdre l\u2019endurance." },
+    williamson2020: { s: "Williamson et al., 2020", r: "Williamson et al. Ultra-short race-pace training (USRPT) in swimmers. 2020.", n: "S\xE9ries ultra-courtes \xE0 l\u2019allure de course (par ex. 20 \xD7 25 m, 35 s de r\xE9cup\xE9ration) : plus proche de la course qu\u2019un 5 \xD7 50 m." },
+    wilson2013: { s: "Wilson et al., 2013", r: "Wilson JM, Lowery RP, Joy JM, Loenneke JP, Naimo MA. Practical blood flow restriction training increases acute determinants of hypertrophy without increasing indices of muscle damage. J Strength Cond Res. 2013;27(11):3068\u20133075.", n: "BFR \xAB pratique \xBB avec des bandes \xE9lastiques serr\xE9es \xE0 un ressenti d\u2019environ 7 sur 10 sur la cuisse : r\xE9ponse aigu\xEB favorable \xE0 l\u2019hypertrophie, sans plus de dommages musculaires." }
+  };
+  var src = (id) => SOURCES[id];
+
+  // src/lib/builder.js
   var LEVELS = [[1, "D\xE9butant", "moins d\u2019un an d\u2019entra\xEEnement r\xE9gulier"], [2, "Interm\xE9diaire", "1 \xE0 3 ans"], [3, "Avanc\xE9", "plus de 3 ans"]];
   var DURS = [45, 60, 75, 90];
   var GROUP_LBL = { jambes: "jambes", dos: "bas du dos", poussee: "pouss\xE9e (pectoraux, triceps)", tirage: "tirage (dos, biceps)", epaule: "\xE9paules", doigts: "doigts", cardio: "cardio intense" };
@@ -3544,7 +3718,10 @@
     long: { kind: "cardio", t: "Sortie longue" },
     lact: { kind: "cardio", t: "Intervalles lactiques" },
     sprint: { kind: "course", t: "Vitesse" },
-    circuit: { kind: "velo", t: "Circuit" }
+    circuit: { kind: "velo", t: "Circuit" },
+    hxc: { kind: "course", t: "Hyrox \xB7 course + station" },
+    hxs: { kind: "velo", t: "Hyrox \xB7 stations" },
+    hxsim: { kind: "course", t: "Hyrox \xB7 simulation" }
   };
   var SESSION_LBL = Object.fromEntries(Object.entries(ST).map(([k, v]) => [k, v.t]));
   function pattern(goal, n) {
@@ -3560,9 +3737,11 @@
       resist: ["resist", "bloc", "resist", "conti", "renfo"],
       conti: ["conti", "renfo", "conti", "resist", "mobi"],
       prev: ["prevS", "mobi", "prevS", "ef", "mobi"],
-      compet: ["compet", "renfo", "bloc", "conti", "mobi"]
+      compet: ["compet", "renfo", "bloc", "conti", "mobi"],
+      hyrox: ["hxc", "fbA", "hxs", "int", "long", "hxsim"]
     }[goal] || ["fbA", "fbB"];
     if (["force", "hyper"].includes(goal) && n >= 4) return ["haut", "bas", "haut", "bas", "mobi", "ef"].slice(0, n);
+    if (goal === "hyrox") return { 1: ["hxc"], 2: ["hxc", "hxs"], 3: ["hxc", "hxs", "int"], 4: ["hxc", "fbA", "hxs", "int"], 5: ["hxc", "fbA", "hxs", "int", "long"], 6: ["hxc", "fbA", "hxs", "int", "long", "hxsim"] }[Math.min(6, n)];
     if (goal === "aero") return { 1: ["int"], 2: ["int", "long"], 3: ["ef", "int", "long"], 4: ["ef", "int", "ef", "long"], 5: ["ef", "int", "ef", "lact", "long"], 6: ["ef", "int", "ef", "ef", "int", "long"] }[Math.min(6, n)];
     const out = [];
     for (let i = 0; i < n; i++) out.push(P2[i % P2.length].split("|")[0]);
@@ -3579,23 +3758,34 @@
     return out.slice(0, n);
   }
   var FORMATS = {
-    conti: [["blocs", "Beaucoup de blocs", "Volume de mouvements, fili\xE8re a\xE9robie"], ["traversee", "Continuit\xE9", "A\xE9robie long : grimper sans s\u2019arr\xEAter"], ["voies", "Volume en voie", "Beaucoup de voies faciles"]],
+    conti: [["blocs", "Beaucoup de blocs", "Volume de mouvements, fili\xE8re a\xE9robie"], ["voies", "Volume en voie", "Beaucoup de voies faciles"]],
     resist: [["4x4", "4 \xD7 4", "R\xE9sistance, fili\xE8re lactique"], ["int", "Intervalles 1 min", "Lactique, sur pan ou travers\xE9e"], ["voies", "Voies encha\xEEn\xE9es", "R\xE9sistance en voie"]],
     bloc: [["limite", "Blocs \xE0 la limite", "Puissance, fili\xE8re alactique"], ["pan", "Pan ou Moonboard", "Mouvements de puissance sur petites prises"]],
-    doigts: [["hangs", "Suspensions max", "Force des doigts sur poutre"], ["lift", "Finger lift", "Force des doigts, charge r\xE9gl\xE9e au kilo"], ["blocs", "Petites prises en bloc", "Force des doigts en grimpant"]],
+    doigts: [
+      ["hangs", "Suspensions max", "Force des doigts sur poutre"],
+      ["lift", "Finger lift", "Force des doigts, charge r\xE9gl\xE9e au kilo"],
+      ["blocs", "Petites prises en bloc", "Force des doigts en grimpant"],
+      ["f100", "Une main \xE0 100 %", "Force max : 6 s par main, charge = ton maximum"],
+      ["f80", "10/6 \xE0 80 %", "Force et endurance : le meilleur compromis des \xE9tudes"],
+      ["f60", "10/6 \xE0 60 %", "Endurance des doigts, charge l\xE9g\xE8re"],
+      ["endu73", "Endurance de force 7/3", "Deux blocs de suspensions 7 s / 3 s"],
+      ["bfr", "Suspensions avec brassards", "Entretien \xE0 30 % du max, peu de contrainte sur les doigts"]
+    ],
     compet: [["qualif", "Format qualif", "Blocs nouveaux, temps limit\xE9 par bloc"], ["contest", "Contest", "Un maximum de blocs en temps limit\xE9"], ["flash", "Flash", "Un seul essai apr\xE8s lecture"]],
     force: [["classique", "S\xE9ries classiques", "Repos complet entre les s\xE9ries"], ["clusters", "Clusters", "R\xE9p\xE9titions isol\xE9es : plus lourd, m\xEAme qualit\xE9"]],
-    hyper: [["classique", "S\xE9ries classiques", "Un exercice \xE0 la fois"], ["supersets", "Supersets antagonistes", "Pouss\xE9e et tirage en alternance : s\xE9ance plus courte"]],
+    hyper: [["classique", "S\xE9ries classiques", "Un exercice \xE0 la fois"], ["supersets", "Supersets antagonistes", "Pouss\xE9e et tirage en alternance : s\xE9ance plus courte"], ["degressif", "S\xE9ries d\xE9gressives", "On baisse la charge sans repos : m\xEAme masse en moins de temps"]],
     puiss: [["balistique", "Balistique", "Charges l\xE9g\xE8res lanc\xE9es vite"], ["contraste", "Contraste", "Une s\xE9rie lourde, puis la m\xEAme chose en explosif"]],
-    int: [["alterne", "30/30 et 3 min en alternance", "VO2max, deux formats d\u2019une semaine \xE0 l\u2019autre"], ["3030", "30/30", "VO2max en efforts courts"], ["seuil", "Seuil", "Autour de ta vitesse critique"]],
-    intV: [["4x4", "4 \xD7 4 min", "VO2max"], ["sst", "Sweet spot", "2 longs blocs juste sous la FTP"]]
+    int: [["alterne", "30/30 et 3 min en alternance", "VO2max, deux formats d\u2019une semaine \xE0 l\u2019autre"], ["3030", "30/30", "VO2max en efforts courts"], ["seuil", "Seuil", "Autour de ta vitesse critique"], ["1515", "15/15", "VO2max en efforts tr\xE8s courts"], ["4x4", "4 \xD7 4 min", "VO2max : 4 min \xE0 90-95 % de la FC max"], ["sp30", "Sprints de 30 s", "Capacit\xE9 a\xE9robie en peu de temps"]],
+    intV: [["4x4", "4 \xD7 4 min", "VO2max"], ["sst", "Sweet spot", "2 longs blocs juste sous la FTP"], ["3015", "30/15", "VO2max : le format le plus efficace trouv\xE9 \xE0 v\xE9lo"], ["z4", "Seuil 2 \xD7 20 min", "Puissance soutenable : 91 \xE0 105 % de la FTP"], ["sp30", "Sprints de 30 s", "Capacit\xE9 a\xE9robie en peu de temps"]],
+    intN: [["css", "S\xE9ries au seuil CSS", "100 m \xE0 l\u2019allure de ta vitesse critique, d\xE9part fixe"], ["usrpt", "Allure de course en ultra-court", "25 m \xE0 l\u2019allure de course, r\xE9cup\xE9ration courte"], ["sup", "Intensit\xE9 \xE0 volume r\xE9duit", "S\xE9ries rapides, volume divis\xE9 par deux"], ["cent", "S\xE9ries de 100 m", "Allure soutenue, 20 \xE0 30 s de repos"]]
   };
+  var FMT_SOURCES = { "doigts:f100": "devise2022", "doigts:f80": "devise2022", "doigts:f60": "devise2022", "int:1515": "helgerud2007", "int:4x4": "helgerud2007", "int:sp30": "gist2014", "intV:3015": "ronnestad2015", "intV:sp30": "gist2014", "intN:css": "wakayoshi1992", "intN:usrpt": "williamson2020", "intN:sup": "johansen2010", "hyper:degressif": "sodal2023" };
   function fmtFamily(type, cfg) {
     if (["conti", "resist", "bloc", "doigts", "compet"].includes(type)) return type;
     if (type === "puiss") return "puiss";
     if (type === "int") {
       const sp = cardioSport(cfg, equipSet(cfg.equip));
-      return sp === "course" ? "int" : sp === "velo" ? "intV" : null;
+      return sp === "course" ? "int" : sp === "velo" ? "intV" : sp === "nage" ? "intN" : null;
     }
     if (["fbA", "fbB", "haut", "bas", "renfo"].includes(type)) {
       const g = ST[type].goal || [cfg.goal, cfg.goal2].find((x) => ["force", "hyper", "endu_f"].includes(x)) || "force";
@@ -3608,12 +3798,13 @@
     if (fam === "conti") return voieOnly || cfg.goal === "conti" && voieOnly ? "voies" : "blocs";
     if (fam === "resist") return voieOnly && cfg.goal === "resist" ? "voies" : "4x4";
     if (fam === "bloc") return "limite";
-    if (fam === "doigts") return available(LIB_BY_ID["max-hangs"], cfg, eq) ? "hangs" : "blocs";
+    if (fam === "doigts") return available(LIB_BY_ID["max-hangs"], cfg, eq) ? cfg.lvl >= 2 && fingerRef2() ? "f80" : "hangs" : "blocs";
     if (fam === "compet") return "qualif";
     if (fam === "hyper") return cfg.dur <= 45 ? "supersets" : "classique";
     if (fam === "puiss") return cfg.lvl >= 2 && eq.has("barre") ? "contraste" : "balistique";
     if (fam === "int") return "alterne";
     if (fam === "intV") return "4x4";
+    if (fam === "intN") return "css";
     return "classique";
   }
   var fmtOf = (fam, cfg) => cfg.fmt && cfg.fmt[fam] && FORMATS[fam].some((f) => f[0] === cfg.fmt[fam]) ? cfg.fmt[fam] : fmtReco(fam, cfg);
@@ -3638,6 +3829,11 @@
   }
   function cardioSport(cfg, eq) {
     const s = cfg.sports || [];
+    const ok = { course: eq.has("exterieur"), velo: eq.has("velo"), nage: eq.has("piscine") };
+    for (const x of s) {
+      const w = { course: "course", trail: "course", hyrox: "course", velo: "velo", natation: "nage" }[x];
+      if (w && ok[w]) return w;
+    }
     if (eq.has("exterieur") && (!s.length || s.some((x) => ["course", "trail", "hyrox", "collectif", "combat", "autre", "muscu", "escalade"].includes(x)))) return "course";
     if (eq.has("velo")) return "velo";
     if (eq.has("piscine")) return "nage";
@@ -3679,6 +3875,11 @@
     if (role2 === "main" && goal === "force") {
       const sh = [2, 0, -1][Math.min(2, wk.meso)];
       base.r = [Math.max(1, base.r[0] + sh), Math.max(2, base.r[1] + sh)];
+    }
+    if (role2 === "main" && goal === "force" && wk.dup != null && !wk.light && !wk.taper) {
+      const sh2 = [0, 2, 4][wk.dup];
+      base.r = [base.r[0] + sh2, base.r[1] + sh2];
+      if (wk.dup === 2) base.rir = Math.min(3, base.rir + 1);
     }
     if (wk.light) {
       base.s = Math.max(1, Math.round(base.s * 0.6));
@@ -3730,6 +3931,12 @@
       items.push(it);
       if (x.heavy && !wk.light && role2 !== "prev") x.g.forEach((g) => heavy.add(g));
     }
+    if (fmt === "degressif" && !wk.light) {
+      for (const it of items) if (it.rx && it.rx.role === "acc") {
+        it.n = Math.max(1, it.n - 1);
+        it.det += " \xB7 d\xE9gressif : \xE0 la fin de la s\xE9rie, baisse la charge de 20 % et encha\xEEne sans repos, deux fois";
+      }
+    }
     if (fmt === "supersets") for (let i = 1; i < items.length; i++) {
       const a = LIB_BY_ID[items[i - 1].lib] || {}, b = LIB_BY_ID[items[i].lib] || {};
       if (items[i - 1].superset || items[i].superset || items[i - 1].pairWith) continue;
@@ -3778,6 +3985,22 @@
     if (fmt === "clusters") sec += items.filter((it) => it.timer && it.timer.kind === "cluster").reduce((a, it) => a + it.n * it.timer.reps * it.timer.intra, 0);
     return { short: T.t, blocks: [blk], target: { rpe, fam: wk.light || goal === "prev" ? "light" : "muscu", why: sys.l + " \xB7 " + sys.d + (mainRx.rest ? " Repos : " + mmss(mainRx.rest) + " entre les s\xE9ries des exercices principaux." : "") }, heavy, est: { min: Math.round(sec / 60 / 5) * 5, tut, fmt } };
   }
+  function fingerRef2() {
+    const t = lastResult("fmax-semi");
+    if (t && t.vals && (typeof t.vals["v.D"] === "number" || typeof t.vals["v.G"] === "number")) {
+      const d = t.vals["v.D"], g = t.vals["v.G"];
+      return { k: t.k, d: typeof d === "number" ? d : g, g: typeof g === "number" ? g : d };
+    }
+    const f = lastResult("fl-semi");
+    if (f && f.vals && typeof f.vals.v === "number") return { k: f.k, d: f.vals.v, g: f.vals.v };
+    return null;
+  }
+  var r052 = (x) => Math.round(x * 2) / 2;
+  function fingerTxt(ref, pct2) {
+    if (!ref) return null;
+    const a = r052(ref.d * pct2 / 100), b = r052(ref.g * pct2 / 100);
+    return (a === b ? fmtNum(a) + " kg" : "droite " + fmtNum(a) + " kg, gauche " + fmtNum(b) + " kg") + " (" + pct2 + " % de ton test du " + fmtDay(ref.k) + ")";
+  }
   function gradeRx(lv, key, shift, disc) {
     const r = lv[key];
     if (!r) return null;
@@ -3800,6 +4023,56 @@
           { id: uid("i"), label: "Suspensions max \xB7 20 mm semi-arqu\xE9", det: "10 s par suspension, 3 min de repos (fili\xE8re alactique, 1:18)", n: reps, unit: "S\xE9rie", unit_load: "+kg", lib: "max-hangs", rx: { goal: "doigts", role: "main", light: !!wk.light }, timer: { kind: "interval", name: "Suspensions max", work: 10, rest: 180, reps, sets: 1, setRest: 0, prep: 10, workLabel: "Suspends", restLabel: "Repos", markEach: "rep" } }
         ], "doigts");
         est = { fmt, min: 15 + Math.round(reps * 190 / 60), tut: reps * 10 };
+      } else if (["f100", "f80", "f60", "endu73", "bfr"].includes(fmt) && available(LIB_BY_ID["max-hangs"], cfg, eq) && (fmt !== "bfr" || eq.has("bfr"))) {
+        const ref = fingerRef2(), m2 = wk.light ? 0.6 : wk.taper ? 0.5 : 1, N = (b) => Math.max(1, Math.round(b * m2));
+        const warm = ech("10 min de grimpe facile, puis 3 suspensions de 10 s \xE0 environ 50, 70 et 85 % de l\u2019effort, 1 min entre chaque.", "\xC9chauffement des doigts");
+        const noRef = " (passe le test de force max dans Suivi \u2192 Tests pour obtenir la charge en kg)";
+        const hang = (label, det, n2, lib, timer) => ({ id: uid("i"), label, det, n: n2, unit: "S\xE9rie", unit_load: "+kg", lib, rx: { goal: "doigts", role: "main", light: !!wk.light }, timer: Object.assign({ kind: "interval", prep: 10, markEach: "rep", setRest: 0 }, timer) });
+        let items, title, desc, sub, min, tut;
+        if (fmt === "f100") {
+          const sets = N(2), c = fingerTxt(ref, 100);
+          items = [hang("Suspensions une main \xB7 6 s", "6 suspensions de 6 s par main, en alternant les mains, 5 min entre les s\xE9ries \xB7 r\xE9glette de 12 mm (ou poulie pour d\xE9charger) \xB7 charge = ton maximum" + (c ? " : " + c : noRef), sets, "max-hangs", { name: "Une main 6 s", work: 6, rest: 6, reps: 12, sets, setRest: 300, workLabel: "Suspends", restLabel: "Change de main" })];
+          title = "Doigts \xB7 une main \xE0 100 %";
+          desc = sets + " \xD7 6 suspensions de 6 s par main";
+          sub = "Force max : 2 s\xE9ances par semaine pendant 4 semaines ont donn\xE9 environ +14 % de force chez des grimpeurs (Devise 2022). Quand les 6 s passent avec de la marge, remonte la charge de 1 \xE0 2 kg.";
+          min = 15 + sets * 7;
+          tut = sets * 72;
+        } else if (fmt === "f80") {
+          const sets = N(3), c = fingerTxt(ref, 80);
+          items = [hang("Suspensions 10/6 \xE0 80 %", "12 suspensions de 10 s / 6 s en alternant les mains, 8 min entre les s\xE9ries \xB7 arr\xEAte la s\xE9rie si tu ne tiens plus 70 %" + (c ? " \xB7 " + c : noRef), sets, "max-hangs", { name: "10/6 \xE0 80 %", work: 10, rest: 6, reps: 12, sets, setRest: 480, workLabel: "Suspends", restLabel: "Change de main" })];
+          title = "Doigts \xB7 10/6 \xE0 80 %";
+          desc = sets + " \xD7 12 suspensions (10 s / 6 s)";
+          sub = "Le meilleur compromis de l\u2019\xE9tude de Devise (2022) : environ +12 % de force et un temps tenu \xE0 80 % doubl\xE9 en 4 semaines, 2 s\xE9ances par semaine.";
+          min = 15 + sets * 11;
+          tut = sets * 120;
+        } else if (fmt === "f60") {
+          const sets = N(2), c = fingerTxt(ref, 60);
+          items = [hang("Suspensions 10/6 \xE0 60 %", "24 suspensions de 10 s / 6 s \xE0 deux mains, 6 min entre les s\xE9ries \xB7 puis au maximum quand la fatigue arrive" + (c ? " \xB7 " + c : noRef), sets, "max-hangs", { name: "10/6 \xE0 60 %", work: 10, rest: 6, reps: 24, sets, setRest: 360, workLabel: "Suspends", restLabel: "Repos" })];
+          title = "Doigts \xB7 10/6 \xE0 60 %";
+          desc = sets + " \xD7 24 suspensions (10 s / 6 s)";
+          sub = "Charge l\xE9g\xE8re : l\u2019endurance progresse nettement, la force peu (Devise 2022). \xC0 r\xE9server aux phases d\u2019endurance de force.";
+          min = 15 + sets * 12;
+          tut = sets * 240;
+        } else if (fmt === "endu73") {
+          const nb = wk.light || wk.taper || cfg.lvl < 2 ? 1 : 2, sets = N(6);
+          items = [];
+          for (let b = 1; b <= nb; b++) items.push(hang("Suspensions 7/3 \xB7 bloc " + b + (nb > 1 ? " sur 2" : ""), sets + " s\xE9ries de 7 suspensions (7 s / 3 s), 2 min 30 entre les s\xE9ries" + (nb > 1 ? " ; 6 min entre les deux blocs" : "") + " \xB7 prise moyenne, sans aller \xE0 l\u2019\xE9chec", sets, "repeaters", { name: "7/3 \xB7 bloc " + b, work: 7, rest: 3, reps: 7, sets, setRest: 150, workLabel: "Suspends", restLabel: "Pause" }));
+          title = "Doigts \xB7 endurance de force 7/3";
+          desc = nb + " \xD7 " + sets + " s\xE9ries de 7 suspensions";
+          sub = "Environ 10 min suspendu au total. Quand la s\xE9ance passe sans \xE9chec, prends des prises plus petites ou retire un doigt (Hermans 2022, L\xF3pez-Rivera 2018).";
+          min = 15 + nb * Math.round(sets * 2.5 + 3) + (nb > 1 ? 6 : 0);
+          tut = nb * sets * 49;
+        } else {
+          const sets = N(6), c = fingerTxt(ref, 30);
+          items = ["droite", "gauche"].map((side) => hang("Suspensions avec brassards \xB7 main " + side, "6 s\xE9ries d\u20191 min en 7 s / 3 s (6 suspensions) avec brassard" + (c ? " \xB7 " + c : " \xB7 30 % de ta force max") + ", 1 min de repos entre les s\xE9ries", sets, "repeaters", { name: "Brassards \xB7 " + side, work: 7, rest: 3, reps: 6, sets, setRest: 60, workLabel: "Suspends", restLabel: "Pause" }));
+          title = "Doigts \xB7 suspensions avec brassards";
+          desc = "2 mains \xD7 " + sets + " s\xE9ries d\u20191 min";
+          sub = "Entretien ou reprise apr\xE8s une blessure : charge de 30 % seulement, donc peu de contrainte sur les poulies (Javorsk\xFD 2023). Brassard serr\xE9 \xE0 40-80 % de la pression qui bloque le sang ; rel\xE2che en cas de fourmillements ou de douleur forte.";
+          min = 15 + 2 * sets * 2;
+          tut = 2 * sets * 42;
+        }
+        blk(title, desc, sub, [warm].concat(items), "doigts");
+        est = { fmt, min, tut };
       } else if (fmt === "lift" && available(LIB_BY_ID["finger-lift"], cfg, eq)) {
         const reps = n(5, [0, 1, 1]), lifts = reps * 2, t = lastResult("fl-semi"), mx = t && t.vals && typeof t.vals.v === "number" ? t.vals.v : null, ld = mx ? Math.round(mx * 0.85 / 1.25) * 1.25 : null;
         const it = { id: uid("i"), label: "Finger lift \xB7 semi-arqu\xE9", det: lifts + " lev\xE9es de 7 s en alternant les mains (" + reps + " par main), 1 min 30 entre deux" + (ld ? " \xB7 " + fmtNum(ld) + " kg (\u2248 85 % de ton test du " + fmtDay(t.k) + ")" : " \xB7 charge que tu tiendrais 9 \xE0 10 s"), n: lifts, unit: "S\xE9rie", lib: "finger-lift", rx: { goal: "doigts", role: "main", light: !!wk.light }, timer: { kind: "interval", name: "Finger lift", work: 7, rest: 90, reps: lifts, sets: 1, setRest: 0, prep: 10, workLabel: "L\xE8ve", restLabel: "Change de main", markEach: "rep" } };
@@ -3881,7 +4154,7 @@
       blk("Escalade \xB7 r\xE9sistance", "Fili\xE8re lactique : efforts de 1 \xE0 3 min qui \xAB br\xFBlent \xBB", "Progression : un bloc ou une s\xE9rie de plus, ou des blocs un peu plus durs, quand tout passe proprement.", items);
       tg = { rpe: wk.light ? [4, 6] : [7, 9], fam: wk.light ? "light" : "hard", s: 8, i: wk.light ? 5 : 7, v: 7 };
     } else {
-      if (fmt === "blocs") {
+      if (fmt !== "voies") {
         const nb = Math.max(6, Math.round((Math.min([14, 20, 26][L], Math.floor(avail / 100)) + (wk.light || wk.taper ? 0 : [0, 2, 4][wk.step])) * m));
         const g = gradeRx(lv, "bf", -3, "bloc");
         blk("Escalade \xB7 volume", nb + " blocs \xB7 1 min de repos", "Assez facile pour encha\xEEner sans \xAB bouteiller \xBB : si les chutes s\u2019accumulent, descends d\u2019une cotation. Le mode blocs note les chutes et le temps sur le mur.", [
@@ -3896,11 +4169,6 @@
           Object.assign({ id: uid("i"), label: "Voies" + (g ? " " + g.g : " faciles"), det: "Environ 4 min de repos (le temps d\u2019assurer)" + (g ? " \xB7 " + g.txt : " \xB7 2 \xE0 3 niveaux sous ton \xE0 vue"), n: nv, unit: "Voie", rest: 240, lib: "volume", disc: "voie" }, g ? { grade: g.g } : {})
         ]);
         est = { fmt, min: 10 + Math.round(nv * 7), tut: nv * 180 };
-      } else {
-        const k = cfg.dur <= 45 ? [2, 10] : cfg.dur <= 60 ? [2, 15] : cfg.dur <= 75 ? [3, 12] : [3, 15];
-        const sets = n(k[0], [0, 0, 1]), g = gradeRx(lv, "bf", -4, "bloc");
-        blk("Escalade \xB7 continuit\xE9", "Fili\xE8re a\xE9robie : long et facile", "Avant-bras chauds mais jamais \xAB bouteill\xE9s \xBB : si \xE7a br\xFBle, descends d\u2019un niveau.", [ech("10 min de grimpe tr\xE8s facile."), { id: uid("i"), label: "Continuit\xE9 " + sets + " \xD7 " + k[1] + " min", det: "Grimpe facile sans t\u2019arr\xEAter (travers\xE9es, voies faciles encha\xEEn\xE9es), 5 min de repos" + (g ? " \xB7 " + g.txt : ""), n: sets, unit: "Bloc", rest: 300, lib: "conti" }]);
-        est = { fmt, min: 10 + sets * (k[1] + 5), tut: sets * k[1] * 60 };
       }
       short = "Volume";
       tg = { rpe: [3, 5], fam: "vol", s: 6, i: 3, v: wk.light ? 5 : 8 };
@@ -3957,6 +4225,39 @@
         const mins = [12, 15, 20][lv], reps = wk.light || wk.taper ? 1 : 2;
         it = { label: "Sweet spot " + reps + " \xD7 " + mins + " min", det: mins + " min juste sous la FTP, 5 min faciles" + (ftp ? " \xB7 " + wTxt(ftp, 88, 94) : fc ? " \xB7 " + fcTxt(fc, 82, 87) : ""), timer: { kind: "interval", name: "Sweet spot", work: mins * 60, rest: 300, reps, sets: 1, setRest: 0, prep: 10, workLabel: "Sweet spot", restLabel: "Facile", markEach: "rep" }, n: reps };
         est = { fmt, min: 25 + reps * (mins + 5) };
+      } else if (type === "int" && fmt === "1515" && sport === "course") {
+        const sets = lv === 0 ? 2 : 3, reps = Math.max(8, Math.round(([10, 12, 14][lv] + (wk.light || wk.taper ? 0 : [0, 1, 2][wk.step])) * m));
+        it = { label: "Intervalles 15/15", det: "15 s vite, 15 s de trot lent, " + sets + " s\xE9ries de " + reps + ", 3 min de r\xE9cup\xE9ration entre les s\xE9ries" + (fc ? " \xB7 " + fcTxt(fc, 90, 95) + " pendant l\u2019effort" : "") + (vma ? " \xB7 " + distTxt(vma, 100, 15) : ""), lib: "run-1515", timer: { kind: "interval", name: "15/15", work: 15, rest: 15, reps, sets, setRest: 180, prep: 10, workLabel: "Vite", restLabel: "Trot" }, n: sets };
+        est = { fmt, min: 25 + sets * (reps / 2 + 3) };
+      } else if (type === "int" && fmt === "4x4" && sport === "course") {
+        const reps = Math.max(2, Math.round(([3, 4, 4][lv] + (wk.light || wk.taper ? 0 : [0, 0, 1][wk.step])) * m));
+        it = { label: "Course 4 \xD7 4 min", det: "4 min \xE0 90-95 % de ta FC max, 3 min de trot lent (environ 70 %)" + (fc ? " \xB7 " + Math.round(fc.v * 0.9) + " \xE0 " + Math.round(fc.v * 0.95) + " bpm" : " \xB7 tr\xE8s dur, tu ne peux presque plus parler"), lib: "run-4x4", timer: { kind: "interval", name: "Course 4 \xD7 4", work: 240, rest: 180, reps, sets: 1, setRest: 0, prep: 10, workLabel: "Fort", restLabel: "Trot", markEach: "rep" }, n: reps };
+        est = { fmt, min: 25 + reps * 7 };
+      } else if (type === "int" && fmt === "sp30") {
+        const reps = Math.max(3, Math.round([4, 5, 6][lv] * m));
+        it = { label: "Sprints de 30 s", det: "30 s \xE0 fond, 4 min de r\xE9cup\xE9ration facile" + (sport === "velo" && ftp ? " \xB7 " + wTxt(ftp, 150) : ""), lib: "sprint-30s", timer: { kind: "interval", name: "Sprints 30 s", work: 30, rest: 240, reps, sets: 1, setRest: 0, prep: 10, workLabel: "\xC0 fond", restLabel: "R\xE9cup", markEach: "rep" }, n: reps };
+        est = { fmt, min: 25 + reps * 5 };
+      } else if (type === "int" && fmt === "3015" && sport === "velo") {
+        const sets = lv === 0 ? 2 : 3, reps = 13;
+        it = { label: "V\xE9lo 30/15 \xB7 " + sets + " \xD7 " + reps, det: "30 s tr\xE8s fort, 15 s facile (environ 50 % de la puissance d\u2019effort), " + reps + " r\xE9p\xE9titions par s\xE9rie, 3 min entre les s\xE9ries \xB7 la puissance la plus haute que tu tiens sur toute la s\xE9rie" + (ftp ? " (au moins " + Math.round(ftp.v * 1.06) + " W)" : ""), lib: "velo-3015", timer: { kind: "interval", name: "V\xE9lo 30/15", work: 30, rest: 15, reps, sets, setRest: 180, prep: 10, workLabel: "Tr\xE8s fort", restLabel: "Facile" }, n: sets };
+        est = { fmt, min: 25 + sets * 13 };
+      } else if (type === "int" && fmt === "z4" && sport === "velo") {
+        const mins = [12, 15, 20][lv], reps = wk.light || wk.taper ? 1 : 2;
+        it = { label: "Seuil " + reps + " \xD7 " + mins + " min", det: mins + " min en zone 4, 5 min faciles entre les blocs" + (ftp ? " \xB7 " + wTxt(ftp, 91, 105) : fc ? " \xB7 " + fcTxt(fc, 85, 92) : ""), lib: "velo-z4", timer: { kind: "interval", name: "Seuil", work: mins * 60, rest: 300, reps, sets: 1, setRest: 0, prep: 10, workLabel: "Seuil", restLabel: "Facile", markEach: "rep" }, n: reps };
+        est = { fmt, min: 25 + reps * (mins + 5) };
+      } else if (type === "int" && sport === "nage" && fmt === "css") {
+        const css = cssOf(), p = css ? Math.round(css.p100) : null, mt = (x) => Math.floor(x / 60) + ":" + String(x % 60).padStart(2, "0"), reps = Math.min(10, Math.max(4, Math.round(([5, 6, 7][lv] + (wk.light || wk.taper ? 0 : [0, 1, 2][wk.step])) * m)));
+        it = { label: "Natation " + reps + " \xD7 100 m au seuil", det: p ? "100 m \xE0 l\u2019allure CSS (" + mt(p) + " /100 m), d\xE9part toutes les " + mt(p + 15) + " : le repos est ce qui reste, environ 15 s" : "100 m \xE0 l\u2019allure que tu tiendrais sur 400 m, 15 s de repos (passe le test de vitesse critique dans Suivi \u2192 Tests pour obtenir l\u2019allure exacte)", lib: "nage-css", n: reps, unit: "S\xE9rie", rest: 15 };
+        if (p) it.timer = { kind: "interval", name: "Seuil CSS", work: p, rest: 15, reps, sets: 1, setRest: 0, prep: 10, workLabel: "Nage", restLabel: "Repos", markEach: "rep" };
+        est = { fmt, min: 20 + Math.round(reps * (p || 100) / 60 * 1.15) };
+      } else if (type === "int" && sport === "nage" && fmt === "usrpt") {
+        const reps = Math.max(8, Math.round([12, 16, 20][lv] * m));
+        it = { label: "Natation " + reps + " \xD7 25 m allure de course", det: "25 m \xE0 l\u2019allure de ton record sur 100 m, 35 s de r\xE9cup\xE9ration \xB7 tr\xE8s dur : arr\xEAte la s\xE9rie d\xE8s que tu ne tiens plus l\u2019allure", lib: "nage-usrpt", n: reps, unit: "S\xE9rie", rest: 35 };
+        est = { fmt, min: 20 + Math.round(reps * 60 / 60) };
+      } else if (type === "int" && sport === "nage" && fmt === "sup") {
+        const reps = Math.max(4, Math.round([6, 8, 10][lv] * m));
+        it = { label: "Natation " + reps + " \xD7 25 m supramaximal", det: "25 m plus vite que ton allure de course, 1 min 30 de r\xE9cup\xE9ration \xB7 au moins 4 s\xE9ries rapides par semaine, volume total divis\xE9 par deux", lib: "nage-sup", n: reps, unit: "S\xE9rie", rest: 90 };
+        est = { fmt, min: 20 + Math.round(reps * 2) };
       } else if (type === "lact") {
         const reps = Math.max(3, Math.round(([5, 6, 7][lv] + [0, 1, 2][wk.step]) * m));
         it = { label: sport === "velo" ? "V\xE9lo 6 \xD7 1 min tr\xE8s vite" : sport === "nage" ? "Natation 6 \xD7 50 m vite" : "R\xE9p\xE9titions de 300 m", det: "Environ 1 min tr\xE8s vite, 3 min 30 de r\xE9cup\xE9ration (1:3 \xE0 1:4)" + (sport === "velo" && ftp ? " \xB7 " + wTxt(ftp, 121) : ""), lib: sport === "course" ? "300m" : null, timer: { kind: "interval", name: "Lactique", work: 60, rest: 210, reps, sets: 1, setRest: 0, prep: 10, workLabel: "Vite", restLabel: "R\xE9cup", markEach: "rep" }, n: reps };
@@ -3995,6 +4296,68 @@
     if (!sp) items.push({ id: uid("i"), label: "Sprints sur place ou en c\xF4te 8 s", det: "8 s \xE0 fond, 2 min de r\xE9cup\xE9ration", n: 6, unit: "Essai", rest: 120 });
     return { short: "Vitesse", blocks: [{ id: uid("b"), kind: "course", title: "Course \xB7 vitesse", desc: "Fili\xE8re alactique : moins de 10 s \xE0 fond", sub: "La qualit\xE9 prime : chaque sprint doit \xEAtre aussi rapide que le premier. Si tu ralentis nettement, arr\xEAte la s\xE9rie.", items }], target: { rpe: wk.light ? [3, 5] : [6, 8], fam: wk.light ? "light" : "hard", why: SYSTEMS.alac.l + " \xB7 " + SYSTEMS.alac.d }, heavy };
   }
+  var HX_STATIONS = [
+    { id: "hx-ski", n: "SkiErg", d: "1 000 m", u: "m" },
+    { id: "hx-push", n: "Pouss\xE9e de tra\xEEneau", d: "50 m", k: "push" },
+    { id: "hx-pull", n: "Tirage de tra\xEEneau", d: "50 m", k: "pull" },
+    { id: "hx-burpee", n: "Burpees sauts en longueur", d: "80 m" },
+    { id: "hx-row", n: "Rameur", d: "1 000 m" },
+    { id: "hx-farmer", n: "Farmer\u2019s carry", d: "200 m", k: "farmer", two: true },
+    { id: "hx-lunge", n: "Fentes avec sac", d: "100 m", k: "lunge" },
+    { id: "hx-wall", n: "Wall balls", d: "100 r\xE9p\xE9titions", k: "wall" }
+  ];
+  var hxLoad = (st, div) => st.k ? (st.two ? "2 \xD7 " : "") + div.w[st.k] + " kg" : "";
+  function hyroxSession(type, cfg, eq, wk) {
+    const m = wk.light ? 0.6 : wk.taper ? 0.5 : 1, lv = cfg.lvl - 1, div = hyroxDiv(cfg.sex, cfg.lv), vma = vmaOf(null, cfg.lv);
+    const heavy = new Set(wk.light ? [] : ["jambes", "cardio"]), items = [];
+    const pace = "";
+    const stItem = (st, i) => Object.assign({ id: uid("i"), label: st.n, det: st.d + (st.k ? " \xB7 " + hxLoad(st, div) : "") + " (" + div.l.toLowerCase() + ")", n: 1, unit: "Bloc", lib: st.id }, st.k ? { load: st.two ? div.w[st.k] : div.w[st.k], unit_load: "kg" } : {});
+    let title, desc, sub, est, short;
+    if (type === "hxs") {
+      const sets = Math.max(2, Math.round((cfg.dur <= 45 ? 2 : cfg.dur <= 60 ? 3 : 4) * (wk.light ? 0.6 : 1)));
+      const part = (id, label, det, ld) => Object.assign({ id: uid("i"), label, det, n: sets, unit: "S\xE9rie", rest: 90, lib: id }, ld ? { load: ld, unit_load: "kg" } : {});
+      items.push(ech("10 min de footing, mobilit\xE9 des hanches et des \xE9paules, puis une mont\xE9e en charge sur le tra\xEEneau."));
+      items.push(part("hx-push", "Pouss\xE9e de tra\xEEneau", "25 m (la moiti\xE9 de la course) \xB7 " + div.w.push + " kg, tra\xEEneau compris", div.w.push));
+      items.push(part("hx-pull", "Tirage de tra\xEEneau", "25 m \xB7 " + div.w.pull + " kg, tra\xEEneau compris", div.w.pull));
+      items.push(part("hx-farmer", "Farmer\u2019s carry", "50 m \xB7 2 \xD7 " + div.w.farmer + " kg", div.w.farmer));
+      items.push(part("hx-lunge", "Fentes avec sac", "25 m \xB7 " + div.w.lunge + " kg", div.w.lunge));
+      items.push(part("hx-wall", "Wall balls", "25 r\xE9p\xE9titions \xB7 " + div.w.wall + " kg", div.w.wall));
+      items.push(Object.assign(part("hx-burpee", "Burpees sauts en longueur", "20 m"), { n: Math.max(2, sets - 1) }));
+      title = "Hyrox \xB7 stations";
+      short = "Hyrox stations";
+      desc = sets + " tours \xB7 charges " + div.l.toLowerCase();
+      sub = "Technique et charge : chaque station \xE0 un quart ou une moiti\xE9 de sa distance de course, avec les charges de la cat\xE9gorie (" + div.l + ", " + div.w.wall + " kg pour les 100 wall balls). Le temps de repos est plus long qu\u2019en course pour garder la qualit\xE9.";
+      est = { min: 20 + Math.round(sets * 7 * 3), tut: sets * 7 * 90 };
+    } else if (type === "hxc") {
+      const rounds = Math.min(8, Math.max(2, Math.round(([3, 4, 5][lv] + (wk.light || wk.taper ? 0 : [0, 1, 2][wk.step])) * m))), off = ((wk.meso || 0) * 2 + (wk.step || 0) * 3) % 8;
+      items.push(ech("15 min de footing facile, puis 3 acc\xE9l\xE9rations progressives de 20 s."));
+      for (let r = 0; r < rounds; r++) {
+        const st = HX_STATIONS[(off + r) % 8];
+        items.push(Object.assign(stItem(st, r), { label: "1 km + " + st.n.toLowerCase(), det: "1 km \xE0 ton allure de course vis\xE9e" + (r === 0 ? pace : "") + ", encha\xEEn\xE9 sans pause avec : " + st.n.toLowerCase() + " " + st.d + (st.k ? " \xB7 " + hxLoad(st, div) : "") + " (" + div.l.toLowerCase() + ")", lib: "hx-run" }));
+      }
+      items.push({ id: "rac", label: "Retour au calme", det: "10 min tr\xE8s faciles", n: 1 });
+      title = "Hyrox \xB7 course compromise";
+      short = "Hyrox course";
+      desc = rounds + " \xD7 (1 km + 1 station)";
+      sub = "Travaille les transitions : la station se fait avec les jambes d\xE9j\xE0 fatigu\xE9es par le km, comme en course. Les stations tournent d\u2019une semaine \xE0 l\u2019autre pour toutes les couvrir.";
+      est = { min: 20 + rounds * 9, tut: rounds * 540 };
+    } else {
+      const full = cfg.lvl >= 3 && cfg.dur >= 90 && !wk.light && !wk.taper, n = full ? 8 : 4;
+      items.push(ech("15 min de footing facile, mobilit\xE9, 3 acc\xE9l\xE9rations progressives."));
+      for (let r = 0; r < n; r++) {
+        const st = HX_STATIONS[r];
+        items.push(Object.assign(stItem(st, r), { label: "1 km + " + st.n.toLowerCase(), det: "1 km \xE0 ton allure de course" + (r === 0 ? pace : "") + ", puis " + st.n.toLowerCase() + " " + st.d + (st.k ? " \xB7 " + hxLoad(st, div) : "") + " (" + div.l.toLowerCase() + ")", lib: "hx-run" }));
+      }
+      items.push({ id: "rac", label: "Retour au calme", det: "10 min tr\xE8s faciles", n: 1 });
+      title = "Hyrox \xB7 " + (full ? "simulation compl\xE8te" : "demi-simulation");
+      short = full ? "Hyrox simulation" : "Hyrox demi-simu";
+      desc = n + " \xD7 (1 km + 1 station)";
+      sub = "R\xE9p\xE9tition de course : allure r\xE9guli\xE8re, gestion des transitions et de l\u2019effort. \xC0 garder pour une s\xE9ance par bloc, loin de l\u2019objectif sauf aff\xFBtage l\xE9ger.";
+      est = { min: 20 + n * 9, tut: n * 540 };
+    }
+    const blocks2 = [{ id: uid("b"), kind: type === "hxs" ? "velo" : "course", title, desc, sub, items, heavy: [...heavy] }];
+    return { short, blocks: blocks2, target: { rpe: wk.light ? [4, 6] : [7, 9], fam: wk.light ? "light" : "hard", why: SYSTEMS.aero.l + " \xB7 En Hyrox, la course p\xE8se environ 59 % du temps total et la VO2max est le meilleur pr\xE9dicteur du chrono (Brandt 2025). Aucune \xE9tude d\u2019entra\xEEnement contr\xF4l\xE9e propre \xE0 Hyrox : ces s\xE9ances suivent les recommandations des revues." }, heavy, est };
+  }
   function mobiSession(cfg) {
     const ids2 = ["mob-hanches", "mob-epaules", "mob-chevilles", "mob-dos"].concat((cfg.sports || []).includes("escalade") ? ["mob-doigts"] : []);
     return { short: "Mobilit\xE9", blocks: [{ id: uid("b"), kind: "recup", title: "R\xE9cup\xE9ration \xB7 mobilit\xE9", desc: "20 \xE0 30 min tranquilles", items: ids2.map((id) => ({ id: uid("i"), label: LIB_BY_ID[id].n, det: LIB_BY_ID[id].c, n: 1, lib: id })) }], target: { rpe: [1, 3], fam: "light", why: "S\xE9ance facile qui entretient la mobilit\xE9 et aide \xE0 r\xE9cup\xE9rer." }, heavy: /* @__PURE__ */ new Set() };
@@ -4006,6 +4369,7 @@
     if (["doigts", "bloc", "resist", "conti", "compet"].includes(type)) return climbSession(type, cfg, eq, wk);
     if (["ef", "int", "long", "lact", "circuit"].includes(type)) return cardioSession(type, cfg, eq, wk);
     if (type === "sprint") return sprintSession(cfg, eq, wk, used);
+    if (["hxc", "hxs", "hxsim"].includes(type)) return hyroxSession(type, cfg, eq, wk);
     return mobiSession(cfg);
   }
   function alternatives(libId, cfg) {
@@ -4087,6 +4451,7 @@
     const t = k || todayKey();
     return dow(t) === 0 ? t : addDays(mondayOf(t), 7);
   }
+  var STR_TYPES = ["fbA", "fbB", "haut", "bas"];
   function generate(cfg) {
     const start = cfg.start || nextMonday();
     let W = cfg.weeks || 4;
@@ -4096,7 +4461,8 @@
     const { map, cost } = placeSessions(cfg, types, sample);
     const weeks = [], warnings = [];
     for (let i = 0; i < W; i++) {
-      const wk = weekInfo(cfg, i, W), ws = addDays(start, i * 7), used = /* @__PURE__ */ new Set(), days = {};
+      const wk = weekInfo(cfg, i, W), ws = addDays(start, i * 7), used = /* @__PURE__ */ new Set(), days = {}, nStr = types.filter((x) => STR_TYPES.includes(x)).length;
+      let sIdx = 0;
       for (let d = 0; d < 7; d++) {
         const k = addDays(ws, d);
         if (cfg.event && k > cfg.event) continue;
@@ -4112,7 +4478,8 @@
         if (!t) continue;
         if (cfg.event && addDays(k, 1) === cfg.event && !["mobi", "ef", "conti"].includes(t)) t = "mobi";
         if (i % 2 === 1 && (t === "fbA" || t === "fbB") && types.filter((x) => x === "fbA").length !== types.filter((x) => x === "fbB").length) t = t === "fbA" ? "fbB" : "fbA";
-        days[d] = Object.assign(buildSession(t, cfg, wk, used, memo), { type: t });
+        const wk2 = nStr >= 3 && STR_TYPES.includes(t) ? Object.assign({}, wk, { dup: sIdx++ % 3 }) : wk;
+        days[d] = Object.assign(buildSession(t, cfg, wk2, used, memo), { type: t });
       }
       applyExtras(days, cfg, wk);
       weeks.push({ i, start: ws, end: addDays(ws, 6), phase: wk.phase, light: !!wk.light, taper: !!wk.taper, days });
@@ -4152,6 +4519,18 @@
     if (STRENGTH_GOALS.includes(c.goal)) lines.push("- Progression des charges : quand toutes les s\xE9ries atteignent le haut de la fourchette avec la r\xE9serve vis\xE9e, la charge monte de 2,5 kg (ou 2 \xE0 5 %).");
     const fams = [...new Set((prog.types || []).map((t) => fmtFamily(t, c)).filter(Boolean))];
     if (fams.length) lines.push("- Formats : " + fams.map((f) => FORMATS[f].find((x) => x[0] === fmtOf(f, c))[1].toLowerCase()).join(", ") + ".");
+    if (c.goal === "force" && (prog.types || []).filter((t) => STR_TYPES.includes(t)).length >= 3) lines.push("- Charges ondulantes : dans la semaine, une s\xE9ance lourde, une moyenne et une plus l\xE9g\xE8re (un peu plus de force max qu\u2019une progression lin\xE9aire).");
+    const hasEndu = (prog.types || []).some((t) => ["ef", "int", "long", "lact", "hxc", "hxsim"].includes(t)), hasExpl = (prog.types || []).some((t) => ["puiss", "sprint"].includes(t)) || fams.includes("puiss");
+    if (hasEndu && hasExpl) lines.push("- Endurance et explosivit\xE9 : ne les mets pas \xE0 moins de 3 h l\u2019une de l\u2019autre le m\xEAme jour, l\u2019endurance freine sinon la qualit\xE9 du travail explosif (Schumann 2021).");
+    const need = [];
+    if ((prog.types || []).some((t) => ["int", "long", "ef", "lact"].includes(t))) {
+      const sp = cardioSport(c, equipSet(c.equip));
+      if (sp === "course" && !vmaOf(null, c.lv)) need.push("VMA (VAMEVAL)");
+      if (sp === "velo" && !ftpOf(null, c.lv)) need.push("FTP 20 min");
+      if (sp === "nage" && !cssOf()) need.push("vitesse critique en natation (400 m + 200 m)");
+    }
+    if ((prog.types || []).includes("doigts") && ["f100", "f80", "f60", "bfr"].includes(fmtOf("doigts", c)) && !fingerRef2()) need.push("force max des doigts");
+    if (need.length) lines.push("- Tests de r\xE9f\xE9rence \xE0 passer en semaine 1 (Suivi \u2192 Tests) : " + need.join(", ") + ". Les allures, puissances et charges des s\xE9ances se calculent d\u2019apr\xE8s eux.");
     const cl = climbLevel(null, c.lv), rep = [];
     for (const [k, l] of [["bf", "bloc flash"], ["bm", "bloc max"], ["vf", "voie \xE0 vue"], ["vm", "voie max"]]) if (cl[k]) rep.push(l + " " + cl[k].g + (cl[k].src !== "d\xE9clar\xE9" ? " (estim\xE9)" : ""));
     for (const l of ["squat", "bench", "deadlift", "pull", "dips"]) {
@@ -4163,9 +4542,13 @@
     if (rep.length) lines.push("- Rep\xE8res utilis\xE9s : " + rep.join(" ; ") + ".");
     const ex = (c.extras || []).filter((id) => EXTRAS[id]);
     if (ex.length) lines.push("- Compl\xE9ments pour ton sport : " + ex.map((id) => EXTRAS[id].t.toLowerCase()).join(", ") + ".");
-    lines.push("", "Sources : ACSM 2009 ; NSCA 2016 ; Schoenfeld 2016 et 2017 ; Helms 2016 ; Williams 2017 ; Bell 2023" + (c.event ? " ; Bosquet 2007" : "") + ([c.goal, c.goal2].includes("aero") ? " ; St\xF6ggl 2014" : "") + (fams.some((f) => fmtOf(f, c) === "clusters") ? " ; Tufano 2017" : "") + (fams.some((f) => fmtOf(f, c) === "supersets") ? " ; Robbins 2010" : "") + (fams.some((f) => fmtOf(f, c) === "contraste") ? " ; Seitz 2016" : "") + (v ? " ; Billat 2001" : "") + exSrc(ex) + ".");
+    lines.push("", "Sources : ACSM 2009 ; NSCA 2016 ; Schoenfeld 2016 et 2017 ; Helms 2016 ; Williams 2017 ; Bell 2023" + (c.event ? " ; Bosquet 2007" : "") + ([c.goal, c.goal2].includes("aero") ? " ; St\xF6ggl 2014" : "") + (fams.some((f) => fmtOf(f, c) === "clusters") ? " ; Tufano 2017" : "") + (fams.some((f) => fmtOf(f, c) === "supersets") ? " ; Robbins 2010" : "") + (fams.some((f) => fmtOf(f, c) === "contraste") ? " ; Seitz 2016" : "") + (v ? " ; Billat 2001" : "") + fmtSrc(fams, c) + exSrc(ex) + ".");
     return lines.join("\n");
   }
+  var fmtSrc = (fams, c) => {
+    const ids2 = [...new Set(fams.map((f) => FMT_SOURCES[f + ":" + fmtOf(f, c)]).filter(Boolean))];
+    return ids2.map((id) => " ; " + SOURCES[id].s.replace(/ et al\./, "").replace(/, (\d{4})$/, " $1")).join("");
+  };
   var SRC_TXT = { turner2003: "Turner 2003", bohm2015: "Bohm 2015", vandyk2019: "van Dyk 2019", byram2010: "Byram 2010", lixandrao2018: "Lixandr\xE3o 2018", patterson2019: "Patterson 2019", wilson2013: "Wilson 2013" };
   var exSrc = (ex) => {
     const s = [...new Set(ex.flatMap((id) => EXTRAS[id].src || []))].map((x) => SRC_TXT[x]).filter(Boolean);
@@ -4681,82 +5064,6 @@
   var GLOSS_RE = new RegExp("(^|[^\\p{L}\\d])(" + FORMS.map(([f]) => esc(f)).join("|") + ")(?=$|[^\\p{L}\\d])", "giu");
   var glossIdOf = (form) => BY_FORM.get(String(form).toLowerCase()) || null;
 
-  // src/lib/sources.js
-  var sources_exports = {};
-  __export(sources_exports, {
-    SOURCES: () => SOURCES,
-    src: () => src
-  });
-  var SOURCES = {
-    saw2016: { s: "Saw et al., 2016", r: "Saw AE, Main LC, Gastin PB. Monitoring the athlete training response: subjective self-reported measures trump commonly used objective measures: a systematic review. Br J Sports Med. 2016;50(5):281\u2013291.", n: "Sur 56 \xE9tudes, les questionnaires de ressenti r\xE9agissent mieux et plus vite \xE0 la charge que les mesures objectives : le bien-\xEAtre baisse quand la charge monte et remonte quand elle baisse." },
-    mclean2010: { s: "McLean et al., 2010", r: "McLean BD, Coutts AJ, Kelly V, McGuigan MR, Cormack SJ. Neuromuscular, endocrine, and perceptual fatigue responses during different length between-match microcycles in professional rugby league players. Int J Sports Physiol Perform. 2010;5(3):367\u2013383.", n: "Questionnaire de bien-\xEAtre en 5 items (fatigue, sommeil, courbatures, stress, humeur) not\xE9s de 1 \xE0 5, sensible \xE0 la r\xE9cup\xE9ration entre deux matchs." },
-    hooper1995: { s: "Hooper & Mackinnon, 1995", r: "Hooper SL, Mackinnon LT. Monitoring overtraining in athletes: recommendations. Sports Med. 1995;20(5):321\u2013327.", n: "Suivi quotidien du sommeil, de la fatigue, du stress et des courbatures pour rep\xE9rer le surentra\xEEnement." },
-    walsh2021: { s: "Walsh et al., 2021", r: "Walsh NP, Halson SL, Sargent C, et al. Sleep and the athlete: narrative review and 2021 expert consensus recommendations. Br J Sports Med. 2021;55(7):356\u2013368.", n: "Moins de 7 h par nuit de fa\xE7on habituelle est un marqueur de sommeil insuffisant chez l\u2019athl\xE8te ; siestes de moins de 30 min, entre 13 h et 16 h ; allonger la nuit (fen\xEAtre de 9 \xE0 10 h) avant une p\xE9riode charg\xE9e." },
-    hirsh2015: { s: "Hirshkowitz et al., 2015", r: "Hirshkowitz M, Whiton K, Albert SM, et al. National Sleep Foundation\u2019s sleep time duration recommendations: methodology and results summary. Sleep Health. 2015;1(1):40\u201343.", n: "7 \xE0 9 h pour les adultes, 8 \xE0 10 h pour les 14-17 ans." },
-    milewski2014: { s: "Milewski et al., 2014", r: "Milewski MD, Skaggs DL, Bishop GA, et al. Chronic lack of sleep is associated with increased sports injuries in adolescent athletes. J Pediatr Orthop. 2014;34(2):129\u2013133.", n: "Chez 112 sportifs de 12 \xE0 18 ans, dormir moins de 8 h par nuit est associ\xE9 \xE0 1,7 fois plus de risque de blessure (association, pas preuve de cause)." },
-    plews2013: { s: "Plews et al., 2013", r: "Plews DJ, Laursen PB, Stanley J, Kilding AE, Buchheit M. Training adaptation and heart rate variability in elite endurance athletes: opening the door to effective monitoring. Sports Med. 2013;43(9):773\u2013781.", n: "La moyenne glissante sur 7 jours du ln rMSSD suit mieux l\u2019adaptation \xE0 l\u2019entra\xEEnement que la valeur d\u2019un seul jour." },
-    plews2014: { s: "Plews et al., 2014", r: "Plews DJ, Laursen PB, Le Meur Y, et al. Monitoring training with heart-rate variability: how much compliance is needed for valid assessment? Int J Sports Physiol Perform. 2014;9(5):783\u2013790.", n: "Au moins 3 mesures sur 7 jours pour une moyenne glissante valable." },
-    ais2023: { s: "AIS, 2023", r: "Bellenger C, Siegel R, Stanley J, McGibbon K. Best practice guidelines for the measurement, analysis and interpretation of resting heart rate and heart rate variability in athletes. Australian Institute of Sport; 2023.", n: "Comparer la moyenne sur 7 jours du ln rMSSD \xE0 sa propre base sur 60 jours ; changement significatif au-del\xE0 de 0,5 \xD7 le coefficient de variation individuel. Les \xAB diagnostics \xBB des applis ont peu d\u2019appui scientifique : regarder la tendance." },
-    buchheit2014: { s: "Buchheit, 2014", r: "Buchheit M. Monitoring training status with HR measures: do all roads lead to Rome? Front Physiol. 2014;5:73.", n: "FC de repos et VFC s\u2019interpr\xE8tent ensemble, par rapport aux valeurs habituelles de l\u2019athl\xE8te et au contexte d\u2019entra\xEEnement." },
-    foster1998: { s: "Foster, 1998", r: "Foster C. Monitoring training in athletes with reference to overtraining syndrome. Med Sci Sports Exerc. 1998;30(7):1164\u20131168.", n: "Monotonie = charge quotidienne moyenne \xF7 \xE9cart type sur la semaine ; contrainte = charge hebdo \xD7 monotonie. Les maladies suivent souvent les pics de charge et de contrainte ; une monotonie au-dessus de 2 est le rep\xE8re couramment utilis\xE9." },
-    foster2001: { s: "Foster et al., 2001", r: "Foster C, Florhaug JA, Franklin J, et al. A new approach to monitoring exercise training. J Strength Cond Res. 2001;15(1):109\u2013115.", n: "Charge de s\xE9ance = ressenti (0-10) not\xE9 environ 30 min apr\xE8s \xD7 dur\xE9e en minutes." },
-    gabbett2016: { s: "Gabbett, 2016", r: "Gabbett TJ. The training\u2014injury prevention paradox: should athletes be training smarter and harder? Br J Sports Med. 2016;50(5):273\u2013280.", n: "Ratio charge aigu\xEB (7 j) / chronique (28 j) : zone 0,8-1,3 d\xE9crite comme favorable, au-del\xE0 de 1,5 risque de blessure accru ; une charge chronique \xE9lev\xE9e bien construite prot\xE8ge." },
-    impellizzeri2020: { s: "Impellizzeri et al., 2020", r: "Impellizzeri FM, Tenan MS, Kempton T, Novak A, Coutts AJ. Acute:chronic workload ratio: conceptual issues and fundamental pitfalls. Int J Sports Physiol Perform. 2020;15(6):907\u2013913.", n: "Le ratio aigu/chronique a des limites m\xE9thodologiques importantes : \xE0 utiliser comme rep\xE8re de progressivit\xE9, pas comme pr\xE9dicteur de blessure." },
-    silbernagel2007: { s: "Silbernagel et al., 2007", r: "Silbernagel KG, Thome\xE9 R, Eriksson BI, Karlsson J. Continued sports activity, using a pain-monitoring model, during rehabilitation in patients with Achilles tendinopathy. Am J Sports Med. 2007;35(6):897\u2013906.", n: "Mod\xE8le de surveillance de la douleur : jusqu\u2019\xE0 5/10 pendant l\u2019effort, retour au niveau habituel le lendemain matin, pas d\u2019augmentation d\u2019une semaine \xE0 l\u2019autre." },
-    schoffl2015: { s: "Sch\xF6ffl et al., 2015", r: "Sch\xF6ffl V, Popp D, K\xFCpper T, Sch\xF6ffl I. Injury trends in rock climbers: evaluation of a case series of 911 injuries between 2009 and 2012. Wilderness Environ Med. 2015;26(1):62\u201367.", n: "Les doigts (poulies en t\xEAte) sont la premi\xE8re localisation des blessures en escalade, devant l\u2019\xE9paule." },
-    mcnulty2020: { s: "McNulty et al., 2020", r: "McNulty KL, Elliott-Sale KJ, Dolan E, et al. The effects of menstrual cycle phase on exercise performance in eumenorrheic women: a systematic review and meta-analysis. Sports Med. 2020;50(10):1813\u20131827.", n: "Performance peut-\xEAtre tr\xE8s l\xE9g\xE8rement r\xE9duite en d\xE9but de phase folliculaire (effet trivial, ES \u22120,06), avec une grande variabilit\xE9 : approche individuelle plut\xF4t que r\xE8gles g\xE9n\xE9rales." },
-    mountjoy2023: { s: "Mountjoy et al., 2023", r: "Mountjoy M, Ackerman KE, Bailey DM, et al. 2023 International Olympic Committee\u2019s (IOC) consensus statement on Relative Energy Deficiency in Sport (REDs). Br J Sports Med. 2023;57(17):1073\u20131097.", n: "Un apport \xE9nerg\xE9tique insuffisant par rapport \xE0 l\u2019entra\xEEnement d\xE9grade sant\xE9 et performance ; cycles irr\xE9guliers ou absents, blessures et fatigue r\xE9p\xE9t\xE9es sont des signaux d\u2019alerte." },
-    kerksick2017: { s: "Kerksick et al., 2017", r: "Kerksick CM, Arent S, Schoenfeld BJ, et al. International Society of Sports Nutrition position stand: nutrient timing. J Int Soc Sports Nutr. 2017;14:33.", n: "Glucides et prot\xE9ines (environ 0,25-0,4 g/kg) dans les heures qui suivent l\u2019effort favorisent la r\xE9cup\xE9ration." },
-    balas2012: { s: "Bal\xE1\u0161 et al., 2012", r: "Bal\xE1\u0161 J, Pecha O, Martin AJ, Cochrane D. Hand\u2013arm strength and endurance as predictors of climbing performance. Eur J Sport Sci. 2012;12(1):16\u201325.", n: "La force et l\u2019endurance des fl\xE9chisseurs des doigts, rapport\xE9es au poids, font partie des meilleurs pr\xE9dicteurs du niveau en escalade." },
-    michailov2018: { s: "Michailov et al., 2018", r: "Michailov ML, Bal\xE1\u0161 J, Tanev SK, et al. Reliability and validity of finger strength and endurance measurements in rock climbing. Res Q Exerc Sport. 2018;89(2):246\u2013254.", n: "Les tests de force des doigts sur r\xE9glette sont fiables \xE0 condition de standardiser la prise, la r\xE9glette et la position." },
-    giles2019: { s: "Giles et al., 2019", r: "Giles D, Chidley JB, Taylor N, et al. The determination of finger-flexor critical force in rock climbers. Int J Sports Physiol Perform. 2019;14(7):972\u2013979.", n: "Test de 4 min en 7 s / 3 s \xE0 effort maximal : la force moyenne des derni\xE8res contractions donne la force critique, li\xE9e au niveau en escalade." },
-    laffaye2014: { s: "Laffaye et al., 2014", r: "Laffaye G, Collin JM, Levernier G, Padulo J. Upper-limb power test in rock-climbing. Int J Sports Med. 2014;35(8):670\u2013675.", n: "Le \xAB power slap \xBB (hauteur atteinte d\u2019un bras depuis une suspension) mesure la puissance du haut du corps de fa\xE7on fiable." },
-    claudino2017: { s: "Claudino et al., 2017", r: "Claudino JG, Cronin J, Mez\xEAncio B, et al. The countermovement jump to monitor neuromuscular status: a meta-analysis. J Sci Med Sport. 2017;20(4):397\u2013402.", n: "Le CMJ (moyenne de plusieurs sauts) est un bon indicateur de l\u2019\xE9tat neuromusculaire." },
-    bennell1998: { s: "Bennell et al., 1998", r: "Bennell K, Talbot R, Wajswelner H, et al. Intra-rater and inter-rater reliability of a weight-bearing lunge measure of ankle dorsiflexion. Aust J Physiother. 1998;44(3):175\u2013180.", n: "Le test genou-mur (wall test) en charge est tr\xE8s fiable pour suivre la flexion dorsale de cheville." },
-    byram2010: { s: "Byram et al., 2010", r: "Byram IR, Bushnell BD, Dugger K, et al. Preseason shoulder strength measurements in professional baseball pitchers: identifying players at risk for injury. Am J Sports Med. 2010;38(7):1375\u20131382.", n: "Une faiblesse des rotateurs externes par rapport aux internes est associ\xE9e \xE0 plus de blessures d\u2019\xE9paule." },
-    acsm2009: { s: "ACSM, 2009", r: "American College of Sports Medicine. American College of Sports Medicine position stand. Progression models in resistance training for healthy adults. Med Sci Sports Exerc. 2009;41(3):687\u2013708.", n: "D\xE9butant : 60-70 % du max pour 8 \xE0 12 r\xE9p\xE9titions ; avanc\xE9 : 80-100 % pour la force. Augmenter la charge de 2 \xE0 10 % quand on d\xE9passe de 1 \xE0 2 r\xE9p\xE9titions l\u2019objectif. Au moins 2 \xE0 3 min de repos sur les exercices lourds, 48 h entre deux s\xE9ances lourdes des m\xEAmes muscles." },
-    nsca2016: { s: "NSCA, 2016", r: "Haff GG, Triplett NT, eds. Essentials of Strength Training and Conditioning. 4th ed. National Strength and Conditioning Association. Champaign, IL: Human Kinetics; 2016.", n: "Force : 6 r\xE9p\xE9titions ou moins \xE0 85 % et plus, 2 \xE0 5 min de repos. Rapports effort:r\xE9cup\xE9ration selon la fili\xE8re : 1:12 \xE0 1:20 (alactique, moins de 10 s), 1:3 \xE0 1:5 (lactique, 15 s \xE0 2 min), 1:1 \xE0 1:3 (a\xE9robie)." },
-    schoenfeld2016: { s: "Schoenfeld et al., 2016", r: "Schoenfeld BJ, Pope ZK, Benik FM, et al. Longer interset rest periods enhance muscle strength and hypertrophy in resistance-trained men. J Strength Cond Res. 2016;30(7):1805\u20131812.", n: "Chez des pratiquants entra\xEEn\xE9s, 3 min de repos entre les s\xE9ries donnent plus de force et de masse que 1 min." },
-    schoenfeld2017: { s: "Schoenfeld et al., 2017", r: "Schoenfeld BJ, Ogborn D, Krieger JW. Dose-response relationship between weekly resistance training volume and increases in muscle mass: a systematic review and meta-analysis. J Sports Sci. 2017;35(11):1073\u20131082.", n: "Chaque s\xE9rie hebdomadaire en plus s\u2019accompagne de plus d\u2019hypertrophie ; au moins 10 s\xE9ries par muscle et par semaine font mieux que moins de 5." },
-    helms2016: { s: "Helms et al., 2016", r: "Helms ER, Cronin J, Storey A, Zourdos MC. Application of the repetitions in reserve-based rating of perceived exertion scale for resistance training. Strength Cond J. 2016;38(4):42\u201349.", n: "La r\xE9serve (r\xE9p\xE9titions qu\u2019on aurait encore pu faire) permet de r\xE9gler la charge au jour le jour selon la forme." },
-    williams2017: { s: "Williams et al., 2017", r: "Williams TD, Tolusso DV, Fedewa MV, Esco MR. Comparison of periodized and non-periodized resistance training on maximal strength: a meta-analysis. Sports Med. 2017;47(10):2083\u20132100.", n: "Un entra\xEEnement p\xE9riodis\xE9 (blocs qui varient) am\xE9liore davantage la force maximale qu\u2019un entra\xEEnement non p\xE9riodis\xE9." },
-    stoggl2014: { s: "St\xF6ggl & Sperlich, 2014", r: "St\xF6ggl T, Sperlich B. Polarized training has greater impact on key endurance variables than threshold, high intensity, or high volume training. Front Physiol. 2014;5:33.", n: "Chez des athl\xE8tes d\u2019endurance, environ 80 % de facile et 20 % d\u2019intense font mieux sur 9 semaines que le travail au seuil, le tout intense ou le gros volume." },
-    bosquet2007: { s: "Bosquet et al., 2007", r: "Bosquet L, Montpetit J, Arvisais D, Mujika I. Effects of tapering on performance: a meta-analysis. Med Sci Sports Exerc. 2007;39(8):1358\u20131365.", n: "Aff\xFBtage le plus efficace : environ 2 semaines, volume r\xE9duit de 41 \xE0 60 %, intensit\xE9 et fr\xE9quence maintenues." },
-    bell2023: { s: "Bell et al., 2023", r: "Bell L, Strafford BW, Coleman M, Androulakis Korakakis P, Nolan D. Integrating deloading into strength and physique sports training programmes: an international Delphi consensus approach. Sports Med Open. 2023;9.", n: "Consensus d\u2019experts : la d\xE9charge est une p\xE9riode de baisse volontaire de la charge (surtout du volume), souvent toutes les 4 \xE0 6 semaines ; les preuves directes restent limit\xE9es." },
-    lopezrivera2012: { s: "L\xF3pez-Rivera & Gonz\xE1lez-Badillo, 2012", r: "L\xF3pez-Rivera E, Gonz\xE1lez-Badillo JJ. The effects of two maximum grip strength training methods using the same effort duration and different edge depth on grip endurance in elite climbers. Sports Technol. 2012;5(3-4):100\u2013110.", n: "Suspensions de 10 s avec une marge d\u2019environ 3 s, 3 min de repos : protocole de force maximale des doigts chez des grimpeurs confirm\xE9s." },
-    tufano2017: { s: "Tufano et al., 2017", r: "Tufano JJ, Brown LE, Haff GG. Theoretical and practical aspects of different cluster set structures: a systematic review. J Strength Cond Res. 2017;31(3):848\u2013867.", n: "Des pauses courtes \xE0 l\u2019int\xE9rieur de la s\xE9rie maintiennent la vitesse et la puissance des r\xE9p\xE9titions, et permettent des charges un peu plus lourdes pour le m\xEAme nombre de r\xE9p\xE9titions." },
-    robbins2010: { s: "Robbins et al., 2010", r: "Robbins DW, Young WB, Behm DG, Payne WR. Agonist-antagonist paired set resistance training: a brief review. J Strength Cond Res. 2010;24(10):2873\u20132882.", n: "Alterner agonistes et antagonistes (pouss\xE9e / tirage) garde le volume et la charge en r\xE9duisant nettement la dur\xE9e de la s\xE9ance." },
-    seitz2016: { s: "Seitz & Haff, 2016", r: "Seitz LB, Haff GG. Factors modulating post-activation potentiation of jump, sprint, throw, and upper-body ballistic performances: a systematic review with meta-analysis. Sports Med. 2016;46(2):231\u2013240.", n: "Une s\xE9rie lourde am\xE9liore un peu les sauts et lancers qui suivent, surtout chez les plus forts et apr\xE8s plusieurs minutes de r\xE9cup\xE9ration." },
-    billat2001: { s: "Billat, 2001", r: "Billat LV. Interval training for performance: a scientific and empirical practice. Special recommendations for middle- and long-distance running. Part I: aerobic interval training. Sports Med. 2001;31(1):13\u201331.", n: "Intervalles courts (30 s / 30 s) autour de la vitesse maximale a\xE9robie pour accumuler du temps pr\xE8s de la VO2max." },
-    tanaka2001: { s: "Tanaka et al., 2001", r: "Tanaka H, Monahan KD, Seals DR. Age-predicted maximal heart rate revisited. J Am Coll Cardiol. 2001;37(1):153\u2013156.", n: "FC max estim\xE9e \u2248 208 \u2212 0,7 \xD7 \xE2ge, plus juste que 220 \u2212 \xE2ge ; une mesure r\xE9elle reste pr\xE9f\xE9rable." },
-    poole2016: { s: "Poole et al., 2016", r: "Poole DC, Burnley M, Vanhatalo A, Rossiter HB, Jones AM. Critical power: an important fatigue threshold in exercise physiology. Med Sci Sports Exerc. 2016;48(11):2320\u20132334.", n: "La puissance (ou vitesse) critique s\xE9pare le domaine \xAB lourd \xBB, tenable longtemps, du domaine \xAB s\xE9v\xE8re \xBB, o\xF9 l\u2019\xE9puisement arrive vite ; D\u2032 est la r\xE9serve de travail au-dessus." },
-    jones2017: { s: "Jones & Vanhatalo, 2017", r: "Jones AM, Vanhatalo A. The \u201Ccritical power\u201D concept: applications to sports performance with a focus on intermittent high-intensity exercise. Sports Med. 2017;47(Suppl 1):65\u201378.", n: "Vitesse critique et D\u2032 se calculent \xE0 partir de 2 \xE0 4 efforts maximaux de 2 \xE0 15 min, et servent \xE0 r\xE9gler l\u2019intensit\xE9 des s\xE9ances." },
-    allen2010: { s: "Allen & Coggan, 2010", r: "Allen H, Coggan A. Training and racing with a power meter. 2nd ed. Boulder (CO): VeloPress; 2010.", n: "FTP estim\xE9e \xE0 95 % de la puissance moyenne d\u2019un effort de 20 min ; zones d\u2019entra\xEEnement en % de la FTP." },
-    harvey1998: { s: "Harvey, 1998", r: "Harvey D. Assessment of the flexibility of elite athletes using the modified Thomas test. Br J Sports Med. 1998;32(1):68\u201370.", n: "Le test de Thomas modifi\xE9 \xE9value la longueur des fl\xE9chisseurs de hanche et du droit f\xE9moral." },
-    draper2009: { s: "Draper et al., 2009", r: "Draper N, Brent S, Hodgson C, Blackwell G. Flexibility assessment and the role of flexibility as a determinant of performance in rock climbing. Int J Perform Anal Sport. 2009;9(1):67\u201389.", n: "Tests de souplesse propres \xE0 l\u2019escalade (mont\xE9e de pied, \xE9cart) ; la souplesse de hanche rapport\xE9e \xE0 la taille est li\xE9e au niveau." },
-    acsm2021: { s: "ACSM, 2021", r: "American College of Sports Medicine. ACSM\u2019s guidelines for exercise testing and prescription. 11th ed. Philadelphia: Wolters Kluwer; 2021.", n: "Protocole du sit and reach : meilleur de plusieurs essais, apr\xE8s un \xE9chauffement l\xE9ger." },
-    remilieux: { s: "Julien Remilieux", r: "Julien Remilieux, entra\xEEneur d\u2019escalade : \xE9chauffement des doigts 7 \xD7 7/3 (pratique d\u2019entra\xEEnement, document d\u2019origine \xE0 retrouver).", n: "7 suspensions de 7 s avec 3 s de pause, charge qui monte progressivement et pr\xE9hensions vari\xE9es, avant les s\xE9ances intenses de doigts." },
-    jeffreys2007: { s: "Jeffreys, 2007", r: "Jeffreys I. Warm-up revisited: the ramp method of optimizing warm-ups. Prof Strength Cond. 2007;(6):12\u201318.", n: "\xC9chauffement RAMP : monter en temp\xE9rature (Raise), activer et mobiliser (Activate, Mobilise), puis potentialiser (Potentiate) en montant vers l\u2019intensit\xE9 de la s\xE9ance." },
-    mcgowan2015: { s: "McGowan et al., 2015", r: "McGowan CJ, Pyne DB, Thompson KG, Rattray B. Warm-up strategies for sport and exercise: mechanisms and applications. Sports Med. 2015;45(11):1523\u20131546.", n: "L\u2019\xE9chauffement am\xE9liore la performance par la temp\xE9rature musculaire et la potentialisation ; il doit rester assez court pour ne pas fatiguer." },
-    buchheit2013: { s: "Buchheit & Laursen, 2013", r: "Buchheit M, Laursen PB. High-intensity interval training, solutions to the programming puzzle. Part II: anaerobic energy, neuromuscular load and practical applications. Sports Med. 2013;43(10):927\u2013954.", n: "Le format des intervalles (dur\xE9e, intensit\xE9, r\xE9cup\xE9ration) r\xE8gle la part a\xE9robie, ana\xE9robie et neuromusculaire de la s\xE9ance." },
-    helgerud2007: { s: "Helgerud et al., 2007", r: "Helgerud J, H\xF8ydal K, Wang E, et al. Aerobic high-intensity intervals improve VO2max more than moderate training. Med Sci Sports Exerc. 2007;39(4):665\u2013671.", n: "4 \xD7 4 min \xE0 90-95 % de la FC max, 3 min de r\xE9cup\xE9ration active : plus de gain de VO2max qu\u2019un entra\xEEnement mod\xE9r\xE9." },
-    vandyk2019: { s: "van Dyk et al., 2019", r: "van Dyk N, Behan FP, Whiteley R. Including the Nordic hamstring exercise in injury prevention programmes halves the rate of hamstring injuries: a systematic review and meta-analysis of 8459 athletes. Br J Sports Med. 2019;53(21):1362\u20131370.", n: "Ajouter le Nordic hamstring aux programmes de pr\xE9vention divise environ par deux les blessures des ischio-jambiers." },
-    thomas2016: { s: "Thomas, Erdman & Burke, 2016", r: "Thomas DT, Erdman KA, Burke LM. American College of Sports Medicine Joint Position Statement. Nutrition and Athletic Performance. Med Sci Sports Exerc. 2016;48(3):543\u2013568.", n: "Glucides selon la charge : 3-5 g/kg (l\xE9ger), 5-7 (environ 1 h par jour), 6-10 (1 \xE0 3 h), 8-12 (plus de 4 h). Prot\xE9ines 1,2 \xE0 2,0 g/kg, lipides 20 \xE0 35 % de l\u2019\xE9nergie. Avant l\u2019effort : 1 \xE0 4 g/kg de glucides 1 \xE0 4 h avant ; pendant plus de 75 min : 30 \xE0 60 g/h ; apr\xE8s : environ 0,3 g/kg de prot\xE9ines." },
-    morton2018: { s: "Morton et al., 2018", r: "Morton RW, Murphy KT, McKellar SR, et al. A systematic review, meta-analysis and meta-regression of the effect of protein supplementation on resistance training-induced gains in muscle mass and strength in healthy adults. Br J Sports Med. 2018;52(6):376\u2013384.", n: "Au-del\xE0 d\u2019environ 1,6 g/kg par jour de prot\xE9ines, plus de gain de masse mesurable en moyenne ; la borne haute (2,2 g/kg) couvre presque tout le monde." },
-    anses2021: { s: "ANSES, 2021", r: "Anses. Avis relatif \xE0 l\u2019actualisation des r\xE9f\xE9rences nutritionnelles en vitamines et min\xE9raux pour la population g\xE9n\xE9rale. Maisons-Alfort : Anses ; 2021.", n: "RNP : apport qui couvre le besoin de presque toute la population ; AS : apport moyen jug\xE9 satisfaisant quand le besoin n\u2019est pas connu. Adultes : fer 11 mg (16 si r\xE8gles abondantes), calcium 950 mg (1 000 avant 25 ans), magn\xE9sium 380 / 300 mg, vitamine D 15 \xB5g, B12 4 \xB5g, vitamine C 110 mg, folates 330 \xB5g." },
-    ciqual2025: { s: "Ciqual, 2025", r: "Anses. 2025. Table de composition nutritionnelle des aliments Ciqual (valeurs manquantes compl\xE9t\xE9es par : Anses. 2020. Table Ciqual pour le calcul des apports nutritionnels CALNUT).", n: "3 484 aliments g\xE9n\xE9riques et 74 constituants. Les produits de marque peuvent s\u2019en \xE9carter." },
-    frankenfield2005: { s: "Frankenfield et al., 2005", r: "Frankenfield D, Roth-Yousey L, Compher C. Comparison of predictive equations for resting metabolic rate in healthy nonobese and obese adults: a systematic review. J Am Diet Assoc. 2005;105(5):775\u2013789.", n: "L\u2019\xE9quation de Mifflin-St Jeor est la plus fiable des \xE9quations test\xE9es : \xE0 \xB110 % du m\xE9tabolisme mesur\xE9 chez la majorit\xE9 des adultes." },
-    herrmann2024: { s: "Herrmann et al., 2024", r: "Herrmann SD, Willis EA, Ainsworth BE, et al. 2024 Adult Compendium of Physical Activities: a third update of the energy costs of human activities. J Sport Health Sci. 2024;13(1):6\u201312.", n: "Co\xFBt \xE9nerg\xE9tique des activit\xE9s en METs (escalade 5,8 \xE0 8,0 ; musculation 3,5 \xE0 6,0 ; course selon la vitesse ; basket 7,5 \xE0 8,0\u2026)." },
-    maughan2018: { s: "CIO, 2018", r: "Maughan RJ, Burke LM, Dvorak J, et al. IOC consensus statement: dietary supplements and the high-performance athlete. Br J Sports Med. 2018;52(7):439\u2013455.", n: "Peu de compl\xE9ments ont un bon niveau de preuve (caf\xE9ine, cr\xE9atine, nitrates, b\xEAta-alanine, bicarbonate) ; les compl\xE9ments \xAB m\xE9dicaux \xBB (fer, vitamine D) se d\xE9cident sur bilan ; risque de contamination par des produits dopants." },
-    turner2003: { s: "Turner & Robling, 2003", r: "Turner CH, Robling AG. Designing exercise regimens to increase bone strength. Exerc Sport Sci Rev. 2003;31(1):45\u201350.", n: "L\u2019os r\xE9pond aux charges dynamiques, rapides et vari\xE9es ; sa sensibilit\xE9 baisse vite au fil des r\xE9p\xE9titions, si bien que quelques dizaines d\u2019impacts par s\xE9ance suffisent, et que des s\xE9ances courtes r\xE9parties dans la journ\xE9e font mieux qu\u2019une longue." },
-    bohm2015: { s: "Bohm et al., 2015", r: "Bohm S, Mersmann F, Arampatzis A. Human tendon adaptation in response to mechanical loading: a systematic review and meta-analysis of exercise intervention studies on healthy adults. Sports Med Open. 2015;1(1):7.", n: "Le tendon s\u2019adapte surtout \xE0 des charges \xE9lev\xE9es (environ 85-90 % de la contraction maximale), tenues assez longtemps (environ 3 s par contraction), sur au moins 12 semaines ; l\u2019isom\xE9trie et le travail lent marchent aussi bien que l\u2019excentrique." },
-    patterson2019: { s: "Patterson et al., 2019", r: "Patterson SD, Hughes L, Warmington S, et al. Blood flow restriction exercise: considerations of methodology, application, and safety. Front Physiol. 2019;10:533.", n: "Position d\u2019experts sur le BFR : 20 \xE0 40 % du max, souvent 75 r\xE9p\xE9titions en 4 s\xE9ries (30, 15, 15, 15), 30 \xE0 60 s de repos, brassard \xE0 40-80 % de la pression d\u2019occlusion, 2 \xE0 3 fois par semaine. Liste les contre-indications et demande un d\xE9pistage avant de commencer." },
-    lixandrao2018: { s: "Lixandr\xE3o et al., 2018", r: "Lixandr\xE3o ME, Ugrinowitsch C, Berton R, et al. Magnitude of muscle strength and mass adaptations between high-load resistance training versus low-load resistance training associated with blood-flow restriction: a systematic review and meta-analysis. Sports Med. 2018;48(2):361\u2013378.", n: "Le BFR \xE0 charge l\xE9g\xE8re donne une hypertrophie comparable \xE0 celle des charges lourdes, mais des gains de force plus faibles." },
-    hughes2017: { s: "Hughes et al., 2017", r: "Hughes L, Paton B, Rosenblatt B, Gissane C, Patterson SD. Blood flow restriction training in clinical musculoskeletal rehabilitation: a systematic review and meta-analysis. Br J Sports Med. 2017;51(13):1003\u20131011.", n: "En r\xE9\xE9ducation, le BFR \xE0 charge l\xE9g\xE8re fait gagner plus de force que la charge l\xE9g\xE8re seule, avec une contrainte articulaire plus faible que les charges lourdes." },
-    wilson2013: { s: "Wilson et al., 2013", r: "Wilson JM, Lowery RP, Joy JM, Loenneke JP, Naimo MA. Practical blood flow restriction training increases acute determinants of hypertrophy without increasing indices of muscle damage. J Strength Cond Res. 2013;27(11):3068\u20133075.", n: "BFR \xAB pratique \xBB avec des bandes \xE9lastiques serr\xE9es \xE0 un ressenti d\u2019environ 7 sur 10 sur la cuisse : r\xE9ponse aigu\xEB favorable \xE0 l\u2019hypertrophie, sans plus de dommages musculaires." }
-  };
-  var src = (id) => SOURCES[id];
-
   // src/lib/io.js
   var io_exports = {};
   __export(io_exports, {
@@ -5146,7 +5453,7 @@
     return Object.assign(
       { goal: null, goal2: null, days: [0, 2, 4], fixed: [], fixedLbl: "", dur: 60, lvl: 2, equip: eq, weeks: 8, start: nextMonday(), event: null, eventLbl: "" },
       saved ? { days: saved.days, fixed: saved.fixed || [], fixedLbl: saved.fixedLbl || "", dur: saved.dur, lvl: saved.lvl, equip: saved.equip, weeks: saved.weeks } : {},
-      { sports: sp, u18: !!p.under18, swap: {}, fmt: saved && saved.fmt || {} },
+      { sports: sp, sex: p.sex, u18: !!p.under18, swap: {}, fmt: saved && saved.fmt || {} },
       isSelf() ? {} : { lv: cloneJ(levelsDoc(o)) }
     );
   }
@@ -5159,18 +5466,19 @@
   function builderDeleteModel(id) {
     putFor(SELF, "models", { list: builderModels().filter((m) => m.id !== id) });
   }
-  var FAM_LBL = { int: "S\xE9ance d\u2019intervalles (course)", intV: "S\xE9ance d\u2019intervalles (v\xE9lo)", conti: "S\xE9ance de volume", resist: "S\xE9ance de r\xE9sistance", bloc: "S\xE9ance de puissance", doigts: "S\xE9ance de doigts", compet: "S\xE9ance de comp\xE9tition", force: "Muscu \xB7 force", hyper: "Muscu \xB7 masse", puiss: "Muscu \xB7 puissance" };
+  var FAM_LBL = { int: "S\xE9ance d\u2019intervalles (course)", intV: "S\xE9ance d\u2019intervalles (v\xE9lo)", intN: "S\xE9ance d\u2019intervalles (natation)", conti: "S\xE9ance de volume", resist: "S\xE9ance de r\xE9sistance", bloc: "S\xE9ance de puissance", doigts: "S\xE9ance de doigts", compet: "S\xE9ance de comp\xE9tition", force: "Muscu \xB7 force", hyper: "Muscu \xB7 masse", puiss: "Muscu \xB7 puissance" };
   var RECO_WHY = {
     conti: (r) => r === "voies" ? "Tu as renseign\xE9 un niveau en voie : le volume se fait en voie." : "Beaucoup de mouvements \xE0 intensit\xE9 basse : la base a\xE9robie des avant-bras et de la technique.",
     resist: (r) => r === "voies" ? "Ton objectif est la r\xE9sistance en voie : on la travaille dans des voies." : "Le 4 \xD7 4 fait durer l\u2019effort 2 \xE0 3 min, la dur\xE9e de la fili\xE8re lactique.",
     bloc: () => "Les blocs \xE0 ta limite recrutent au maximum, frais \xE0 chaque essai.",
-    doigts: (r) => r === "hangs" ? "Avec une poutre, la charge des suspensions se r\xE8gle au kilo pr\xE8s." : "Sans poutre (ou avant 18 ans), les petites prises en bloc font progresser sans risque.",
+    doigts: (r) => r === "f80" ? "Le 10/6 \xE0 80 % de ta force max est le meilleur compromis force et endurance de l\u2019\xE9tude de Devise (2022) : environ +12 % de force en 4 semaines." : r === "hangs" ? "Avec une poutre, la charge des suspensions se r\xE8gle au kilo pr\xE8s." : "Sans poutre (ou avant 18 ans), les petites prises en bloc font progresser sans risque.",
     compet: () => "Le format des qualifications : blocs nouveaux, temps limit\xE9, repos impos\xE9.",
     force: () => "Repos complets entre les s\xE9ries : la base la plus simple pour progresser en force.",
     hyper: (r, c) => r === "supersets" ? "S\xE9ance de " + c.dur + " min : les supersets gardent le volume en moins de temps." : "Un exercice \xE0 la fois, repos complets : le plus simple pour bien charger.",
     puiss: (r) => r === "contraste" ? "Avec une barre et de l\u2019exp\xE9rience : la s\xE9rie lourde potentialise la s\xE9rie explosive." : "Charges l\xE9g\xE8res lanc\xE9es vite : la base, sans mat\xE9riel lourd.",
-    int: () => "Alterner 30/30 et 3 min varie le stimulus pr\xE8s de la VO2max ; le seuil se cale sur ta vitesse critique quand tu l\u2019as test\xE9e.",
-    intV: () => "Le 4 \xD7 4 min est le format le plus \xE9tudi\xE9 pour la VO2max ; le sweet spot construit l\u2019endurance juste sous la FTP."
+    int: () => "Alterner 30/30 et 3 min varie le stimulus pr\xE8s de la VO2max ; le 4 \xD7 4 min et le 15/15 font encore mieux sur la VO2max (Helgerud 2007) ; le seuil se cale sur ta vitesse critique quand tu l\u2019as test\xE9e.",
+    intV: () => "Le 4 \xD7 4 min est le format le plus \xE9tudi\xE9 pour la VO2max ; le 30/15 de R\xF8nnestad (2015) a donn\xE9 plus de VO2max \xE0 effort \xE9gal ; le sweet spot et le seuil construisent l\u2019endurance autour de la FTP.",
+    intN: () => "La vitesse critique (CSS) se mesure avec un 400 m et un 200 m : les s\xE9ries \xE0 son allure travaillent le seuil a\xE9robie, et le volume r\xE9duit \xE0 haute intensit\xE9 ne fait pas perdre de performance."
   };
   var WK0 = { step: 1, meso: 0, phase: "volume" };
   var tutTxt = (s) => s >= 120 ? Math.round(s / 60) + " min" : s + " s";
@@ -5186,7 +5494,7 @@
       }
     }
     if (fams.includes("puiss")) ["squat", "bench", "pull"].forEach((l) => lifts.add(l));
-    const need = { climb: types.some((t) => ["conti", "resist", "bloc", "doigts", "compet"].includes(t)), lifts: [...lifts], cardio: types.some((t) => ["ef", "int", "long", "lact", "sprint", "circuit"].includes(t)) };
+    const need = { climb: types.some((t) => ["conti", "resist", "bloc", "doigts", "compet"].includes(t)), lifts: [...lifts], cardio: types.some((t) => ["ef", "int", "long", "lact", "sprint", "circuit", "hxc", "hxs", "hxsim"].includes(t)), hyrox: types.some((t) => ["hxc", "hxs", "hxsim"].includes(t)) };
     const out = fams.map((f) => {
       const t = types.find((x) => fmtFamily(x, cfg) === f), cur = fmtOf(f, cfg), reco = fmtReco(f, cfg);
       return { f, label: FAM_LBL[f] || f, cur, reco, why: RECO_WHY[f] ? RECO_WHY[f](reco, cfg) : "", opts: FORMATS[f].map(([id, l, d]) => {
@@ -5235,14 +5543,15 @@
     return {
       climb: need ? need.climb : all || s.includes("escalade"),
       lifts: need ? need.lifts : all || s.some((x) => ["muscu", "hyrox", "combat", "collectif", "escalade"].includes(x)) ? s.length && s.every((x) => x === "escalade") ? ["pull", "dips"] : Object.keys(LIFTS) : [],
-      cardio: need ? need.cardio : all || s.some((x) => ["course", "trail", "velo", "natation", "hyrox", "collectif", "combat"].includes(x))
+      cardio: need ? need.cardio : all || s.some((x) => ["course", "trail", "velo", "natation", "hyrox", "collectif", "combat"].includes(x)),
+      hyrox: need ? !!need.hyrox : all || s.includes("hyrox")
     };
   }
   var fmtN = (v) => v == null ? "" : String(v).replace(".", ",");
   function levelsForm(need, lvIn) {
     const lv = lvIn || levelsDoc();
     const g = levelGroups(sportsOf(), need);
-    const cl = climbLevel(null, lvIn), vma = vmaOf(null, lvIn), fc = fcmaxOf(null, lvIn), cs = csOf(), vo2 = vo2Of(null, lvIn), ftp = ftpOf(null, lvIn), rp = runProfile(null, lvIn);
+    const cl = climbLevel(null, lvIn), vma = vmaOf(null, lvIn), fc = fcmaxOf(null, lvIn), cs = csOf(), css = cssOf(), vo2 = vo2Of(null, lvIn), ftp = ftpOf(null, lvIn), rp = runProfile(null, lvIn);
     return {
       climb: g.climb ? CLIMB_KEYS.map(([k, disc, , l]) => ({ k, l, v: lv[k] || "", hint: cl[k] && cl[k].src !== "d\xE9clar\xE9" ? cl[k].g + " (" + cl[k].src + ")" : "", opts: SCALE[disc].filter((x, i) => i >= 3) })) : [],
       lifts: g.lifts.map((id) => {
@@ -5255,7 +5564,8 @@
         { k: "fcmax", l: "FC max (bpm)", v: lv.fcmax ?? null, int: true, hint: fc && fc.src !== "d\xE9clar\xE9e" ? fc.v + " \xB7 " + fc.src : "" },
         { k: "ftp", l: "FTP v\xE9lo (W)", v: lv.ftp ?? null, int: true, hint: ftp && ftp.src !== "d\xE9clar\xE9e" ? ftp.v + " W \xB7 " + srcTxt(ftp) : "" }
       ] : [],
-      cardioNote: g.cardio ? (cs ? "Vitesse critique " + fmtN(cs.v) + " km/h \xB7 D\u2032 \u2248 " + cs.dp + " m (test du " + srcTxt(cs).replace("test le ", "") + "). " : "Vitesse critique : passe le test 3 min + 12 min dans Suivi \u2192 Tests. ") + (rp ? rp.txt : "") : ""
+      hyrox: g.hyrox ? { k: "hdiv", l: "Cat\xE9gorie Hyrox", v: lv.hdiv === "pro" ? "pro" : "open", opts: [["open", "Open"], ["pro", "Pro"]] } : null,
+      cardioNote: g.cardio ? (cs ? "Vitesse critique " + fmtN(cs.v) + " km/h \xB7 D\u2032 \u2248 " + cs.dp + " m (test du " + srcTxt(cs).replace("test le ", "") + "). " : "Vitesse critique : passe le test 3 min + 12 min dans Suivi \u2192 Tests. ") + (css ? "CSS natation " + fmtN(Math.round(css.ms * 100) / 100) + " m/s (" + swimPace(css, 100) + " /100 m). " : "") + (rp ? rp.txt : "") : ""
     };
   }
   function readImportText(txt) {

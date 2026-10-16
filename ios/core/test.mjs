@@ -161,5 +161,70 @@ ok('Whoop : séances déjà remplies non écrasées', call('store.jget', wd).dur
   call('plan.resetOrder', sd);
   ok('ordre : retour au plan', call('plan.blocks', sd).map(b => b.id).join() === 'g1,d1');
 }
+
+// ---- Catalogue de modalités : tests de référence, protocoles doigts, intervalles, natation, Hyrox
+{
+  const td = call('dates.addDays', t, -3);
+  const base = { goal: 'doigts', goal2: null, days: [0, 2, 4], fixed: [], fixedLbl: '', dur: 75, lvl: 2, equip: ['salle-esc', 'bfr'], weeks: 4, start: call('dates.mondayOf', t), sports: ['escalade'], sex: 'M', u18: false, swap: {}, fmt: {} };
+  const sess = (type, over, wk) => call('builder.buildSession', type, Object.assign({}, base, over), Object.assign({ step: 1, meso: 0, phase: 'volume' }, wk || {}), null, {});
+  const items = x => x.blocks.flatMap(b => b.items).filter(i => i.id !== 'ech' && i.id !== 'rac');
+  // doigts
+  C.loadJSON(JSON.stringify(Object.assign({}, docs, { ['self|t:' + td]: { res: { 'fmax-semi': { 'v.D': 40, 'v.G': 36 } } } })));
+  const f80 = items(sess('doigts', { fmt: { doigts: 'f80' } }))[0];
+  ok('doigts 10/6 à 80 % : minuteur et charge par main', f80.timer.work === 10 && f80.timer.rest === 6 && f80.timer.reps === 12 && f80.timer.sets === 3 && f80.det.includes('droite 32 kg, gauche 29 kg'), f80.det);
+  const f100 = items(sess('doigts', { fmt: { doigts: 'f100' } }))[0];
+  ok('doigts une main à 100 %', f100.timer.work === 6 && f100.timer.reps === 12 && f100.timer.sets === 2 && f100.det.includes('droite 40 kg'), f100.det);
+  ok('doigts 10/6 à 60 %', items(sess('doigts', { fmt: { doigts: 'f60' } }))[0].timer.reps === 24);
+  const e73 = items(sess('doigts', { fmt: { doigts: 'endu73' } }));
+  ok('doigts 7/3 en deux blocs', e73.length === 2 && e73[0].timer.work === 7 && e73[0].timer.rest === 3 && e73[0].timer.sets === 6, e73.length + ' blocs');
+  const bfr = items(sess('doigts', { fmt: { doigts: 'bfr' } }));
+  ok('doigts avec brassards : une série par main, 30 %', bfr.length === 2 && bfr[0].det.includes('droite 12 kg'), bfr[0].det);
+  ok('doigts avec brassards : sans brassards, repli sur la grimpe', items(sess('doigts', { fmt: { doigts: 'bfr' }, equip: ['salle-esc'] }))[0].label.startsWith('Blocs'));
+  ok('doigts : 10/6 à 80 % conseillé avec un test de force', call('builder.fmtReco', 'doigts', Object.assign({}, base)) === 'f80');
+  // tests VAMEVAL, CSS
+  C.loadJSON(JSON.stringify(Object.assign({}, docs, { ['self|t:' + td]: { res: { vameval: { v: 17.5 }, css: { t400: 390, t200: 180 }, ftp: { p20: 263 } } } })));
+  const vm = call('levels.vmaOf', null, null);
+  ok('VAMEVAL lu comme VMA', vm && vm.v === 17.5, JSON.stringify(vm));
+  const cs = call('levels.cssOf');
+  ok('CSS 400/200 : allure au 100 m', cs && Math.round(cs.p100) === 105 && call('levels.swimPace', cs, 100) === '1:45', JSON.stringify(cs));
+  // course
+  const run = { goal: 'aero', sports: ['course'], equip: ['exterieur'] };
+  const r1515 = items(sess('int', Object.assign({ fmt: { int: '1515' } }, run)))[0], r44 = items(sess('int', Object.assign({ fmt: { int: '4x4' } }, run)))[0];
+  ok('course 15/15', r1515.timer.work === 15 && r1515.timer.rest === 15 && r1515.det.includes('m en 15 s'), r1515.det);
+  ok('course 4 × 4 min', r44.timer.work === 240 && r44.timer.rest === 180, r44.det);
+  ok('course : sprints de 30 s', items(sess('int', Object.assign({ fmt: { int: 'sp30' } }, run)))[0].timer.work === 30);
+  // vélo
+  const bike = { goal: 'aero', sports: ['velo'], equip: ['velo'] };
+  const b3015 = items(sess('int', Object.assign({ fmt: { intV: '3015' } }, bike)))[0], bz4 = items(sess('int', Object.assign({ fmt: { intV: 'z4' } }, bike)))[0];
+  ok('vélo 30/15', b3015.timer.work === 30 && b3015.timer.rest === 15 && b3015.timer.reps === 13 && b3015.timer.sets === 3, b3015.det);
+  ok('vélo seuil : watts d’après la FTP', bz4.det.includes('W') && bz4.timer.work === 900, bz4.det);
+  // natation
+  const swim = { goal: 'aero', sports: ['natation'], equip: ['piscine'] };
+  ok('natation : famille d’intervalles et format conseillé', call('builder.fmtFamily', 'int', Object.assign({}, base, swim)) === 'intN' && call('builder.fmtReco', 'intN', Object.assign({}, base, swim)) === 'css');
+  const sc = items(sess('int', swim))[0];
+  ok('natation CSS : départ toutes les 2:00 (1:45 + 15 s)', sc.timer && sc.timer.work === 105 && sc.det.includes('1:45') && sc.det.includes('2:00'), sc.det);
+  ok('natation : ultra-court et volume réduit', items(sess('int', Object.assign({ fmt: { intN: 'usrpt' } }, swim)))[0].rest === 35 && items(sess('int', Object.assign({ fmt: { intN: 'sup' } }, swim)))[0].rest === 90);
+  // Hyrox
+  const hx = { goal: 'hyrox', sports: ['hyrox'], equip: ['exterieur', 'salle'] };
+  const hs = items(sess('hxs', hx)), hsF = items(sess('hxs', Object.assign({ sex: 'F' }, hx)));
+  ok('Hyrox stations : charges Open hommes', hs.find(i => i.lib === 'hx-push').load === 152 && hs.find(i => i.lib === 'hx-wall').load === 6);
+  ok('Hyrox stations : charges Open femmes', hsF.find(i => i.lib === 'hx-push').load === 102 && hsF.find(i => i.lib === 'hx-wall').load === 4 && hsF.find(i => i.lib === 'hx-wall').det.includes('4 kg'));
+  ok('Hyrox course compromise', items(sess('hxc', hx)).every(i => i.label.startsWith('1 km + ')) && items(sess('hxc', hx)).length >= 3);
+  ok('Hyrox simulation : demi-course par défaut', items(sess('hxsim', hx)).length === 4 && items(sess('hxsim', Object.assign({ lvl: 3, dur: 90 }, hx))).length === 8);
+  ok('objectif Hyrox dans la liste, continuité masquée', call('library.goalsFor', false, true).some(g => g.id === 'hyrox') && !call('library.goalsFor', true, true).some(g => g.id === 'conti') && !call('library.goalsFor', true, false).some(g => g.id === 'hyrox'));
+  const hp = call('builder.generate', Object.assign({}, base, hx, { goal: 'hyrox', days: [0, 1, 3, 4, 5], dur: 60 }));
+  ok('programme Hyrox généré', hp.weeks.length === 4 && hp.types.includes('hxs') && hp.types.includes('hxc'), hp.types.join(','));
+  // musculation : séries dégressives, ondulation
+  const dg = call('builder.generate', Object.assign({}, base, { goal: 'hyper', sports: ['muscu'], equip: ['salle'], fmt: { hyper: 'degressif' }, days: [0, 2, 4] }));
+  ok('séries dégressives sur les exercices d’appoint', JSON.stringify(dg.weeks[0]).includes('dégressif'));
+  const fu = call('builder.generate', Object.assign({}, base, { goal: 'force', sports: ['muscu'], equip: ['salle'], days: [0, 2, 4] }));
+  const d0 = fu.weeks[0].days, ks = Object.keys(d0).map(Number).sort((a, b) => a - b).map(k => d0[k]);
+  const reps = ks.map(sx => sx.blocks[0].items.find(i => i.rx && i.rx.role === 'main').rx.r[0]);
+  ok('charges ondulantes : lourd, moyen, léger', reps[0] < reps[1] && reps[1] < reps[2], reps.join(','));
+  const notes = call('builder.programNotes', fu);
+  ok('notes : charges ondulantes expliquées', notes.includes('Charges ondulantes'));
+  const hn = call('builder.programNotes', call('builder.generate', Object.assign({}, base, swim, { goal: 'aero', days: [0, 2, 4] })));
+  ok('notes : formats et source natation', hn.includes('Wakayoshi'), hn.slice(-160));
+}
 console.log(fails ? fails + ' échec(s)' : 'Tout est bon');
 process.exit(fails ? 1 : 0);

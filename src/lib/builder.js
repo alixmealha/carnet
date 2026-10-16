@@ -6,10 +6,11 @@ import { meta, day, clone, uid, KIND } from './plan.js';
 import { putMany, put, remove, links, myProfile } from './store.js';
 import { cloud } from './supa.js';
 import { addDays, mondayOf, todayKey, dow, fmtDay, diffDays, mmss, fmtNum } from './dates.js';
-import { climbLevel, oneRM, loadForPct, LIFT_OF_LIB, vmaOf, fcmaxOf, paceAt, srcTxt, csOf, ftpOf } from './levels.js';
+import { climbLevel, oneRM, loadForPct, LIFT_OF_LIB, vmaOf, fcmaxOf, paceAt, srcTxt, csOf, ftpOf, cssOf, swimPace, hyroxDiv } from './levels.js';
 import { shiftGrade, gapText } from './grades.js';
 import { lastResult } from './tests.js';
 import { applyExtras, EXTRAS } from './needs.js';
+import { SOURCES } from './sources.js';
 
 export const LEVELS = [[1, 'Débutant', 'moins d’un an d’entraînement régulier'], [2, 'Intermédiaire', '1 à 3 ans'], [3, 'Avancé', 'plus de 3 ans']];
 export const DURS = [45, 60, 75, 90];
@@ -38,7 +39,8 @@ const ST = {
   mobi: { kind: 'recup', t: 'Mobilité' },
   doigts: { kind: 'doigts', t: 'Doigts' }, bloc: { kind: 'grimpe', t: 'Bloc à la limite' }, resist: { kind: 'grimpe', t: 'Résistance' }, conti: { kind: 'grimpe', t: 'Volume' }, compet: { kind: 'grimpe', t: 'Compétition' },
   ef: { kind: 'cardio', t: 'Endurance fondamentale' }, int: { kind: 'cardio', t: 'Intervalles' }, long: { kind: 'cardio', t: 'Sortie longue' }, lact: { kind: 'cardio', t: 'Intervalles lactiques' },
-  sprint: { kind: 'course', t: 'Vitesse' }, circuit: { kind: 'velo', t: 'Circuit' }
+  sprint: { kind: 'course', t: 'Vitesse' }, circuit: { kind: 'velo', t: 'Circuit' },
+  hxc: { kind: 'course', t: 'Hyrox · course + station' }, hxs: { kind: 'velo', t: 'Hyrox · stations' }, hxsim: { kind: 'course', t: 'Hyrox · simulation' }
 };
 export const SESSION_LBL = Object.fromEntries(Object.entries(ST).map(([k, v]) => [k, v.t]));
 
@@ -49,10 +51,11 @@ function pattern(goal, n) {
     puiss: ['puiss', 'fbA', 'puiss', 'fbB', 'mobi'], vit: ['sprint', 'fbA', 'sprint', 'fbB', 'mobi'],
     aero: ['int', 'long', 'ef', 'ef', 'int', 'ef'], doigts: ['doigts', 'conti', 'doigts', 'renfo', 'mobi'], bloc: ['bloc', 'renfo', 'bloc', 'conti', 'mobi'],
     resist: ['resist', 'bloc', 'resist', 'conti', 'renfo'], conti: ['conti', 'renfo', 'conti', 'resist', 'mobi'], prev: ['prevS', 'mobi', 'prevS', 'ef', 'mobi'],
-    compet: ['compet', 'renfo', 'bloc', 'conti', 'mobi']
+    compet: ['compet', 'renfo', 'bloc', 'conti', 'mobi'], hyrox: ['hxc', 'fbA', 'hxs', 'int', 'long', 'hxsim']
   }[goal] || ['fbA', 'fbB'];
   // 4 jours ou plus en force / masse : haut / bas plutôt que corps entier
   if (['force', 'hyper'].includes(goal) && n >= 4) return ['haut', 'bas', 'haut', 'bas', 'mobi', 'ef'].slice(0, n);
+  if (goal === 'hyrox') return { 1: ['hxc'], 2: ['hxc', 'hxs'], 3: ['hxc', 'hxs', 'int'], 4: ['hxc', 'fbA', 'hxs', 'int'], 5: ['hxc', 'fbA', 'hxs', 'int', 'long'], 6: ['hxc', 'fbA', 'hxs', 'int', 'long', 'hxsim'] }[Math.min(6, n)];
   if (goal === 'aero') return { 1: ['int'], 2: ['int', 'long'], 3: ['ef', 'int', 'long'], 4: ['ef', 'int', 'ef', 'long'], 5: ['ef', 'int', 'ef', 'lact', 'long'], 6: ['ef', 'int', 'ef', 'ef', 'int', 'long'] }[Math.min(6, n)];
   const out = []; for (let i = 0; i < n; i++) out.push(P[i % P.length].split('|')[0]);
   return out;
@@ -71,23 +74,27 @@ export function weekPlanTypes(cfg) {
 /* ---------- Formats de séance ---------- */
 // Pour chaque famille de séance, plusieurs façons de travailler la même filière ; l'assistant en conseille une selon l'objectif et le niveau.
 export const FORMATS = {
-  conti: [['blocs', 'Beaucoup de blocs', 'Volume de mouvements, filière aérobie'], ['traversee', 'Continuité', 'Aérobie long : grimper sans s’arrêter'], ['voies', 'Volume en voie', 'Beaucoup de voies faciles']],
+  conti: [['blocs', 'Beaucoup de blocs', 'Volume de mouvements, filière aérobie'], ['voies', 'Volume en voie', 'Beaucoup de voies faciles']],
   resist: [['4x4', '4 × 4', 'Résistance, filière lactique'], ['int', 'Intervalles 1 min', 'Lactique, sur pan ou traversée'], ['voies', 'Voies enchaînées', 'Résistance en voie']],
   bloc: [['limite', 'Blocs à la limite', 'Puissance, filière alactique'], ['pan', 'Pan ou Moonboard', 'Mouvements de puissance sur petites prises']],
-  doigts: [['hangs', 'Suspensions max', 'Force des doigts sur poutre'], ['lift', 'Finger lift', 'Force des doigts, charge réglée au kilo'], ['blocs', 'Petites prises en bloc', 'Force des doigts en grimpant']],
+  doigts: [['hangs', 'Suspensions max', 'Force des doigts sur poutre'], ['lift', 'Finger lift', 'Force des doigts, charge réglée au kilo'], ['blocs', 'Petites prises en bloc', 'Force des doigts en grimpant'],
+    ['f100', 'Une main à 100 %', 'Force max : 6 s par main, charge = ton maximum'], ['f80', '10/6 à 80 %', 'Force et endurance : le meilleur compromis des études'], ['f60', '10/6 à 60 %', 'Endurance des doigts, charge légère'], ['endu73', 'Endurance de force 7/3', 'Deux blocs de suspensions 7 s / 3 s'], ['bfr', 'Suspensions avec brassards', 'Entretien à 30 % du max, peu de contrainte sur les doigts']],
   compet: [['qualif', 'Format qualif', 'Blocs nouveaux, temps limité par bloc'], ['contest', 'Contest', 'Un maximum de blocs en temps limité'], ['flash', 'Flash', 'Un seul essai après lecture']],
   force: [['classique', 'Séries classiques', 'Repos complet entre les séries'], ['clusters', 'Clusters', 'Répétitions isolées : plus lourd, même qualité']],
-  hyper: [['classique', 'Séries classiques', 'Un exercice à la fois'], ['supersets', 'Supersets antagonistes', 'Poussée et tirage en alternance : séance plus courte']],
+  hyper: [['classique', 'Séries classiques', 'Un exercice à la fois'], ['supersets', 'Supersets antagonistes', 'Poussée et tirage en alternance : séance plus courte'], ['degressif', 'Séries dégressives', 'On baisse la charge sans repos : même masse en moins de temps']],
   puiss: [['balistique', 'Balistique', 'Charges légères lancées vite'], ['contraste', 'Contraste', 'Une série lourde, puis la même chose en explosif']],
-  int: [['alterne', '30/30 et 3 min en alternance', 'VO2max, deux formats d’une semaine à l’autre'], ['3030', '30/30', 'VO2max en efforts courts'], ['seuil', 'Seuil', 'Autour de ta vitesse critique']],
-  intV: [['4x4', '4 × 4 min', 'VO2max'], ['sst', 'Sweet spot', '2 longs blocs juste sous la FTP']]
+  int: [['alterne', '30/30 et 3 min en alternance', 'VO2max, deux formats d’une semaine à l’autre'], ['3030', '30/30', 'VO2max en efforts courts'], ['seuil', 'Seuil', 'Autour de ta vitesse critique'], ['1515', '15/15', 'VO2max en efforts très courts'], ['4x4', '4 × 4 min', 'VO2max : 4 min à 90-95 % de la FC max'], ['sp30', 'Sprints de 30 s', 'Capacité aérobie en peu de temps']],
+  intV: [['4x4', '4 × 4 min', 'VO2max'], ['sst', 'Sweet spot', '2 longs blocs juste sous la FTP'], ['3015', '30/15', 'VO2max : le format le plus efficace trouvé à vélo'], ['z4', 'Seuil 2 × 20 min', 'Puissance soutenable : 91 à 105 % de la FTP'], ['sp30', 'Sprints de 30 s', 'Capacité aérobie en peu de temps']],
+  intN: [['css', 'Séries au seuil CSS', '100 m à l’allure de ta vitesse critique, départ fixe'], ['usrpt', 'Allure de course en ultra-court', '25 m à l’allure de course, récupération courte'], ['sup', 'Intensité à volume réduit', 'Séries rapides, volume divisé par deux'], ['cent', 'Séries de 100 m', 'Allure soutenue, 20 à 30 s de repos']]
 };
 const FMT_SRC = { clusters: 'tufano2017', supersets: 'robbins2010', contraste: 'seitz2016' };
+// Sources par format (famille:format) pour les notes du programme
+export const FMT_SOURCES = { 'doigts:f100': 'devise2022', 'doigts:f80': 'devise2022', 'doigts:f60': 'devise2022', 'int:1515': 'helgerud2007', 'int:4x4': 'helgerud2007', 'int:sp30': 'gist2014', 'intV:3015': 'ronnestad2015', 'intV:sp30': 'gist2014', 'intN:css': 'wakayoshi1992', 'intN:usrpt': 'williamson2020', 'intN:sup': 'johansen2010', 'hyper:degressif': 'sodal2023' };
 // Famille de format d'une séance type
 export function fmtFamily(type, cfg) {
   if (['conti', 'resist', 'bloc', 'doigts', 'compet'].includes(type)) return type;
   if (type === 'puiss') return 'puiss';
-  if (type === 'int') { const sp = cardioSport(cfg, equipSet(cfg.equip)); return sp === 'course' ? 'int' : sp === 'velo' ? 'intV' : null; }
+  if (type === 'int') { const sp = cardioSport(cfg, equipSet(cfg.equip)); return sp === 'course' ? 'int' : sp === 'velo' ? 'intV' : sp === 'nage' ? 'intN' : null; }
   if (['fbA', 'fbB', 'haut', 'bas', 'renfo'].includes(type)) { const g = ST[type].goal || [cfg.goal, cfg.goal2].find(x => ['force', 'hyper', 'endu_f'].includes(x)) || 'force'; return FORMATS[g] ? g : null; }
   return null;
 }
@@ -97,12 +104,13 @@ export function fmtReco(fam, cfg) {
   if (fam === 'conti') return voieOnly || cfg.goal === 'conti' && voieOnly ? 'voies' : 'blocs';
   if (fam === 'resist') return voieOnly && cfg.goal === 'resist' ? 'voies' : '4x4';
   if (fam === 'bloc') return 'limite';
-  if (fam === 'doigts') return available(LIB_BY_ID['max-hangs'], cfg, eq) ? 'hangs' : 'blocs';
+  if (fam === 'doigts') return available(LIB_BY_ID['max-hangs'], cfg, eq) ? (cfg.lvl >= 2 && fingerRef() ? 'f80' : 'hangs') : 'blocs';
   if (fam === 'compet') return 'qualif';
   if (fam === 'hyper') return cfg.dur <= 45 ? 'supersets' : 'classique';
   if (fam === 'puiss') return cfg.lvl >= 2 && eq.has('barre') ? 'contraste' : 'balistique';
   if (fam === 'int') return 'alterne';
   if (fam === 'intV') return '4x4';
+  if (fam === 'intN') return 'css';
   return 'classique';
 }
 export const fmtOf = (fam, cfg) => (cfg.fmt && cfg.fmt[fam] && FORMATS[fam].some(f => f[0] === cfg.fmt[fam])) ? cfg.fmt[fam] : fmtReco(fam, cfg);
@@ -129,6 +137,9 @@ function pick(pats, quality, cfg, eq, used) {
 }
 function cardioSport(cfg, eq) {
   const s = cfg.sports || [];
+  // le premier sport d'endurance du profil dont on a le matériel
+  const ok = { course: eq.has('exterieur'), velo: eq.has('velo'), nage: eq.has('piscine') };
+  for (const x of s) { const w = { course: 'course', trail: 'course', hyrox: 'course', velo: 'velo', natation: 'nage' }[x]; if (w && ok[w]) return w; }
   if (eq.has('exterieur') && (!s.length || s.some(x => ['course', 'trail', 'hyrox', 'collectif', 'combat', 'autre', 'muscu', 'escalade'].includes(x)))) return 'course';
   if (eq.has('velo')) return 'velo';
   if (eq.has('piscine')) return 'nage';
@@ -173,6 +184,8 @@ function rxFor(goal, role, cfg, wk) {
   const base = clone((role === 'main' || role === 'puiss' ? RX[role === 'puiss' ? 'puiss' : goal] || RX.acc : RX[role] || RX.acc)[lv]);
   base.role = role; base.goal = goal;
   if (role === 'main' && goal === 'force') { const sh = [2, 0, -1][Math.min(2, wk.meso)]; base.r = [Math.max(1, base.r[0] + sh), Math.max(2, base.r[1] + sh)]; }
+  // périodisation ondulante : dans la semaine, séance lourde, moyenne puis légère (3 séances de muscu ou plus)
+  if (role === 'main' && goal === 'force' && wk.dup != null && !wk.light && !wk.taper) { const sh2 = [0, 2, 4][wk.dup]; base.r = [base.r[0] + sh2, base.r[1] + sh2]; if (wk.dup === 2) base.rir = Math.min(3, base.rir + 1); }
   if (wk.light) { base.s = Math.max(1, Math.round(base.s * 0.6)); base.rir = 4; base.light = true; }
   else if (wk.taper) { base.s = Math.max(1, Math.round(base.s * 0.5)); }
   else {
@@ -219,6 +232,8 @@ function strengthSession(type, cfg, eq, wk, used, memo, goalOverride) {
     items.push(it);
     if (x.heavy && !wk.light && role !== 'prev') x.g.forEach(g => heavy.add(g));
   }
+  // séries dégressives sur les exercices d'appoint : une série de travail, puis charge −20 % sans repos, deux fois
+  if (fmt === 'degressif' && !wk.light) for (const it of items) if (it.rx && it.rx.role === 'acc') { it.n = Math.max(1, it.n - 1); it.det += ' · dégressif : à la fin de la série, baisse la charge de 20 % et enchaîne sans repos, deux fois'; }
   // supersets : poussée et tirage voisins en alternance (1 min entre les deux, le repos habituel avant la paire suivante)
   if (fmt === 'supersets') for (let i = 1; i < items.length; i++) {
     const a = LIB_BY_ID[items[i - 1].lib] || {}, b = LIB_BY_ID[items[i].lib] || {};
@@ -256,6 +271,22 @@ function strengthSession(type, cfg, eq, wk, used, memo, goalOverride) {
   return { short: T.t, blocks: [blk], target: { rpe, fam: wk.light || goal === 'prev' ? 'light' : 'muscu', why: sys.l + ' · ' + sys.d + (mainRx.rest ? ' Repos : ' + mmss(mainRx.rest) + ' entre les séries des exercices principaux.' : '') }, heavy, est: { min: Math.round(sec / 60 / 5) * 5, tut, fmt } };
 }
 
+// Force max d'une main : test de force max semi-arquée (par main), sinon finger lift max
+function fingerRef() {
+  const t = lastResult('fmax-semi');
+  if (t && t.vals && (typeof t.vals['v.D'] === 'number' || typeof t.vals['v.G'] === 'number')) { const d = t.vals['v.D'], g = t.vals['v.G']; return { k: t.k, d: typeof d === 'number' ? d : g, g: typeof g === 'number' ? g : d }; }
+  const f = lastResult('fl-semi');
+  if (f && f.vals && typeof f.vals.v === 'number') return { k: f.k, d: f.vals.v, g: f.vals.v };
+  return null;
+}
+const r05 = x => Math.round(x * 2) / 2;
+// Charge visée à un % de la force max d'une main (texte), null sans test
+function fingerTxt(ref, pct) {
+  if (!ref) return null;
+  const a = r05(ref.d * pct / 100), b = r05(ref.g * pct / 100);
+  return (a === b ? fmtNum(a) + ' kg' : 'droite ' + fmtNum(a) + ' kg, gauche ' + fmtNum(b) + ' kg') + ' (' + pct + ' % de ton test du ' + fmtDay(ref.k) + ')';
+}
+
 // Cotation conseillée : écart (en niveaux) à ton flash / à vue ou à ton max, si tu les as renseignés ou si l'appli les estime
 function gradeRx(lv, key, shift, disc) {
   const r = lv[key]; if (!r) return null;
@@ -278,6 +309,41 @@ function climbSession(type, cfg, eq, wk) {
         { id: uid('i'), label: 'Suspensions max · 20 mm semi-arqué', det: '10 s par suspension, 3 min de repos (filière alactique, 1:18)', n: reps, unit: 'Série', unit_load: '+kg', lib: 'max-hangs', rx: { goal: 'doigts', role: 'main', light: !!wk.light }, timer: { kind: 'interval', name: 'Suspensions max', work: 10, rest: 180, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Suspends', restLabel: 'Repos', markEach: 'rep' } }
       ], 'doigts');
       est = { fmt, min: 15 + Math.round(reps * 190 / 60), tut: reps * 10 };
+    } else if (['f100', 'f80', 'f60', 'endu73', 'bfr'].includes(fmt) && available(LIB_BY_ID['max-hangs'], cfg, eq) && (fmt !== 'bfr' || eq.has('bfr'))) {
+      const ref = fingerRef(), m2 = wk.light ? 0.6 : wk.taper ? 0.5 : 1, N = b => Math.max(1, Math.round(b * m2));
+      const warm = ech('10 min de grimpe facile, puis 3 suspensions de 10 s à environ 50, 70 et 85 % de l’effort, 1 min entre chaque.', 'Échauffement des doigts');
+      const noRef = ' (passe le test de force max dans Suivi → Tests pour obtenir la charge en kg)';
+      const hang = (label, det, n, lib, timer) => ({ id: uid('i'), label, det, n, unit: 'Série', unit_load: '+kg', lib, rx: { goal: 'doigts', role: 'main', light: !!wk.light }, timer: Object.assign({ kind: 'interval', prep: 10, markEach: 'rep', setRest: 0 }, timer) });
+      let items, title, desc, sub, min, tut;
+      if (fmt === 'f100') {
+        const sets = N(2), c = fingerTxt(ref, 100);
+        items = [hang('Suspensions une main · 6 s', '6 suspensions de 6 s par main, en alternant les mains, 5 min entre les séries · réglette de 12 mm (ou poulie pour décharger) · charge = ton maximum' + (c ? ' : ' + c : noRef), sets, 'max-hangs', { name: 'Une main 6 s', work: 6, rest: 6, reps: 12, sets, setRest: 300, workLabel: 'Suspends', restLabel: 'Change de main' })];
+        title = 'Doigts · une main à 100 %'; desc = sets + ' × 6 suspensions de 6 s par main'; sub = 'Force max : 2 séances par semaine pendant 4 semaines ont donné environ +14 % de force chez des grimpeurs (Devise 2022). Quand les 6 s passent avec de la marge, remonte la charge de 1 à 2 kg.';
+        min = 15 + sets * 7; tut = sets * 72;
+      } else if (fmt === 'f80') {
+        const sets = N(3), c = fingerTxt(ref, 80);
+        items = [hang('Suspensions 10/6 à 80 %', '12 suspensions de 10 s / 6 s en alternant les mains, 8 min entre les séries · arrête la série si tu ne tiens plus 70 %' + (c ? ' · ' + c : noRef), sets, 'max-hangs', { name: '10/6 à 80 %', work: 10, rest: 6, reps: 12, sets, setRest: 480, workLabel: 'Suspends', restLabel: 'Change de main' })];
+        title = 'Doigts · 10/6 à 80 %'; desc = sets + ' × 12 suspensions (10 s / 6 s)'; sub = 'Le meilleur compromis de l’étude de Devise (2022) : environ +12 % de force et un temps tenu à 80 % doublé en 4 semaines, 2 séances par semaine.';
+        min = 15 + sets * 11; tut = sets * 120;
+      } else if (fmt === 'f60') {
+        const sets = N(2), c = fingerTxt(ref, 60);
+        items = [hang('Suspensions 10/6 à 60 %', '24 suspensions de 10 s / 6 s à deux mains, 6 min entre les séries · puis au maximum quand la fatigue arrive' + (c ? ' · ' + c : noRef), sets, 'max-hangs', { name: '10/6 à 60 %', work: 10, rest: 6, reps: 24, sets, setRest: 360, workLabel: 'Suspends', restLabel: 'Repos' })];
+        title = 'Doigts · 10/6 à 60 %'; desc = sets + ' × 24 suspensions (10 s / 6 s)'; sub = 'Charge légère : l’endurance progresse nettement, la force peu (Devise 2022). À réserver aux phases d’endurance de force.';
+        min = 15 + sets * 12; tut = sets * 240;
+      } else if (fmt === 'endu73') {
+        const nb = wk.light || wk.taper || cfg.lvl < 2 ? 1 : 2, sets = N(6);
+        items = [];
+        for (let b = 1; b <= nb; b++) items.push(hang('Suspensions 7/3 · bloc ' + b + (nb > 1 ? ' sur 2' : ''), sets + ' séries de 7 suspensions (7 s / 3 s), 2 min 30 entre les séries' + (nb > 1 ? ' ; 6 min entre les deux blocs' : '') + ' · prise moyenne, sans aller à l’échec', sets, 'repeaters', { name: '7/3 · bloc ' + b, work: 7, rest: 3, reps: 7, sets, setRest: 150, workLabel: 'Suspends', restLabel: 'Pause' }));
+        title = 'Doigts · endurance de force 7/3'; desc = nb + ' × ' + sets + ' séries de 7 suspensions'; sub = 'Environ 10 min suspendu au total. Quand la séance passe sans échec, prends des prises plus petites ou retire un doigt (Hermans 2022, López-Rivera 2018).';
+        min = 15 + nb * Math.round(sets * 2.5 + 3) + (nb > 1 ? 6 : 0); tut = nb * sets * 49;
+      } else {
+        const sets = N(6), c = fingerTxt(ref, 30);
+        items = ['droite', 'gauche'].map(side => hang('Suspensions avec brassards · main ' + side, '6 séries d’1 min en 7 s / 3 s (6 suspensions) avec brassard' + (c ? ' · ' + c : ' · 30 % de ta force max') + ', 1 min de repos entre les séries', sets, 'repeaters', { name: 'Brassards · ' + side, work: 7, rest: 3, reps: 6, sets, setRest: 60, workLabel: 'Suspends', restLabel: 'Pause' }));
+        title = 'Doigts · suspensions avec brassards'; desc = '2 mains × ' + sets + ' séries d’1 min'; sub = 'Entretien ou reprise après une blessure : charge de 30 % seulement, donc peu de contrainte sur les poulies (Javorský 2023). Brassard serré à 40-80 % de la pression qui bloque le sang ; relâche en cas de fourmillements ou de douleur forte.';
+        min = 15 + 2 * sets * 2; tut = 2 * sets * 42;
+      }
+      blk(title, desc, sub, [warm].concat(items), 'doigts');
+      est = { fmt, min, tut };
     } else if (fmt === 'lift' && available(LIB_BY_ID['finger-lift'], cfg, eq)) {
       // charge d'après ton test de finger lift max (7 s) : environ 85 %, il reste 2 à 3 s de marge
       // en alternant les mains : 7 s, 1 min 30, l'autre main… chaque main récupère environ 3 min
@@ -348,7 +414,7 @@ function climbSession(type, cfg, eq, wk) {
     blk('Escalade · résistance', 'Filière lactique : efforts de 1 à 3 min qui « brûlent »', 'Progression : un bloc ou une série de plus, ou des blocs un peu plus durs, quand tout passe proprement.', items);
     tg = { rpe: wk.light ? [4, 6] : [7, 9], fam: wk.light ? 'light' : 'hard', s: 8, i: wk.light ? 5 : 7, v: 7 };
   } else {
-    if (fmt === 'blocs') {
+    if (fmt !== 'voies') {
       // 40 s sur le bloc + 1 min de repos ; plafond selon le niveau ; +2 blocs par semaine dans le mésocycle
       const nb = Math.max(6, Math.round((Math.min([14, 20, 26][L], Math.floor(avail / 100)) + (wk.light || wk.taper ? 0 : [0, 2, 4][wk.step])) * m));
       const g = gradeRx(lv, 'bf', -3, 'bloc');
@@ -360,11 +426,6 @@ function climbSession(type, cfg, eq, wk) {
       blk('Escalade · volume en voie', nv + ' voies faciles', 'Beaucoup de voies faciles en soignant les placements ; repos le temps d’assurer.', [ech('10 min de grimpe très facile.'),
         Object.assign({ id: uid('i'), label: 'Voies' + (g ? ' ' + g.g : ' faciles'), det: 'Environ 4 min de repos (le temps d’assurer)' + (g ? ' · ' + g.txt : ' · 2 à 3 niveaux sous ton à vue'), n: nv, unit: 'Voie', rest: 240, lib: 'volume', disc: 'voie' }, g ? { grade: g.g } : {})]);
       est = { fmt, min: 10 + Math.round(nv * 7), tut: nv * 180 };
-    } else {
-      const k = cfg.dur <= 45 ? [2, 10] : cfg.dur <= 60 ? [2, 15] : cfg.dur <= 75 ? [3, 12] : [3, 15];
-      const sets = n(k[0], [0, 0, 1]), g = gradeRx(lv, 'bf', -4, 'bloc');
-      blk('Escalade · continuité', 'Filière aérobie : long et facile', 'Avant-bras chauds mais jamais « bouteillés » : si ça brûle, descends d’un niveau.', [ech('10 min de grimpe très facile.'), { id: uid('i'), label: 'Continuité ' + sets + ' × ' + k[1] + ' min', det: 'Grimpe facile sans t’arrêter (traversées, voies faciles enchaînées), 5 min de repos' + (g ? ' · ' + g.txt : ''), n: sets, unit: 'Bloc', rest: 300, lib: 'conti' }]);
-      est = { fmt, min: 10 + sets * (k[1] + 5), tut: sets * k[1] * 60 };
     }
     short = 'Volume';
     tg = { rpe: [3, 5], fam: 'vol', s: 6, i: 3, v: wk.light ? 5 : 8 };
@@ -407,6 +468,19 @@ function cardioSession(type, cfg, eq, wk) {
     let it;
     if (type === 'int' && fmt === 'seuil') { const reps = Math.max(2, Math.round(([3, 4, 5][lv] + (wk.light || wk.taper ? 0 : [0, 0, 1][wk.step])) * m)); it = { label: 'Seuil ' + reps + ' × 8 min', det: '8 min à allure seuil, 2 min de trot' + (cs ? ' · ' + csTxt(cs, 93, 97) : vma ? ' · ' + vmaTxt(vma, 82, 86) + ' (sans test de vitesse critique)' : ' · allure semi-marathon'), lib: '3min', timer: { kind: 'interval', name: 'Seuil', work: 480, rest: 120, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Seuil', restLabel: 'Trot', markEach: 'rep' }, n: reps }; est = { fmt, min: 25 + reps * 10 }; }
     else if (type === 'int' && fmt === 'sst') { const mins = [12, 15, 20][lv], reps = wk.light || wk.taper ? 1 : 2; it = { label: 'Sweet spot ' + reps + ' × ' + mins + ' min', det: mins + ' min juste sous la FTP, 5 min faciles' + (ftp ? ' · ' + wTxt(ftp, 88, 94) : fc ? ' · ' + fcTxt(fc, 82, 87) : ''), timer: { kind: 'interval', name: 'Sweet spot', work: mins * 60, rest: 300, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Sweet spot', restLabel: 'Facile', markEach: 'rep' }, n: reps }; est = { fmt, min: 25 + reps * (mins + 5) }; }
+    else if (type === 'int' && fmt === '1515' && sport === 'course') { const sets = lv === 0 ? 2 : 3, reps = Math.max(8, Math.round(([10, 12, 14][lv] + (wk.light || wk.taper ? 0 : [0, 1, 2][wk.step])) * m)); it = { label: 'Intervalles 15/15', det: '15 s vite, 15 s de trot lent, ' + sets + ' séries de ' + reps + ', 3 min de récupération entre les séries' + (fc ? ' · ' + fcTxt(fc, 90, 95) + ' pendant l’effort' : '') + (vma ? ' · ' + distTxt(vma, 100, 15) : ''), lib: 'run-1515', timer: { kind: 'interval', name: '15/15', work: 15, rest: 15, reps, sets, setRest: 180, prep: 10, workLabel: 'Vite', restLabel: 'Trot' }, n: sets }; est = { fmt, min: 25 + sets * (reps / 2 + 3) }; }
+    else if (type === 'int' && fmt === '4x4' && sport === 'course') { const reps = Math.max(2, Math.round(([3, 4, 4][lv] + (wk.light || wk.taper ? 0 : [0, 0, 1][wk.step])) * m)); it = { label: 'Course 4 × 4 min', det: '4 min à 90-95 % de ta FC max, 3 min de trot lent (environ 70 %)' + (fc ? ' · ' + Math.round(fc.v * 0.9) + ' à ' + Math.round(fc.v * 0.95) + ' bpm' : ' · très dur, tu ne peux presque plus parler'), lib: 'run-4x4', timer: { kind: 'interval', name: 'Course 4 × 4', work: 240, rest: 180, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Fort', restLabel: 'Trot', markEach: 'rep' }, n: reps }; est = { fmt, min: 25 + reps * 7 }; }
+    else if (type === 'int' && fmt === 'sp30') { const reps = Math.max(3, Math.round([4, 5, 6][lv] * m)); it = { label: 'Sprints de 30 s', det: '30 s à fond, 4 min de récupération facile' + (sport === 'velo' && ftp ? ' · ' + wTxt(ftp, 150) : ''), lib: 'sprint-30s', timer: { kind: 'interval', name: 'Sprints 30 s', work: 30, rest: 240, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'À fond', restLabel: 'Récup', markEach: 'rep' }, n: reps }; est = { fmt, min: 25 + reps * 5 }; }
+    else if (type === 'int' && fmt === '3015' && sport === 'velo') { const sets = lv === 0 ? 2 : 3, reps = 13; it = { label: 'Vélo 30/15 · ' + sets + ' × ' + reps, det: '30 s très fort, 15 s facile (environ 50 % de la puissance d’effort), ' + reps + ' répétitions par série, 3 min entre les séries · la puissance la plus haute que tu tiens sur toute la série' + (ftp ? ' (au moins ' + Math.round(ftp.v * 1.06) + ' W)' : ''), lib: 'velo-3015', timer: { kind: 'interval', name: 'Vélo 30/15', work: 30, rest: 15, reps, sets, setRest: 180, prep: 10, workLabel: 'Très fort', restLabel: 'Facile' }, n: sets }; est = { fmt, min: 25 + sets * 13 }; }
+    else if (type === 'int' && fmt === 'z4' && sport === 'velo') { const mins = [12, 15, 20][lv], reps = wk.light || wk.taper ? 1 : 2; it = { label: 'Seuil ' + reps + ' × ' + mins + ' min', det: mins + ' min en zone 4, 5 min faciles entre les blocs' + (ftp ? ' · ' + wTxt(ftp, 91, 105) : fc ? ' · ' + fcTxt(fc, 85, 92) : ''), lib: 'velo-z4', timer: { kind: 'interval', name: 'Seuil', work: mins * 60, rest: 300, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Seuil', restLabel: 'Facile', markEach: 'rep' }, n: reps }; est = { fmt, min: 25 + reps * (mins + 5) }; }
+    else if (type === 'int' && sport === 'nage' && fmt === 'css') {
+      const css = cssOf(), p = css ? Math.round(css.p100) : null, mt = x => Math.floor(x / 60) + ':' + String(x % 60).padStart(2, '0'), reps = Math.min(10, Math.max(4, Math.round(([5, 6, 7][lv] + (wk.light || wk.taper ? 0 : [0, 1, 2][wk.step])) * m)));
+      it = { label: 'Natation ' + reps + ' × 100 m au seuil', det: p ? '100 m à l’allure CSS (' + mt(p) + ' /100 m), départ toutes les ' + mt(p + 15) + ' : le repos est ce qui reste, environ 15 s' : '100 m à l’allure que tu tiendrais sur 400 m, 15 s de repos (passe le test de vitesse critique dans Suivi → Tests pour obtenir l’allure exacte)', lib: 'nage-css', n: reps, unit: 'Série', rest: 15 };
+      if (p) it.timer = { kind: 'interval', name: 'Seuil CSS', work: p, rest: 15, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Nage', restLabel: 'Repos', markEach: 'rep' };
+      est = { fmt, min: 20 + Math.round(reps * (p || 100) / 60 * 1.15) };
+    }
+    else if (type === 'int' && sport === 'nage' && fmt === 'usrpt') { const reps = Math.max(8, Math.round([12, 16, 20][lv] * m)); it = { label: 'Natation ' + reps + ' × 25 m allure de course', det: '25 m à l’allure de ton record sur 100 m, 35 s de récupération · très dur : arrête la série dès que tu ne tiens plus l’allure', lib: 'nage-usrpt', n: reps, unit: 'Série', rest: 35 }; est = { fmt, min: 20 + Math.round(reps * 60 / 60) }; }
+    else if (type === 'int' && sport === 'nage' && fmt === 'sup') { const reps = Math.max(4, Math.round([6, 8, 10][lv] * m)); it = { label: 'Natation ' + reps + ' × 25 m supramaximal', det: '25 m plus vite que ton allure de course, 1 min 30 de récupération · au moins 4 séries rapides par semaine, volume total divisé par deux', lib: 'nage-sup', n: reps, unit: 'Série', rest: 90 }; est = { fmt, min: 20 + Math.round(reps * 2) }; }
     else if (type === 'lact') { const reps = Math.max(3, Math.round(([5, 6, 7][lv] + [0, 1, 2][wk.step]) * m)); it = { label: sport === 'velo' ? 'Vélo 6 × 1 min très vite' : sport === 'nage' ? 'Natation 6 × 50 m vite' : 'Répétitions de 300 m', det: 'Environ 1 min très vite, 3 min 30 de récupération (1:3 à 1:4)' + (sport === 'velo' && ftp ? ' · ' + wTxt(ftp, 121) : ''), lib: sport === 'course' ? '300m' : null, timer: { kind: 'interval', name: 'Lactique', work: 60, rest: 210, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Vite', restLabel: 'Récup', markEach: 'rep' }, n: reps }; }
     else if (sport === 'velo') { const reps = Math.max(2, Math.round((4 + (wk.light || wk.taper ? 0 : [0, 0, 1][wk.step])) * m)); it = { label: 'Vélo 4 × 4 min', det: '4 min fort (90-95 % de ta FC max), 3 min faciles' + (ftp ? ' · ' + wTxt(ftp, 106, 120) : fc ? ' · ' + fcTxt(fc, 90, 95) : ''), lib: 'velo-4x4', timer: { kind: 'interval', name: 'Vélo 4 × 4', work: 240, rest: 180, reps, sets: 1, setRest: 0, prep: 10, workLabel: 'Fort', restLabel: 'Facile', markEach: 'rep' }, n: reps }; }
     else if (sport === 'nage') { const reps = Math.max(4, Math.round(([6, 8, 10][lv] + [0, 1, 2][wk.step]) * m)); it = { label: 'Natation ' + reps + ' × 100 m', det: '100 m soutenu, 20 à 30 s de repos', lib: 'nage-100', n: reps, unit: 'Série', rest: 25 }; }
@@ -432,6 +506,59 @@ function sprintSession(cfg, eq, wk, used) {
   return { short: 'Vitesse', blocks: [{ id: uid('b'), kind: 'course', title: 'Course · vitesse', desc: 'Filière alactique : moins de 10 s à fond', sub: 'La qualité prime : chaque sprint doit être aussi rapide que le premier. Si tu ralentis nettement, arrête la série.', items }], target: { rpe: wk.light ? [3, 5] : [6, 8], fam: wk.light ? 'light' : 'hard', why: SYSTEMS.alac.l + ' · ' + SYSTEMS.alac.d }, heavy };
 }
 
+// ---- Hyrox : 8 × (1 km de course + 1 station). Charges de la catégorie (traîneau compris), stations aux distances de course.
+const HX_STATIONS = [
+  { id: 'hx-ski', n: 'SkiErg', d: '1 000 m', u: 'm' },
+  { id: 'hx-push', n: 'Poussée de traîneau', d: '50 m', k: 'push' },
+  { id: 'hx-pull', n: 'Tirage de traîneau', d: '50 m', k: 'pull' },
+  { id: 'hx-burpee', n: 'Burpees sauts en longueur', d: '80 m' },
+  { id: 'hx-row', n: 'Rameur', d: '1 000 m' },
+  { id: 'hx-farmer', n: 'Farmer’s carry', d: '200 m', k: 'farmer', two: true },
+  { id: 'hx-lunge', n: 'Fentes avec sac', d: '100 m', k: 'lunge' },
+  { id: 'hx-wall', n: 'Wall balls', d: '100 répétitions', k: 'wall' }
+];
+const hxLoad = (st, div) => st.k ? (st.two ? '2 × ' : '') + div.w[st.k] + ' kg' : '';
+function hyroxSession(type, cfg, eq, wk) {
+  const m = wk.light ? 0.6 : wk.taper ? 0.5 : 1, lv = cfg.lvl - 1, div = hyroxDiv(cfg.sex, cfg.lv), vma = vmaOf(null, cfg.lv);
+  const heavy = new Set(wk.light ? [] : ['jambes', 'cardio']), items = [];
+  const pace = '';
+  const stItem = (st, i) => Object.assign({ id: uid('i'), label: st.n, det: st.d + (st.k ? ' · ' + hxLoad(st, div) : '') + ' (' + div.l.toLowerCase() + ')', n: 1, unit: 'Bloc', lib: st.id }, st.k ? { load: st.two ? div.w[st.k] : div.w[st.k], unit_load: 'kg' } : {});
+  let title, desc, sub, est, short;
+  if (type === 'hxs') {
+    const sets = Math.max(2, Math.round((cfg.dur <= 45 ? 2 : cfg.dur <= 60 ? 3 : 4) * (wk.light ? 0.6 : 1)));
+    const part = (id, label, det, ld) => Object.assign({ id: uid('i'), label, det, n: sets, unit: 'Série', rest: 90, lib: id }, ld ? { load: ld, unit_load: 'kg' } : {});
+    items.push(ech('10 min de footing, mobilité des hanches et des épaules, puis une montée en charge sur le traîneau.'));
+    items.push(part('hx-push', 'Poussée de traîneau', '25 m (la moitié de la course) · ' + div.w.push + ' kg, traîneau compris', div.w.push));
+    items.push(part('hx-pull', 'Tirage de traîneau', '25 m · ' + div.w.pull + ' kg, traîneau compris', div.w.pull));
+    items.push(part('hx-farmer', 'Farmer’s carry', '50 m · 2 × ' + div.w.farmer + ' kg', div.w.farmer));
+    items.push(part('hx-lunge', 'Fentes avec sac', '25 m · ' + div.w.lunge + ' kg', div.w.lunge));
+    items.push(part('hx-wall', 'Wall balls', '25 répétitions · ' + div.w.wall + ' kg', div.w.wall));
+    items.push(Object.assign(part('hx-burpee', 'Burpees sauts en longueur', '20 m'), { n: Math.max(2, sets - 1) }));
+    title = 'Hyrox · stations'; short = 'Hyrox stations'; desc = sets + ' tours · charges ' + div.l.toLowerCase();
+    sub = 'Technique et charge : chaque station à un quart ou une moitié de sa distance de course, avec les charges de la catégorie (' + div.l + ', ' + div.w.wall + ' kg pour les 100 wall balls). Le temps de repos est plus long qu’en course pour garder la qualité.';
+    est = { min: 20 + Math.round(sets * 7 * 3), tut: sets * 7 * 90 };
+  } else if (type === 'hxc') {
+    const rounds = Math.min(8, Math.max(2, Math.round(([3, 4, 5][lv] + (wk.light || wk.taper ? 0 : [0, 1, 2][wk.step])) * m))), off = ((wk.meso || 0) * 2 + (wk.step || 0) * 3) % 8;
+    items.push(ech('15 min de footing facile, puis 3 accélérations progressives de 20 s.'));
+    for (let r = 0; r < rounds; r++) { const st = HX_STATIONS[(off + r) % 8]; items.push(Object.assign(stItem(st, r), { label: '1 km + ' + st.n.toLowerCase(), det: '1 km à ton allure de course visée' + (r === 0 ? pace : '') + ', enchaîné sans pause avec : ' + st.n.toLowerCase() + ' ' + st.d + (st.k ? ' · ' + hxLoad(st, div) : '') + ' (' + div.l.toLowerCase() + ')', lib: 'hx-run' })); }
+    items.push({ id: 'rac', label: 'Retour au calme', det: '10 min très faciles', n: 1 });
+    title = 'Hyrox · course compromise'; short = 'Hyrox course'; desc = rounds + ' × (1 km + 1 station)';
+    sub = 'Travaille les transitions : la station se fait avec les jambes déjà fatiguées par le km, comme en course. Les stations tournent d’une semaine à l’autre pour toutes les couvrir.';
+    est = { min: 20 + rounds * 9, tut: rounds * 540 };
+  } else {
+    const full = cfg.lvl >= 3 && cfg.dur >= 90 && !wk.light && !wk.taper, n = full ? 8 : 4;
+    items.push(ech('15 min de footing facile, mobilité, 3 accélérations progressives.'));
+    for (let r = 0; r < n; r++) { const st = HX_STATIONS[r]; items.push(Object.assign(stItem(st, r), { label: '1 km + ' + st.n.toLowerCase(), det: '1 km à ton allure de course' + (r === 0 ? pace : '') + ', puis ' + st.n.toLowerCase() + ' ' + st.d + (st.k ? ' · ' + hxLoad(st, div) : '') + ' (' + div.l.toLowerCase() + ')', lib: 'hx-run' })); }
+    items.push({ id: 'rac', label: 'Retour au calme', det: '10 min très faciles', n: 1 });
+    title = 'Hyrox · ' + (full ? 'simulation complète' : 'demi-simulation'); short = full ? 'Hyrox simulation' : 'Hyrox demi-simu';
+    desc = n + ' × (1 km + 1 station)';
+    sub = 'Répétition de course : allure régulière, gestion des transitions et de l’effort. À garder pour une séance par bloc, loin de l’objectif sauf affûtage léger.';
+    est = { min: 20 + n * 9, tut: n * 540 };
+  }
+  const blocks = [{ id: uid('b'), kind: type === 'hxs' ? 'velo' : 'course', title, desc, sub, items, heavy: [...heavy] }];
+  return { short, blocks, target: { rpe: wk.light ? [4, 6] : [7, 9], fam: wk.light ? 'light' : 'hard', why: SYSTEMS.aero.l + ' · En Hyrox, la course pèse environ 59 % du temps total et la VO2max est le meilleur prédicteur du chrono (Brandt 2025). Aucune étude d’entraînement contrôlée propre à Hyrox : ces séances suivent les recommandations des revues.' }, heavy, est };
+}
+
 function mobiSession(cfg) {
   const ids = ['mob-hanches', 'mob-epaules', 'mob-chevilles', 'mob-dos'].concat((cfg.sports || []).includes('escalade') ? ['mob-doigts'] : []);
   return { short: 'Mobilité', blocks: [{ id: uid('b'), kind: 'recup', title: 'Récupération · mobilité', desc: '20 à 30 min tranquilles', items: ids.map(id => ({ id: uid('i'), label: LIB_BY_ID[id].n, det: LIB_BY_ID[id].c, n: 1, lib: id })) }], target: { rpe: [1, 3], fam: 'light', why: 'Séance facile qui entretient la mobilité et aide à récupérer.' }, heavy: new Set() };
@@ -444,6 +571,7 @@ export function buildSession(type, cfg, wk, used, memo) {
   if (['doigts', 'bloc', 'resist', 'conti', 'compet'].includes(type)) return climbSession(type, cfg, eq, wk);
   if (['ef', 'int', 'long', 'lact', 'circuit'].includes(type)) return cardioSession(type, cfg, eq, wk);
   if (type === 'sprint') return sprintSession(cfg, eq, wk, used);
+  if (['hxc', 'hxs', 'hxsim'].includes(type)) return hyroxSession(type, cfg, eq, wk);
   return mobiSession(cfg);
 }
 
@@ -509,6 +637,7 @@ export function placeSessions(cfg, types, sample) {
 
 /* ---------- Génération du bloc complet ---------- */
 export function nextMonday(k) { const t = k || todayKey(); return dow(t) === 0 ? t : addDays(mondayOf(t), 7); }
+const STR_TYPES = ['fbA', 'fbB', 'haut', 'bas'];
 export function generate(cfg) {
   const start = cfg.start || nextMonday();
   let W = cfg.weeks || 4;
@@ -518,7 +647,8 @@ export function generate(cfg) {
   const { map, cost } = placeSessions(cfg, types, sample);
   const weeks = [], warnings = [];
   for (let i = 0; i < W; i++) {
-    const wk = weekInfo(cfg, i, W), ws = addDays(start, i * 7), used = new Set(), days = {};
+    const wk = weekInfo(cfg, i, W), ws = addDays(start, i * 7), used = new Set(), days = {}, nStr = types.filter(x => STR_TYPES.includes(x)).length;
+    let sIdx = 0;
     for (let d = 0; d < 7; d++) {
       const k = addDays(ws, d);
       if (cfg.event && k > cfg.event) continue;
@@ -529,7 +659,8 @@ export function generate(cfg) {
       if (cfg.event && addDays(k, 1) === cfg.event && !['mobi', 'ef', 'conti'].includes(t)) t = 'mobi';
       // corps entier A / B : on alterne d'une semaine à l'autre
       if (i % 2 === 1 && (t === 'fbA' || t === 'fbB') && types.filter(x => x === 'fbA').length !== types.filter(x => x === 'fbB').length) t = t === 'fbA' ? 'fbB' : 'fbA';
-      days[d] = Object.assign(buildSession(t, cfg, wk, used, memo), { type: t });
+      const wk2 = nStr >= 3 && STR_TYPES.includes(t) ? Object.assign({}, wk, { dup: sIdx++ % 3 }) : wk;
+      days[d] = Object.assign(buildSession(t, cfg, wk2, used, memo), { type: t });
     }
     // compléments choisis dans l'aperçu (ce qui manque pour ton sport)
     applyExtras(days, cfg, wk);
@@ -566,6 +697,17 @@ export function programNotes(prog) {
   // repères et formats retenus, pour relire le programme plus tard
   const fams = [...new Set((prog.types || []).map(t => fmtFamily(t, c)).filter(Boolean))];
   if (fams.length) lines.push('- Formats : ' + fams.map(f => FORMATS[f].find(x => x[0] === fmtOf(f, c))[1].toLowerCase()).join(', ') + '.');
+  // règles du plan : ondulation, endurance + explosivité, tests de référence
+  if (c.goal === 'force' && (prog.types || []).filter(t => STR_TYPES.includes(t)).length >= 3) lines.push('- Charges ondulantes : dans la semaine, une séance lourde, une moyenne et une plus légère (un peu plus de force max qu’une progression linéaire).');
+  const hasEndu = (prog.types || []).some(t => ['ef', 'int', 'long', 'lact', 'hxc', 'hxsim'].includes(t)), hasExpl = (prog.types || []).some(t => ['puiss', 'sprint'].includes(t)) || fams.includes('puiss');
+  if (hasEndu && hasExpl) lines.push('- Endurance et explosivité : ne les mets pas à moins de 3 h l’une de l’autre le même jour, l’endurance freine sinon la qualité du travail explosif (Schumann 2021).');
+  const need = [];
+  if ((prog.types || []).some(t => ['int', 'long', 'ef', 'lact'].includes(t))) {
+    const sp = cardioSport(c, equipSet(c.equip));
+    if (sp === 'course' && !vmaOf(null, c.lv)) need.push('VMA (VAMEVAL)'); if (sp === 'velo' && !ftpOf(null, c.lv)) need.push('FTP 20 min'); if (sp === 'nage' && !cssOf()) need.push('vitesse critique en natation (400 m + 200 m)');
+  }
+  if ((prog.types || []).includes('doigts') && ['f100', 'f80', 'f60', 'bfr'].includes(fmtOf('doigts', c)) && !fingerRef()) need.push('force max des doigts');
+  if (need.length) lines.push('- Tests de référence à passer en semaine 1 (Suivi → Tests) : ' + need.join(', ') + '. Les allures, puissances et charges des séances se calculent d’après eux.');
   const cl = climbLevel(null, c.lv), rep = [];
   for (const [k, l] of [['bf', 'bloc flash'], ['bm', 'bloc max'], ['vf', 'voie à vue'], ['vm', 'voie max']]) if (cl[k]) rep.push(l + ' ' + cl[k].g + (cl[k].src !== 'déclaré' ? ' (estimé)' : ''));
   for (const l of ['squat', 'bench', 'deadlift', 'pull', 'dips']) { const r = oneRM(l, null, c.lv); if (r) rep.push('1RM ' + ({ squat: 'squat', bench: 'développé couché', deadlift: 'soulevé de terre', pull: 'traction', dips: 'dips' })[l] + ' ' + r.txt + ' (' + srcTxt(r) + ')'); }
@@ -573,9 +715,10 @@ export function programNotes(prog) {
   if (rep.length) lines.push('- Repères utilisés : ' + rep.join(' ; ') + '.');
   const ex = (c.extras || []).filter(id => EXTRAS[id]);
   if (ex.length) lines.push('- Compléments pour ton sport : ' + ex.map(id => EXTRAS[id].t.toLowerCase()).join(', ') + '.');
-  lines.push('', 'Sources : ACSM 2009 ; NSCA 2016 ; Schoenfeld 2016 et 2017 ; Helms 2016 ; Williams 2017 ; Bell 2023' + (c.event ? ' ; Bosquet 2007' : '') + ([c.goal, c.goal2].includes('aero') ? ' ; Stöggl 2014' : '') + (fams.some(f => fmtOf(f, c) === 'clusters') ? ' ; Tufano 2017' : '') + (fams.some(f => fmtOf(f, c) === 'supersets') ? ' ; Robbins 2010' : '') + (fams.some(f => fmtOf(f, c) === 'contraste') ? ' ; Seitz 2016' : '') + (v ? ' ; Billat 2001' : '') + exSrc(ex) + '.');
+  lines.push('', 'Sources : ACSM 2009 ; NSCA 2016 ; Schoenfeld 2016 et 2017 ; Helms 2016 ; Williams 2017 ; Bell 2023' + (c.event ? ' ; Bosquet 2007' : '') + ([c.goal, c.goal2].includes('aero') ? ' ; Stöggl 2014' : '') + (fams.some(f => fmtOf(f, c) === 'clusters') ? ' ; Tufano 2017' : '') + (fams.some(f => fmtOf(f, c) === 'supersets') ? ' ; Robbins 2010' : '') + (fams.some(f => fmtOf(f, c) === 'contraste') ? ' ; Seitz 2016' : '') + (v ? ' ; Billat 2001' : '') + fmtSrc(fams, c) + exSrc(ex) + '.');
   return lines.join('\n');
 }
+const fmtSrc = (fams, c) => { const ids = [...new Set(fams.map(f => FMT_SOURCES[f + ':' + fmtOf(f, c)]).filter(Boolean))]; return ids.map(id => ' ; ' + SOURCES[id].s.replace(/ et al\./, '').replace(/, (\d{4})$/, ' $1')).join(''); };
 const SRC_TXT = { turner2003: 'Turner 2003', bohm2015: 'Bohm 2015', vandyk2019: 'van Dyk 2019', byram2010: 'Byram 2010', lixandrao2018: 'Lixandrão 2018', patterson2019: 'Patterson 2019', wilson2013: 'Wilson 2013' };
 const exSrc = ex => { const s = [...new Set(ex.flatMap(id => EXTRAS[id].src || []))].map(x => SRC_TXT[x]).filter(Boolean); return s.length ? ' ; ' + s.join(' ; ') : ''; };
 // mode : 'replace' (les séances prévues sur ces jours sont remplacées) ou 'merge' (le programme s'ajoute)

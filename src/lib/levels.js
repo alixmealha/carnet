@@ -89,7 +89,7 @@ export function climbLevel(o, cfgLv) {
 }
 export function vmaOf(o, cfgLv) {
   const lv = cfgLv || levelsDoc(o), cand = [];
-  for (const h of history('vma')) if (h.vals && typeof h.vals.v === 'number') cand.push({ k: h.k, v: h.vals.v, src: 'test' });
+  for (const id of ['vma', 'vameval']) for (const h of history(id)) if (h.vals && typeof h.vals.v === 'number') cand.push({ k: h.k, v: h.vals.v, src: 'test' });
   if (typeof lv.vma === 'number') cand.push({ k: (lv.at || {}).vma || '2000-01-01', v: lv.vma, src: 'déclarée' });
   return newest(cand);
 }
@@ -115,6 +115,26 @@ export function csOf() {
 }
 // Allure (min/km) à un % de la vitesse critique
 export const paceCs = (cs, pct) => paceAt(cs.v, pct);
+// Vitesse critique en natation (400 m + 200 m) : CSS en m/s, allure au 100 m en secondes
+export function cssOf() {
+  const h = history('css');
+  for (let i = h.length - 1; i >= 0; i--) {
+    const v = h[i].vals || {};
+    if (v.t400 > 0 && v.t200 > 0 && v.t400 > v.t200 * 2) { const ms = 200 / (v.t400 - v.t200); return { ms, p100: 100 / ms, k: h[i].k, src: 'test' }; }
+  }
+  return null;
+}
+// Temps au 100 m (« 1:45 ») à un % de la CSS : plus le pourcentage est haut, plus l'allure est rapide
+export function swimPace(css, pct) { if (!css) return null; const s = Math.round(css.p100 * 100 / pct); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+// Hyrox : charges officielles par catégorie, traîneau compris (4 mars 2026, Red Bull) ; 100 wall balls dans toutes les catégories
+export const HYROX_W = {
+  openF: { push: 102, pull: 78, farmer: 16, lunge: 10, wall: 4 }, openM: { push: 152, pull: 103, farmer: 24, lunge: 20, wall: 6 },
+  proF: { push: 152, pull: 103, farmer: 24, lunge: 20, wall: 6 }, proM: { push: 202, pull: 153, farmer: 32, lunge: 30, wall: 9 }
+};
+export function hyroxDiv(sex, cfgLv) {
+  const lv = cfgLv || levelsDoc(), d = lv.hdiv === 'pro' ? 'pro' : 'open', f = sex === 'F', key = d + (f ? 'F' : 'M');
+  return { key, l: (d === 'pro' ? 'Pro' : 'Open') + (f ? ' femmes' : ' hommes'), w: HYROX_W[key] };
+}
 // VO2max : mesurée (montre, labo), déclarée, sinon estimée d'après la VMA (≈ 3,5 ml/kg/min par km/h)
 export function vo2Of(o, cfgLv) {
   const lv = cfgLv || levelsDoc(o), cand = [];

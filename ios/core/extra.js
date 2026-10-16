@@ -57,7 +57,7 @@ import { sportsOf } from '../../src/lib/sports.js';
 import { GOAL_BY_ID, LIB_BY_ID } from '../../src/lib/library.js';
 import { generate, writeProgram, conflicts, nextMonday, alternatives, sessionSummary, FORMATS, fmtFamily, fmtOf, fmtReco, weekPlanTypes, buildSession } from '../../src/lib/builder.js';
 import { missingFor } from '../../src/lib/needs.js';
-import { levelsDoc, LIFT_OF_LIB, LIFTS, CLIMB_KEYS, oneRM, climbLevel, vmaOf, fcmaxOf, srcTxt, csOf, vo2Of, ftpOf, runProfile } from '../../src/lib/levels.js';
+import { levelsDoc, LIFT_OF_LIB, LIFTS, CLIMB_KEYS, oneRM, climbLevel, vmaOf, fcmaxOf, srcTxt, csOf, cssOf, swimPace, vo2Of, ftpOf, runProfile } from '../../src/lib/levels.js';
 import { SCALE } from '../../src/lib/grades.js';
 import { DOW_L, todayKey } from '../../src/lib/dates.js';
 
@@ -70,7 +70,7 @@ export function builderInitial(saved) {
   const eq = [...new Set(sp.flatMap(s => DEFAULT_EQ[s] || []))];
   return Object.assign({ goal: null, goal2: null, days: [0, 2, 4], fixed: [], fixedLbl: '', dur: 60, lvl: 2, equip: eq, weeks: 8, start: nextMonday(), event: null, eventLbl: '' },
     saved ? { days: saved.days, fixed: saved.fixed || [], fixedLbl: saved.fixedLbl || '', dur: saved.dur, lvl: saved.lvl, equip: saved.equip, weeks: saved.weeks } : {},
-    { sports: sp, u18: !!p.under18, swap: {}, fmt: (saved && saved.fmt) || {} },
+    { sports: sp, sex: p.sex, u18: !!p.under18, swap: {}, fmt: (saved && saved.fmt) || {} },
     isSelf() ? {} : { lv: cloneJ(levelsDoc(o)) });
 }
 
@@ -83,18 +83,19 @@ export function builderSaveModel(name, cfg) {
 }
 export function builderDeleteModel(id) { putFor(SELF, 'models', { list: builderModels().filter(m => m.id !== id) }); }
 
-const FAM_LBL = { int: 'Séance d’intervalles (course)', intV: 'Séance d’intervalles (vélo)', conti: 'Séance de volume', resist: 'Séance de résistance', bloc: 'Séance de puissance', doigts: 'Séance de doigts', compet: 'Séance de compétition', force: 'Muscu · force', hyper: 'Muscu · masse', puiss: 'Muscu · puissance' };
+const FAM_LBL = { int: 'Séance d’intervalles (course)', intV: 'Séance d’intervalles (vélo)', intN: 'Séance d’intervalles (natation)', conti: 'Séance de volume', resist: 'Séance de résistance', bloc: 'Séance de puissance', doigts: 'Séance de doigts', compet: 'Séance de compétition', force: 'Muscu · force', hyper: 'Muscu · masse', puiss: 'Muscu · puissance' };
 const RECO_WHY = {
   conti: r => r === 'voies' ? 'Tu as renseigné un niveau en voie : le volume se fait en voie.' : 'Beaucoup de mouvements à intensité basse : la base aérobie des avant-bras et de la technique.',
   resist: r => r === 'voies' ? 'Ton objectif est la résistance en voie : on la travaille dans des voies.' : 'Le 4 × 4 fait durer l’effort 2 à 3 min, la durée de la filière lactique.',
   bloc: () => 'Les blocs à ta limite recrutent au maximum, frais à chaque essai.',
-  doigts: r => r === 'hangs' ? 'Avec une poutre, la charge des suspensions se règle au kilo près.' : 'Sans poutre (ou avant 18 ans), les petites prises en bloc font progresser sans risque.',
+  doigts: r => r === 'f80' ? 'Le 10/6 à 80 % de ta force max est le meilleur compromis force et endurance de l’étude de Devise (2022) : environ +12 % de force en 4 semaines.' : r === 'hangs' ? 'Avec une poutre, la charge des suspensions se règle au kilo près.' : 'Sans poutre (ou avant 18 ans), les petites prises en bloc font progresser sans risque.',
   compet: () => 'Le format des qualifications : blocs nouveaux, temps limité, repos imposé.',
   force: () => 'Repos complets entre les séries : la base la plus simple pour progresser en force.',
   hyper: (r, c) => r === 'supersets' ? 'Séance de ' + c.dur + ' min : les supersets gardent le volume en moins de temps.' : 'Un exercice à la fois, repos complets : le plus simple pour bien charger.',
   puiss: r => r === 'contraste' ? 'Avec une barre et de l’expérience : la série lourde potentialise la série explosive.' : 'Charges légères lancées vite : la base, sans matériel lourd.',
-  int: () => 'Alterner 30/30 et 3 min varie le stimulus près de la VO2max ; le seuil se cale sur ta vitesse critique quand tu l’as testée.',
-  intV: () => 'Le 4 × 4 min est le format le plus étudié pour la VO2max ; le sweet spot construit l’endurance juste sous la FTP.'
+  int: () => 'Alterner 30/30 et 3 min varie le stimulus près de la VO2max ; le 4 × 4 min et le 15/15 font encore mieux sur la VO2max (Helgerud 2007) ; le seuil se cale sur ta vitesse critique quand tu l’as testée.',
+  intV: () => 'Le 4 × 4 min est le format le plus étudié pour la VO2max ; le 30/15 de Rønnestad (2015) a donné plus de VO2max à effort égal ; le sweet spot et le seuil construisent l’endurance autour de la FTP.',
+  intN: () => 'La vitesse critique (CSS) se mesure avec un 400 m et un 200 m : les séries à son allure travaillent le seuil aérobie, et le volume réduit à haute intensité ne fait pas perdre de performance.'
 };
 const WK0 = { step: 1, meso: 0, phase: 'volume' };
 const tutTxt = s => s >= 120 ? Math.round(s / 60) + ' min' : s + ' s';
@@ -106,7 +107,7 @@ export function builderFormats(cfg) {
   const lifts = new Set();
   for (const t of types) { const ss = buildSession(t, cfg, WK0, new Set(), {}); for (const b of ss.blocks) for (const it of b.items || []) { const l = LIFT_OF_LIB[it.lib]; if (l && it.rx && it.rx.role === 'main') lifts.add(l); } }
   if (fams.includes('puiss')) ['squat', 'bench', 'pull'].forEach(l => lifts.add(l));
-  const need = { climb: types.some(t => ['conti', 'resist', 'bloc', 'doigts', 'compet'].includes(t)), lifts: [...lifts], cardio: types.some(t => ['ef', 'int', 'long', 'lact', 'sprint', 'circuit'].includes(t)) };
+  const need = { climb: types.some(t => ['conti', 'resist', 'bloc', 'doigts', 'compet'].includes(t)), lifts: [...lifts], cardio: types.some(t => ['ef', 'int', 'long', 'lact', 'sprint', 'circuit', 'hxc', 'hxs', 'hxsim'].includes(t)), hyrox: types.some(t => ['hxc', 'hxs', 'hxsim'].includes(t)) };
   const out = fams.map(f => {
     const t = types.find(x => fmtFamily(x, cfg) === f), cur = fmtOf(f, cfg), reco = fmtReco(f, cfg);
     return { f, label: FAM_LBL[f] || f, cur, reco, why: RECO_WHY[f] ? RECO_WHY[f](reco, cfg) : '', opts: FORMATS[f].map(([id, l, d]) => {
@@ -144,7 +145,8 @@ export function levelGroups(sports, need) {
   return {
     climb: need ? need.climb : all || s.includes('escalade'),
     lifts: need ? need.lifts : (all || s.some(x => ['muscu', 'hyrox', 'combat', 'collectif', 'escalade'].includes(x))) ? (s.length && s.every(x => x === 'escalade') ? ['pull', 'dips'] : Object.keys(LIFTS)) : [],
-    cardio: need ? need.cardio : all || s.some(x => ['course', 'trail', 'velo', 'natation', 'hyrox', 'collectif', 'combat'].includes(x))
+    cardio: need ? need.cardio : all || s.some(x => ['course', 'trail', 'velo', 'natation', 'hyrox', 'collectif', 'combat'].includes(x)),
+    hyrox: need ? !!need.hyrox : all || s.includes('hyrox')
   };
 }
 const fmtN = v => v == null ? '' : String(v).replace('.', ',');
@@ -152,7 +154,7 @@ const fmtN = v => v == null ? '' : String(v).replace('.', ',');
 export function levelsForm(need, lvIn) {
   const lv = lvIn || levelsDoc();
   const g = levelGroups(sportsOf(), need);
-  const cl = climbLevel(null, lvIn), vma = vmaOf(null, lvIn), fc = fcmaxOf(null, lvIn), cs = csOf(), vo2 = vo2Of(null, lvIn), ftp = ftpOf(null, lvIn), rp = runProfile(null, lvIn);
+  const cl = climbLevel(null, lvIn), vma = vmaOf(null, lvIn), fc = fcmaxOf(null, lvIn), cs = csOf(), css = cssOf(), vo2 = vo2Of(null, lvIn), ftp = ftpOf(null, lvIn), rp = runProfile(null, lvIn);
   return {
     climb: g.climb ? CLIMB_KEYS.map(([k, disc, , l]) => ({ k, l, v: lv[k] || '', hint: cl[k] && cl[k].src !== 'déclaré' ? cl[k].g + ' (' + cl[k].src + ')' : '', opts: SCALE[disc].filter((x, i) => i >= 3) })) : [],
     lifts: g.lifts.map(id => { const L = LIFTS[id], rm = oneRM(id, null, lvIn); return { id, l: L.l + (L.lest ? ' (lest)' : '') + ' · kg', v: lv.rm && lv.rm[id] != null ? lv.rm[id] : null, hint: rm && rm.src !== 'déclaré' ? rm.txt + ' · ' + srcTxt(rm) : '' }; }),
@@ -162,7 +164,8 @@ export function levelsForm(need, lvIn) {
       { k: 'fcmax', l: 'FC max (bpm)', v: lv.fcmax ?? null, int: true, hint: fc && fc.src !== 'déclarée' ? fc.v + ' · ' + fc.src : '' },
       { k: 'ftp', l: 'FTP vélo (W)', v: lv.ftp ?? null, int: true, hint: ftp && ftp.src !== 'déclarée' ? ftp.v + ' W · ' + srcTxt(ftp) : '' }
     ] : [],
-    cardioNote: g.cardio ? (cs ? 'Vitesse critique ' + fmtN(cs.v) + ' km/h · D′ ≈ ' + cs.dp + ' m (test du ' + srcTxt(cs).replace('test le ', '') + '). ' : 'Vitesse critique : passe le test 3 min + 12 min dans Suivi → Tests. ') + (rp ? rp.txt : '') : ''
+    hyrox: g.hyrox ? { k: 'hdiv', l: 'Catégorie Hyrox', v: lv.hdiv === 'pro' ? 'pro' : 'open', opts: [['open', 'Open'], ['pro', 'Pro']] } : null,
+    cardioNote: g.cardio ? (cs ? 'Vitesse critique ' + fmtN(cs.v) + ' km/h · D′ ≈ ' + cs.dp + ' m (test du ' + srcTxt(cs).replace('test le ', '') + '). ' : 'Vitesse critique : passe le test 3 min + 12 min dans Suivi → Tests. ') + (css ? 'CSS natation ' + fmtN(Math.round(css.ms * 100) / 100) + ' m/s (' + swimPace(css, 100) + ' /100 m). ' : '') + (rp ? rp.txt : '') : ''
   };
 }
 
