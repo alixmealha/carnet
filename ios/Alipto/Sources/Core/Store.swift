@@ -139,6 +139,7 @@ final class Store {
         put("j:" + k, .obj(cur))
     }
     var planLocked: Bool { isSelf && myLock }
+    var canEditPlan: Bool { !planLocked }
     func profile(_ owner: String? = nil) -> JSON {
         let o = owner ?? subject
         var p = get("profile", owner: o)?.object ?? [:]

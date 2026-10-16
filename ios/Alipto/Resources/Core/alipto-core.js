@@ -4851,9 +4851,22 @@
   // ios/core/extra.js
   var extra_exports = {};
   __export(extra_exports, {
+    builderAlternatives: () => builderAlternatives,
+    builderConflicts: () => builderConflicts,
+    builderDeleteModel: () => builderDeleteModel,
+    builderFormats: () => builderFormats,
+    builderGenerate: () => builderGenerate,
+    builderInitial: () => builderInitial,
+    builderModels: () => builderModels,
+    builderSaveModel: () => builderSaveModel,
+    builderWrite: () => builderWrite,
     climbSuggestApply: () => climbSuggestApply,
     climbSuggestOf: () => climbSuggestOf,
     glossSplit: () => glossSplit,
+    levelGroups: () => levelGroups,
+    levelsForm: () => levelsForm,
+    libName: () => libName,
+    loadFoods: () => loadFoods2,
     moveWarn: () => moveWarn,
     testDerive: () => testDerive
   });
@@ -4916,6 +4929,130 @@
       if (g.length) out.push(groupsTxt(g) + " en lourd " + w);
     }
     return out.length ? out.join(" \xB7 ") : null;
+  }
+  async function loadFoods2() {
+    const f = await loadFoods();
+    return f.length;
+  }
+  var DEFAULT_EQ = { escalade: ["salle-esc"], muscu: ["salle"], course: ["exterieur"], trail: ["exterieur"], velo: ["velo"], natation: ["piscine"], hyrox: ["salle", "exterieur"], collectif: ["exterieur"], combat: [], autre: [] };
+  var cloneJ = (x) => JSON.parse(JSON.stringify(x));
+  function builderInitial(saved) {
+    const o = getSubject(), p = profileOf(o), sp = sportsOf(o) || [];
+    const eq = [...new Set(sp.flatMap((s) => DEFAULT_EQ[s] || []))];
+    return Object.assign(
+      { goal: null, goal2: null, days: [0, 2, 4], fixed: [], fixedLbl: "", dur: 60, lvl: 2, equip: eq, weeks: 8, start: nextMonday(), event: null, eventLbl: "" },
+      saved ? { days: saved.days, fixed: saved.fixed || [], fixedLbl: saved.fixedLbl || "", dur: saved.dur, lvl: saved.lvl, equip: saved.equip, weeks: saved.weeks } : {},
+      { sports: sp, u18: !!p.under18, swap: {}, fmt: saved && saved.fmt || {} },
+      isSelf() ? {} : { lv: cloneJ(levelsDoc(o)) }
+    );
+  }
+  var builderModels = () => (getFor(SELF, "models") || {}).list || [];
+  function builderSaveModel(name, cfg) {
+    const keep = ["goal", "goal2", "days", "fixed", "fixedLbl", "dur", "lvl", "equip", "weeks", "swap", "fmt"], c = {};
+    for (const k of keep) c[k] = cfg[k];
+    putFor(SELF, "models", { list: builderModels().filter((m) => m.name !== name).concat([{ id: uid("m"), name, cfg: c, at: Date.now() }]) });
+  }
+  function builderDeleteModel(id) {
+    putFor(SELF, "models", { list: builderModels().filter((m) => m.id !== id) });
+  }
+  var FAM_LBL = { int: "S\xE9ance d\u2019intervalles (course)", intV: "S\xE9ance d\u2019intervalles (v\xE9lo)", conti: "S\xE9ance de volume", resist: "S\xE9ance de r\xE9sistance", bloc: "S\xE9ance de puissance", doigts: "S\xE9ance de doigts", compet: "S\xE9ance de comp\xE9tition", force: "Muscu \xB7 force", hyper: "Muscu \xB7 masse", puiss: "Muscu \xB7 puissance" };
+  var RECO_WHY = {
+    conti: (r) => r === "voies" ? "Tu as renseign\xE9 un niveau en voie : le volume se fait en voie." : "Beaucoup de mouvements \xE0 intensit\xE9 basse : la base a\xE9robie des avant-bras et de la technique.",
+    resist: (r) => r === "voies" ? "Ton objectif est la r\xE9sistance en voie : on la travaille dans des voies." : "Le 4 \xD7 4 fait durer l\u2019effort 2 \xE0 3 min, la dur\xE9e de la fili\xE8re lactique.",
+    bloc: () => "Les blocs \xE0 ta limite recrutent au maximum, frais \xE0 chaque essai.",
+    doigts: (r) => r === "hangs" ? "Avec une poutre, la charge des suspensions se r\xE8gle au kilo pr\xE8s." : "Sans poutre (ou avant 18 ans), les petites prises en bloc font progresser sans risque.",
+    compet: () => "Le format des qualifications : blocs nouveaux, temps limit\xE9, repos impos\xE9.",
+    force: () => "Repos complets entre les s\xE9ries : la base la plus simple pour progresser en force.",
+    hyper: (r, c) => r === "supersets" ? "S\xE9ance de " + c.dur + " min : les supersets gardent le volume en moins de temps." : "Un exercice \xE0 la fois, repos complets : le plus simple pour bien charger.",
+    puiss: (r) => r === "contraste" ? "Avec une barre et de l\u2019exp\xE9rience : la s\xE9rie lourde potentialise la s\xE9rie explosive." : "Charges l\xE9g\xE8res lanc\xE9es vite : la base, sans mat\xE9riel lourd.",
+    int: () => "Alterner 30/30 et 3 min varie le stimulus pr\xE8s de la VO2max ; le seuil se cale sur ta vitesse critique quand tu l\u2019as test\xE9e.",
+    intV: () => "Le 4 \xD7 4 min est le format le plus \xE9tudi\xE9 pour la VO2max ; le sweet spot construit l\u2019endurance juste sous la FTP."
+  };
+  var WK0 = { step: 1, meso: 0, phase: "volume" };
+  var tutTxt = (s) => s >= 120 ? Math.round(s / 60) + " min" : s + " s";
+  function builderFormats(cfg) {
+    const types = [...new Set(weekPlanTypes(cfg))];
+    const fams = [...new Set(types.map((t) => fmtFamily(t, cfg)).filter(Boolean))];
+    const lifts = /* @__PURE__ */ new Set();
+    for (const t of types) {
+      const ss = buildSession(t, cfg, WK0, /* @__PURE__ */ new Set(), {});
+      for (const b of ss.blocks) for (const it of b.items || []) {
+        const l = LIFT_OF_LIB[it.lib];
+        if (l && it.rx && it.rx.role === "main") lifts.add(l);
+      }
+    }
+    if (fams.includes("puiss")) ["squat", "bench", "pull"].forEach((l) => lifts.add(l));
+    const need = { climb: types.some((t) => ["conti", "resist", "bloc", "doigts", "compet"].includes(t)), lifts: [...lifts], cardio: types.some((t) => ["ef", "int", "long", "lact", "sprint", "circuit"].includes(t)) };
+    const out = fams.map((f) => {
+      const t = types.find((x) => fmtFamily(x, cfg) === f), cur = fmtOf(f, cfg), reco = fmtReco(f, cfg);
+      return { f, label: FAM_LBL[f] || f, cur, reco, why: RECO_WHY[f] ? RECO_WHY[f](reco, cfg) : "", opts: FORMATS[f].map(([id, l, d]) => {
+        const ss = buildSession(t, Object.assign({}, cfg, { fmt: Object.assign({}, cfg.fmt, { [f]: id }) }), WK0, /* @__PURE__ */ new Set(), {}), ex = ss.est || {};
+        const main = sessionSummary(ss).filter((it) => it.id !== "ech")[0];
+        return {
+          id,
+          l,
+          d,
+          main: main ? (main.n > 1 ? main.n + " \xD7 " : "") + main.label + (main.det ? " \xB7 " + main.det.split(" \xB7 ").slice(0, 2).join(" \xB7 ") : "") : "",
+          est: [ex.min ? "\u2248 " + ex.min + " min" : "", ex.tut ? "\u2248 " + tutTxt(ex.tut) + " sous tension" : ""].filter(Boolean).join(" \xB7 ")
+        };
+      }) };
+    });
+    return { need, fams: out };
+  }
+  var lastProg = null;
+  function builderGenerate(cfg) {
+    const prog = generate(cfg), t = todayKey();
+    lastProg = prog;
+    const fams = [...new Set(prog.types.map((x) => fmtFamily(x, cfg)).filter(Boolean))];
+    const fmts = fams.map((f) => FAM_LBL[f].replace("S\xE9ance de ", "").replace("Muscu \xB7 ", "").toLowerCase() + " en " + FORMATS[f].find((x) => x[0] === fmtOf(f, cfg))[1].toLowerCase()).join(" \xB7 ");
+    const nSes = prog.weeks.reduce((a, x) => a + Object.keys(x.days).filter((d) => addDays(x.start, +d) >= t).length, 0);
+    const weeks = prog.weeks.map((w) => ({
+      start: w.start,
+      phase: w.phase,
+      light: !!w.light,
+      taper: !!w.taper,
+      days: Object.keys(w.days).map((d) => {
+        const s = w.days[d];
+        return { k: addDays(w.start, +d), short: s.short || "", blocks: (s.blocks || []).map((b) => ({
+          kind: b.kind,
+          items: (b.items || []).filter((it) => it.id !== "ech" && it.id !== "rac").map((it) => ({ label: it.label, det: it.det || "", n: it.n || 1, unit: it.unit || "", rest: it.rest || 0, lib: it.lib || null, alt: it.lib ? alternatives(it.lib, cfg).length : 0 }))
+        })) };
+      })
+    }));
+    const warn = prog.warnings.map((x) => DOW_L[x.d].toLowerCase() + " et " + DOW_L[x.d2].toLowerCase() + " (" + groupsTxt(x.groups) + ")").join(" ; ");
+    return { start: prog.start, end: prog.end, nSes, fmts, weeks, warn, phases: [...new Set(prog.weeks.map((x) => x.phase))], needs: missingFor(prog) };
+  }
+  var builderAlternatives = (lib, cfg) => alternatives(lib, cfg).map((x) => ({ id: x.id, n: x.n, c: x.c || "" }));
+  var libName = (id) => (LIB_BY_ID[id] || {}).n || id;
+  var builderConflicts = () => lastProg ? conflicts(lastProg) : [];
+  var builderWrite = (mode) => lastProg ? writeProgram(lastProg, mode) : 0;
+  function levelGroups(sports, need) {
+    const s = sports || [], all = !s.length;
+    return {
+      climb: need ? need.climb : all || s.includes("escalade"),
+      lifts: need ? need.lifts : all || s.some((x) => ["muscu", "hyrox", "combat", "collectif", "escalade"].includes(x)) ? s.length && s.every((x) => x === "escalade") ? ["pull", "dips"] : Object.keys(LIFTS) : [],
+      cardio: need ? need.cardio : all || s.some((x) => ["course", "trail", "velo", "natation", "hyrox", "collectif", "combat"].includes(x))
+    };
+  }
+  var fmtN = (v) => v == null ? "" : String(v).replace(".", ",");
+  function levelsForm(need, lvIn) {
+    const lv = lvIn || levelsDoc();
+    const g = levelGroups(sportsOf(), need);
+    const cl = climbLevel(null, lvIn), vma = vmaOf(null, lvIn), fc = fcmaxOf(null, lvIn), cs = csOf(), vo2 = vo2Of(null, lvIn), ftp = ftpOf(null, lvIn), rp = runProfile(null, lvIn);
+    return {
+      climb: g.climb ? CLIMB_KEYS.map(([k, disc, , l]) => ({ k, l, v: lv[k] || "", hint: cl[k] && cl[k].src !== "d\xE9clar\xE9" ? cl[k].g + " (" + cl[k].src + ")" : "", opts: SCALE[disc].filter((x, i) => i >= 3) })) : [],
+      lifts: g.lifts.map((id) => {
+        const L = LIFTS[id], rm = oneRM(id, null, lvIn);
+        return { id, l: L.l + (L.lest ? " (lest)" : "") + " \xB7 kg", v: lv.rm && lv.rm[id] != null ? lv.rm[id] : null, hint: rm && rm.src !== "d\xE9clar\xE9" ? rm.txt + " \xB7 " + srcTxt(rm) : "" };
+      }),
+      cardio: g.cardio ? [
+        { k: "vma", l: "VMA (km/h)", v: lv.vma ?? null, int: false, hint: vma && vma.src !== "d\xE9clar\xE9e" ? fmtN(vma.v) + " \xB7 " + srcTxt(vma) : "" },
+        { k: "vo2", l: "VO2max (ml/kg/min)", v: lv.vo2 ?? null, int: true, hint: vo2 && vo2.src !== "d\xE9clar\xE9e" ? vo2.v + " \xB7 " + vo2.src : "montre, labo\u2026" },
+        { k: "fcmax", l: "FC max (bpm)", v: lv.fcmax ?? null, int: true, hint: fc && fc.src !== "d\xE9clar\xE9e" ? fc.v + " \xB7 " + fc.src : "" },
+        { k: "ftp", l: "FTP v\xE9lo (W)", v: lv.ftp ?? null, int: true, hint: ftp && ftp.src !== "d\xE9clar\xE9e" ? ftp.v + " W \xB7 " + srcTxt(ftp) : "" }
+      ] : [],
+      cardioNote: g.cardio ? (cs ? "Vitesse critique " + fmtN(cs.v) + " km/h \xB7 D\u2032 \u2248 " + cs.dp + " m (test du " + srcTxt(cs).replace("test le ", "") + "). " : "Vitesse critique : passe le test 3 min + 12 min dans Suivi \u2192 Tests. ") + (rp ? rp.txt : "") : ""
+    };
   }
 
   // ios/core/entry.js

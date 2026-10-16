@@ -15,6 +15,11 @@ enum D {
         return String(format: "%04d-%02d-%02d", c.year ?? 2000, c.month ?? 1, c.day ?? 1)
     }
     static var today: String { key() }
+    /// Le jour k à midi (heure locale), pour les sélecteurs de date
+    static func date(_ k: String) -> Date {
+        let (y, m, d) = parts(k)
+        return Calendar.current.date(from: DateComponents(year: y, month: m, day: d, hour: 12)) ?? Date()
+    }
     private static func parts(_ k: String) -> (Int, Int, Int) {
         let p = k.split(separator: "-").compactMap { Int($0) }
         return p.count == 3 ? (p[0], p[1], p[2]) : (2000, 1, 1)

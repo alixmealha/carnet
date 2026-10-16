@@ -55,7 +55,7 @@ struct MainTabs: View {
             TodayView()
                 .tabItem { Label("Aujourd’hui", systemImage: "sun.max") }
                 .tag("today")
-            PlanListView()
+            PlanTabView()
                 .tabItem { Label("Plan", systemImage: "calendar") }
                 .tag("plan")
             StatsView()

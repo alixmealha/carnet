@@ -13,7 +13,7 @@ final class Foods {
         guard !ready, !loading else { return }
         loading = true
         Task { @MainActor in
-            do { _ = try await Core.shared.callAsync("nutrition.loadFoods"); ready = true } catch { self.error = error.localizedDescription }
+            do { _ = try await Core.shared.callAsync("extra.loadFoods"); ready = true } catch { self.error = error.localizedDescription }
             loading = false
         }
     }

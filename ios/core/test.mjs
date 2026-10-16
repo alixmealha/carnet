@@ -62,9 +62,39 @@ ok('sources', Object.keys(call('sources.SOURCES')).length > 10);
 ok('besoins', call('needs.missingFor', prog) != null);
 ok('nutrition : repères', call('nutrition.NUT').length > 5);
 // base d'aliments (promesse)
-C.callAsync('a1', 'nutrition.loadFoods', '[]');
+C.callAsync('a1', 'extra.loadFoods', '[]');
 await new Promise(r => setTimeout(r, 300));
-ok('nutrition : base d’aliments', ctx.__done && ctx.__done.id === 'a1' && !ctx.__done.err, ctx.__done && ctx.__done.err);
+ok('nutrition : base d’aliments', ctx.__done && ctx.__done.id === 'a1' && !ctx.__done.err && +ctx.__done.json > 1000, ctx.__done && (ctx.__done.err || ctx.__done.json + ' aliments'));
 ok('nutrition : recherche', call('nutrition.searchFoods', 'riz', [], 5).length > 0, call('nutrition.searchFoods', 'pomme', [], 3).map(f => f.n).join(' / '));
+
+// assistant (étapes de l'appli iPhone)
+const ini = call('extra.builderInitial', null);
+ok('assistant : réglages de départ', ini && ini.days && ini.start, JSON.stringify(ini.equip));
+const cfg2 = Object.assign({}, ini, { goal: 'doigts', goal2: 'force' });
+const fm = call('extra.builderFormats', cfg2);
+ok('assistant : formats', fm && fm.fams.length > 0 && fm.fams[0].opts.length > 0, fm.fams.map(f => f.f + ':' + f.cur).join(' '));
+const pv = call('extra.builderGenerate', cfg2);
+ok('assistant : aperçu', pv && pv.weeks.length === 8 && pv.nSes > 0, pv.nSes + ' séances · ' + pv.fmts);
+const lib = pv.weeks[0].days.flatMap(d => d.blocks.flatMap(b => b.items)).find(it => it.alt > 0);
+ok('assistant : remplacements', !lib || call('extra.builderAlternatives', lib.lib, cfg2).length > 0, lib && lib.label);
+ok('assistant : conflits', call('extra.builderConflicts').length > 0, call('extra.builderConflicts').length + ' jours déjà prévus');
+const nw = call('extra.builderWrite', 'merge');
+ok('assistant : écriture', nw > 10, nw + ' séances');
+call('extra.builderSaveModel', 'Doigts 3 j', cfg2);
+ok('assistant : modèles', call('extra.builderModels').length === 1);
+const lf = call('extra.levelsForm', null, null);
+ok('repères : formulaire', lf && lf.climb.length === 4, lf.climb.map(x => x.k + '=' + (x.v || x.hint)).join(' '));
+// éditeurs du plan
+const pl = call('plan.meta');
+call('plan.addWeeks', 2, 'deload', 'Récup');
+ok('plan : semaines ajoutées', call('plan.meta').weeks.length === pl.weeks.length + 2);
+call('plan.removeLastWeek');
+ok('plan : dernière semaine retirée', call('plan.meta').weeks.length === pl.weeks.length + 1);
+const kx = call('dates.addDays', t, 3);
+call('plan.saveDay', kx, { blocks: [{ id: 'bx', kind: 'muscu', title: 'Muscu', items: [{ id: 'i1', label: 'Tractions lestées', n: 4, unit: 'Série' }] }] });
+ok('plan : jour enregistré', call('plan.sessionName', kx) === 'Muscu', call('plan.sessionName', kx));
+ok('plan : exercices', call('plan.exerciseNames').some(x => x.label === 'Tractions lestées'));
+ok('plan : renommer', call('plan.renameExercise', 'Tractions lestées', 'Tractions', true) >= 1);
+ok('règle des 48 h', Array.isArray(call('builder.check48', kx, call('plan.day', kx))));
 console.log(fails ? fails + ' échec(s)' : 'Tout est bon');
 process.exit(fails ? 1 : 0);

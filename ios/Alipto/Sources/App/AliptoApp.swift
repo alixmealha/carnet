@@ -11,7 +11,8 @@ struct AliptoApp: App {
             Store.shared.load()
             Store.shared.startAutoSync()
         }
-        if !Launch.screen.isEmpty { AppState.shared.tab = ["plan", "more", "stats"].contains(Launch.screen) ? Launch.screen : Launch.screen == "tests" || Launch.screen == "nutri" ? "stats" : "today" }
+        if !Launch.screen.isEmpty { AppState.shared.tab = Launch.tab }
+        if ["plan", "prog", "builder", "dayedit"].contains(Launch.screen) { UserDefaults.standard.set(Launch.screen == "plan" ? "cal" : "prog", forKey: "plan-view") }
         if Launch.screen == "tests" { UserDefaults.standard.set("tests", forKey: "carnet-stats-view") }
         if Launch.screen == "nutri" { UserDefaults.standard.set("nutri", forKey: "carnet-stats-view") }
         if Launch.screen == "stats" { UserDefaults.standard.set("dash", forKey: "carnet-stats-view") }
@@ -30,4 +31,13 @@ struct AliptoApp: App {
 enum Launch {
     static var demo: Bool { UserDefaults.standard.bool(forKey: "demo") }
     static var screen: String { UserDefaults.standard.string(forKey: "screen") ?? "" }
+    /// Onglet ouvert pour la capture
+    static var tab: String {
+        switch screen {
+        case "plan", "prog", "builder", "dayedit": return "plan"
+        case "stats", "tests", "nutri": return "stats"
+        case "more": return "more"
+        default: return "today"
+        }
+    }
 }

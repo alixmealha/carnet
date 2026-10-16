@@ -72,7 +72,7 @@ jobs:
             xcrun simctl ui "$DEV" appearance $scheme
             for s in $SCREENS; do
               xcrun simctl launch --terminate-running-process "$DEV" app.alipto.Alipto -demo 1 -screen "$s" >/dev/null
-              sleep 5
+              case "$s" in nutri|builder|dayedit) sleep 8 ;; *) sleep 5 ;; esac
               xcrun simctl io "$DEV" screenshot "shots/$scheme-$s.png" >/dev/null 2>&1
             done
           done

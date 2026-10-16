@@ -199,6 +199,7 @@ struct SessionCard: View {
     let k: String
     @State private var store = Store.shared
     @State private var menu = false
+    @State private var edit = false
 
     var body: some View {
         let e = store.journal(k), pr = PlanReader(store), bl = pr.blocks(k), p = pr.progress(k), d = pr.day(k)
@@ -209,6 +210,10 @@ struct SessionCard: View {
             CardHeader("Séance du jour") {
                 HStack(spacing: 10) {
                     if p.total > 0 { Text("\(p.done)/\(p.total) fait").font(Typo.mono(13, .medium)).foregroundStyle(Palette.muted) }
+                    if store.canEditPlan {
+                        Button { Haptics.tap(); edit = true } label: { Text("Modifier").font(Typo.sans(14, .semibold)).foregroundStyle(Palette.accent) }
+                            .accessibilityLabel("Modifier la séance")
+                    }
                     if !ro && hasSes {
                         Button { Haptics.tap(); menu = true } label: {
                             Image(systemName: "ellipsis").font(.system(size: 15, weight: .bold)).foregroundStyle(Palette.ink)
@@ -252,6 +257,7 @@ struct SessionCard: View {
         }
         .card()
         .sheet(isPresented: $menu) { SessionMenuSheet(k: k).presentationDetents([.medium, .large]).presentationDragIndicator(.visible) }
+        .sheet(isPresented: $edit) { NavigationStack { DayEditorView(k: k) } }
     }
 }
 
