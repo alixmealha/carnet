@@ -1,8 +1,7 @@
 // « Pas possible maintenant ? » : faire un bloc à un autre moment de la journée, un autre jour, ou pas du tout (avec la raison)
 import { useState } from 'preact/hooks';
 import { jget, planLocked, links, isSelf } from '../lib/store.js';
-import { SKIP, skipLabel, blockState, setBlockState, moveBlock, unmoveBlock, day, sessionName, apartOf, moveTargets, blocks, placeBlock, resetOrder, setSwap, clearSwap, itemKey } from '../lib/plan.js';
-import { LIB } from '../lib/library.js';
+import { SKIP, skipLabel, blockState, setBlockState, moveBlock, unmoveBlock, day, sessionName, apartOf, moveTargets, blocks, placeBlock, resetOrder, setSwap, clearSwap, itemKey, swapChoices, plannedIntensity, fingerRef, SWAP_HOW } from '../lib/plan.js';
 import { heavyOf, groupsTxt } from '../lib/builder.js';
 import { addDays, todayKey, fmtShort } from '../lib/dates.js';
 import { Sheet, toast } from './kit.jsx';
@@ -31,13 +30,18 @@ export function BlockMenu({ k, b, onClose, top }) {
   const [pick, setPick] = useState(swappable.length === 1 ? swappable[0].id : null);
   const cur = swappable.find(x => x.id === pick) || null, was = cur && (e.swap || {})[itemKey(b, cur)];
   const [form, setForm] = useState(null);
-  const open = x => { const sw = (e.swap || {})[itemKey(b, x)]; setPick(x.id); setForm(sw ? { label: sw.label || '', det: sw.det || '', pct: sw.pct || (b.finger && b.finger.unit === '%' ? b.finger.load : ''), lib: sw.lib || '' } : { label: '', det: '', pct: b.finger && b.finger.unit === '%' ? b.finger.load : '', lib: '' }); };
-  const sugg = LIB.filter(x => x.k === b.kind && !(cur && x.id === cur.lib)).slice(0, 8);
+  const open = x => {
+    const sw = (e.swap || {})[itemKey(b, x)], pl = plannedIntensity(k, b, x);
+    setPick(x.id);
+    setForm(sw ? { lib: sw.lib || '', v: sw.v != null ? String(sw.v).replace('.', ',') : '', u: sw.u || 'kg', how: sw.how || [] } : { lib: '', v: pl ? String(pl.v).replace('.', ',') : '', u: pl ? pl.u : 'kg', how: [] });
+  };
+  const choices = cur ? swapChoices(k, b, cur) : [];
+  const ref = fingerRef(k);
   const saveSwap = () => {
-    const label = String(form.label || '').trim(); if (!label || !cur) return;
-    const pct = parseFloat(String(form.pct).replace(',', '.'));
-    setSwap(k, b, cur, { label, det: String(form.det || '').trim(), pct: isNaN(pct) || pct <= 0 ? null : pct, lib: form.lib || null });
-    done(label + ' : fait à la place');
+    const ch = choices.find(x => x.id === form.lib); if (!ch || !cur) return;
+    const v = parseFloat(String(form.v).replace(',', '.'));
+    setSwap(k, b, cur, { lib: ch.id, label: ch.name, v: isNaN(v) || v <= 0 ? null : v, u: form.u, how: form.how });
+    done(ch.name + ' : fait à la place');
   };
   return (
     <Sheet title={name} onClose={onClose} cls={top ? 'top' : ''}>
@@ -76,12 +80,15 @@ export function BlockMenu({ k, b, onClose, top }) {
           {mode === 'swap' && <div class="stack" style="gap:10px">
             {swappable.length > 1 && <div class="chips">{swappable.map(x => <button type="button" class={'chip' + (pick === x.id ? ' on' : '')} onClick={() => open(x)}>{plain(x.label)}</button>)}</div>}
             {cur && form && <>
-              {was && <p class="small" style="margin:0">Fait à la place de : {plain(was && cur.swap ? cur.swap.from : cur.label)}</p>}
-              {sugg.length > 0 && <div class="chips">{sugg.map(x => <button type="button" class="chip" onClick={() => setForm(f => ({ ...f, label: x.n, lib: x.id, det: f.det || x.c || '' }))}>{x.n}</button>)}</div>}
-              <label class="fld"><span>Ce que tu as fait</span><input value={form.label} placeholder="ex. Suspension 20 mm, pieds en appui" onInput={ev => setForm(f => ({ ...f, label: ev.currentTarget.value }))} /></label>
-              <label class="fld"><span>Détail (facultatif)</span><input value={form.det} placeholder="ex. pieds au sol pour alléger, 10 s" onInput={ev => setForm(f => ({ ...f, det: ev.currentTarget.value }))} /></label>
-              <label class="fld"><span>% de ton max visé (facultatif)</span><input inputmode="decimal" value={form.pct} placeholder="ex. 85" onInput={ev => setForm(f => ({ ...f, pct: ev.currentTarget.value }))} /></label>
-              <button class="btn primary" onClick={saveSwap} disabled={!String(form.label || '').trim()}>Enregistrer</button>
+              {cur.swap && <p class="small" style="margin:0">Fait à la place de : {plain(cur.swap.from)}</p>}
+              <div class="sub-lbl" style="margin:0">À la place, tu as fait</div>
+              <div class="chips">{choices.map(x => <button type="button" class={'chip' + (form.lib === x.id ? ' on' : '')} onClick={() => setForm(f => ({ ...f, lib: x.id }))}>{x.name}</button>)}</div>
+              <label class="fld"><span>Charge visée, comme prévu au plan{ref ? ' · ton max ≈ ' + String(ref).replace('.', ',') + ' kg' : ''}</span>
+                <div class="row" style="gap:8px"><input style="flex:1" inputmode="decimal" value={form.v} placeholder="ex. 9" onInput={ev => setForm(f => ({ ...f, v: ev.currentTarget.value }))} />
+                  <div class="chips" style="flex:none"><button type="button" class={'chip' + (form.u === 'kg' ? ' on' : '')} onClick={() => setForm(f => ({ ...f, u: 'kg' }))}>kg</button><button type="button" class={'chip' + (form.u === 'pct' ? ' on' : '')} onClick={() => setForm(f => ({ ...f, u: 'pct' }))}>% du max</button></div></div></label>
+              <div class="sub-lbl" style="margin:0">Comment tu as dosé</div>
+              <div class="chips">{SWAP_HOW.map(([id, lbl]) => <button type="button" class={'chip' + (form.how.includes(id) ? ' on' : '')} onClick={() => setForm(f => ({ ...f, how: f.how.includes(id) ? f.how.filter(y => y !== id) : f.how.concat([id]) }))}>{lbl}</button>)}</div>
+              <button class="btn primary" onClick={saveSwap} disabled={!form.lib}>Enregistrer</button>
               {was && <button class="btn" onClick={() => { clearSwap(k, b, cur); done('Exercice prévu remis'); }}>Remettre l’exercice prévu</button>}
             </>}
           </div>}

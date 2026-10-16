@@ -145,13 +145,17 @@ struct PlanReader {
             nb["items"] = .arr(its.map { it in
                 guard let x = sw[bid + "." + (it["id"]?.string ?? "")] else { return it }
                 var c = it
-                let pct = x["pct"]?.double
-                let parts = [x["det"]?.string, pct.map { "≈ \(Fmt.num($0)) % de ton max" }].compactMap { $0 }.filter { !$0.isEmpty }
                 c["label"] = .str(x["label"]?.string ?? it["label"]?.string ?? "Exercice")
-                c["det"] = .str(parts.joined(separator: " · "))
+                c["det"] = .str(x["det"]?.string ?? "")
                 c["swap"] = .obj(["from": it["label"] ?? .str("Exercice")])
-                for key in ["timer", "load", "unit_load", "repsBySet", "lib", "adj"] { c[key] = nil }
+                for key in ["load", "unit_load", "repsBySet", "lib", "adj"] { c[key] = nil }
                 if let l = x["lib"]?.string, !l.isEmpty { c["lib"] = .str(l) }
+                // le minuteur du plan reste valable (mêmes temps) ; seul son libellé suit l'exercice
+                if var t = c["timer"], t != .null {
+                    t["name"] = c["label"]
+                    if t["workLabel"]?.string == "Lève" { t["workLabel"] = .str("Suspends") }
+                    c["timer"] = t
+                }
                 return c
             })
             return nb
@@ -291,15 +295,6 @@ struct JournalWriter {
         s.jset(k, ["order": .arr(ids.map { JSON.str($0) })])
     }
     func resetOrder(_ k: String) { s.jset(k, ["order": nil]) }
-    func setSwap(_ k: String, _ b: Block, _ it: Item, label: String, det: String, pct: Double?, lib: String?) {
-        var sw = s.journal(k)["swap"]?.object ?? [:]
-        var o: [String: JSON] = ["label": .str(label)]
-        if !det.isEmpty { o["det"] = .str(det) }
-        if let pct { o["pct"] = .num(pct) }
-        if let lib, !lib.isEmpty { o["lib"] = .str(lib) }
-        sw[PlanReader.itemKey(b, it)] = .obj(o)
-        s.jset(k, ["swap": .obj(sw)])
-    }
     func clearSwap(_ k: String, _ b: Block, _ it: Item) {
         var sw = s.journal(k)["swap"]?.object ?? [:]
         sw.removeValue(forKey: PlanReader.itemKey(b, it))

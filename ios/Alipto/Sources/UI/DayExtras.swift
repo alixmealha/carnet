@@ -227,10 +227,10 @@ struct BlockMenuSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var mode: String?
     @State private var pick: String?
-    @State private var label = ""
-    @State private var det = ""
-    @State private var pct = ""
     @State private var lib = ""
+    @State private var intensity = ""
+    @State private var unit = "kg"
+    @State private var how: Set<String> = []
     var body: some View {
         let s = Store.shared, e = s.journal(k), st = PlanReader.blockState(e, b), t = D.today, name = plain(b.title)
         let real = PlanReader(s).blocks(k).filter { !$0.isRest && $0.id != b.id && PlanReader.blockState(e, $0) == nil }
@@ -330,54 +330,58 @@ struct BlockMenuSheet: View {
     private func openSwap(_ it: Item, _ e: JSON) {
         let x = e["swap"]?[PlanReader.itemKey(b, it)]
         pick = it.id
-        label = x?["label"]?.string ?? ""
-        det = x?["det"]?.string ?? ""
         lib = x?["lib"]?.string ?? ""
-        let planned = b.raw["finger"]?["unit"]?.string == "%" ? b.raw["finger"]?["load"]?.double : nil
-        if let v = x?["pct"]?.double ?? planned { pct = Fmt.num(v) } else { pct = "" }
+        how = Set((x?["how"]?.array ?? []).compactMap { $0.string })
+        // sans choix déjà fait, on part de la charge prévue au plan
+        let planned = Core.shared.call("plan.plannedIntensity", .str(k), b.raw, it.raw)
+        let v = x?["v"]?.double ?? planned?["v"]?.double
+        unit = x?["u"]?.string ?? planned?["u"]?.string ?? "kg"
+        intensity = v.map { Fmt.num($0) } ?? ""
     }
+    private static let hows: [(String, String)] = [("pieds", "Pieds en appui"), ("lest", "Lest"), ("poulie", "Poulie (décharge)")]
     @ViewBuilder private func swapForm(_ items: [Item], _ e: JSON) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             if items.count > 1 {
                 Flow(spacing: 6) { ForEach(items) { x in Chip(label: plain(x.label), on: pick == x.id) { openSwap(x, e) } } }
             }
             if let cur = items.first(where: { $0.id == pick }) {
+                let choices = Core.shared.call("plan.swapChoices", .str(k), b.raw, cur.raw)?.array ?? []
+                let ref = Core.shared.call("plan.fingerRef", .str(k))?.double
                 if let from = cur.swapFrom { Text("Fait à la place de : " + plain(from)).font(Typo.sans(13.5)).foregroundStyle(Palette.muted) }
-                let sugg = Array(Core.shared.constant("library.LIB").array.filter { $0["k"]?.string == b.kind && $0["id"]?.string != cur.lib }.prefix(8))
-                if !sugg.isEmpty {
-                    Flow(spacing: 6) {
-                        ForEach(Array(sugg.enumerated()), id: \.offset) { _, x in
-                            Chip(label: x["n"]?.string ?? "", on: false) {
-                                label = x["n"]?.string ?? ""; lib = x["id"]?.string ?? ""
-                                if det.isEmpty { det = x["c"]?.string ?? "" }
-                            }
-                        }
+                Text("À la place, tu as fait").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                Flow(spacing: 6) {
+                    ForEach(Array(choices.enumerated()), id: \.offset) { _, x in
+                        Chip(label: x["name"]?.string ?? "", on: lib == (x["id"]?.string ?? "-")) { lib = x["id"]?.string ?? "" }
                     }
                 }
-                swapField("Ce que tu as fait", "ex. Suspension 20 mm, pieds en appui", $label)
-                swapField("Détail (facultatif)", "ex. pieds au sol pour alléger, 10 s", $det)
-                swapField("% de ton max visé (facultatif)", "ex. 85", $pct, decimal: true)
-                Button("Enregistrer") {
-                    let l = label.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !l.isEmpty else { return }
-                    let p = Double(pct.replacingOccurrences(of: ",", with: "."))
-                    JournalWriter(Store.shared).setSwap(k, b, cur, label: l, det: det.trimmingCharacters(in: .whitespacesAndNewlines), pct: (p ?? 0) > 0 ? p : nil, lib: lib)
-                    done(l + " : fait à la place")
+                Text("Charge visée, comme prévu au plan" + (ref.map { " · ton max ≈ \(Fmt.num($0)) kg" } ?? "")).font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                HStack(spacing: 8) {
+                    TextField("ex. 9", text: $intensity)
+                        .keyboardType(.decimalPad)
+                        .font(Typo.sans(16)).padding(12)
+                        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Chip(label: "kg", on: unit == "kg") { unit = "kg" }
+                    Chip(label: "% du max", on: unit == "pct") { unit = "pct" }
                 }
-                .buttonStyle(BigButton()).disabled(label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Text("Comment tu as dosé").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                Flow(spacing: 6) {
+                    ForEach(Self.hows, id: \.0) { h in
+                        Chip(label: h.1, on: how.contains(h.0)) { if how.contains(h.0) { how.remove(h.0) } else { how.insert(h.0) } }
+                    }
+                }
+                Button("Enregistrer") {
+                    guard let ch = choices.first(where: { $0["id"]?.string == lib }) else { return }
+                    let v = Double(intensity.replacingOccurrences(of: ",", with: ".")) ?? 0
+                    var o: [String: JSON] = ["lib": .str(lib), "label": .str(ch["name"]?.string ?? ""), "u": .str(unit), "how": .arr(Self.hows.map { $0.0 }.filter { how.contains($0) }.map { JSON.str($0) })]
+                    if v > 0 { o["v"] = .num(v) }
+                    Core.shared.call("plan.setSwap", .str(k), b.raw, cur.raw, .obj(o))
+                    done((ch["name"]?.string ?? "Exercice") + " : fait à la place")
+                }
+                .buttonStyle(BigButton()).disabled(lib.isEmpty)
                 if cur.swapFrom != nil {
                     Button("Remettre l’exercice prévu") { JournalWriter(Store.shared).clearSwap(k, b, cur); done("Exercice prévu remis") }.buttonStyle(SmallButton(color: Palette.muted))
                 }
             }
-        }
-    }
-    private func swapField(_ title: String, _ ph: String, _ text: Binding<String>, decimal: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
-            TextField(ph, text: text)
-                .keyboardType(decimal ? .decimalPad : .default)
-                .font(Typo.sans(16)).padding(12)
-                .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }

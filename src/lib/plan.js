@@ -2,6 +2,7 @@ import { get, jget, jset, put, putMany, remove, ids, links, myProfile } from './
 import { cloud } from './supa.js';
 import { rangeKeys, r05, fmtNum, fmtDay, addDays, mondayOf, todayKey } from './dates.js';
 import { history } from './tests.js';
+import { LIB, LIB_BY_ID } from './library.js';
 
 export const KIND = { grimpe: 'Escalade', doigts: 'Doigts', muscu: 'Muscu', renfo: 'Renfo', epaule: 'Épaule', kine: 'Kiné', velo: 'Cardio', course: 'Course', sport: 'Sport', test: 'Test', compet: 'Compétition', affut: 'Affûtage', recup: 'Récupération', autre: 'Autre', rest: 'Repos' };
 export const KIND_ORDER = ['grimpe', 'doigts', 'muscu', 'renfo', 'epaule', 'kine', 'velo', 'course', 'sport', 'test', 'compet', 'affut', 'recup', 'autre', 'rest'];
@@ -23,11 +24,39 @@ export const blocks = k => {
   _adjCache.set(k, { bl, a, o, s, out }); return out;
 };
 // Exercice fait à la place de celui du plan (matériel absent, autre choix) : gardé dans le journal du jour, le plan reste intact.
-// Même clé d'exercice (les séries déjà cochées restent), mais sans minuteur ni charge en kilos du plan.
+// Même clé d'exercice (les séries déjà cochées restent) ; le minuteur du plan reste valable (mêmes temps de suspension et de repos).
+// La charge en kilos du plan n'est pas reprise : l'intensité réellement visée est notée dans le détail.
+const SWAP_NAME = { 'max-hangs': 'Suspensions 20 mm' };
+export const swapName = x => SWAP_NAME[x.id] || x.n;
+// Exercices proposés à la place (même type de séance que le bloc), hors celui du plan
+export function swapChoices(k, b, it) {
+  const rb = rawBlocks(k).find(x => x.id === b.id), planned = rb && (rb.items || []).find(x => x.id === it.id);
+  return LIB.filter(x => x.k === b.kind && !(planned && x.id === planned.lib)).map(x => ({ id: x.id, name: swapName(x), c: x.c || '' }));
+}
+// Intensité prévue au plan pour cet exercice : { v, u } en % du max ou en kilos (bloc doigts, sinon un « 9 kg » dans le détail)
+export function plannedIntensity(k, b, it) {
+  const rb = rawBlocks(k).find(x => x.id === b.id), pi = rb && (rb.items || []).find(x => x.id === it.id), f = (rb || b).finger;
+  if (f && typeof f.load === 'number') return { v: f.load, u: f.unit === '%' ? 'pct' : 'kg' };
+  const m = String((pi && pi.det) || '').match(/(\d+(?:[.,]\d+)?)\s*kg/);
+  return m ? { v: parseFloat(m[1].replace(',', '.')), u: 'kg' } : null;
+}
+export const SWAP_HOW = [['pieds', 'Pieds en appui', 'pieds en appui'], ['lest', 'Lest', 'lesté'], ['poulie', 'Poulie (décharge)', 'décharge à la poulie']];
+// Max de référence en kilos (dernier test de finger lift, semi-arqué), pour passer des kilos aux % du max
+export function fingerRef(k) { const lt = latestTest(k); return lt && lt.te && lt.te.semi ? lt.te.semi : null; }
+// « pieds en appui · 9 kg (≈ 45 % de ton max) » : la charge est donnée dans l'unité choisie, l'autre entre parenthèses si un test existe
+export function swapDetail(k, x) {
+  const parts = (x.how || []).map(h => (SWAP_HOW.find(y => y[0] === h) || [])[2]).filter(Boolean), mx = fingerRef(k), v = Number(x.v);
+  if (v > 0) {
+    if (x.u === 'pct') parts.push(fmtNum(v) + ' % de ton max' + (mx ? ' (≈ ' + fmtNum(r05(mx * v / 100)) + ' kg)' : ''));
+    else parts.push(fmtNum(v) + ' kg' + (mx ? ' (≈ ' + Math.round(v / mx * 100) + ' % de ton max)' : ''));
+  }
+  return parts.join(' · ');
+}
 function swapItem(it, x) {
-  const c = Object.assign({}, it, { label: x.label || it.label, det: [x.det, x.pct ? '≈ ' + x.pct + ' % de ton max' : ''].filter(Boolean).join(' · '), swap: { from: it.label, pct: x.pct || null } });
-  delete c.timer; delete c.load; delete c.unit_load; delete c.repsBySet; delete c.lib; delete c.adj;
+  const c = Object.assign({}, it, { label: x.label || it.label, det: x.det || '', swap: { from: it.label, lib: x.lib || null } });
+  delete c.load; delete c.unit_load; delete c.repsBySet; delete c.lib; delete c.adj;
   if (x.lib) c.lib = x.lib;
+  if (c.timer) c.timer = Object.assign({}, c.timer, { name: c.label }, c.timer.workLabel === 'Lève' ? { workLabel: 'Suspends' } : {});
   return c;
 }
 function applySwap(bl, s) {
@@ -53,7 +82,8 @@ export function placeBlock(k, b, afterId) {
 }
 export const resetOrder = k => jset(k, { order: null });
 export function setSwap(k, b, it, x) {
-  const s = Object.assign({}, jget(k).swap); s[itemKey(b, it)] = { label: x.label, det: x.det || null, pct: x.pct || null, lib: x.lib || null };
+  const s = Object.assign({}, jget(k).swap), v = Number(x.v) > 0 ? Number(x.v) : null;
+  s[itemKey(b, it)] = { lib: x.lib, label: x.label, v, u: v ? (x.u === 'pct' ? 'pct' : 'kg') : null, how: x.how || [], det: swapDetail(k, { v, u: x.u, how: x.how }) || null };
   jset(k, { swap: s });
 }
 export function clearSwap(k, b, it) {

@@ -133,5 +133,33 @@ ok('Whoop : séances (durée, km, FC pondérée = 140)', jd.duree === 92 && jd.c
 ok('Whoop : 3 jours modifiés', wn === 3, String(wn));
 call('whoop.mergeDays', { [wd]: { workouts: [{ min: 50, km: 5, hr: 140 }] } });
 ok('Whoop : séances déjà remplies non écrasées', call('store.jget', wd).duree === 92);
+
+// Exercice fait à la place (finger lift → suspensions 20 mm) et ordre réel des blocs
+{
+  const sd = '2031-03-03';
+  docs['self|p:' + sd] = { blocks: [
+    { id: 'g1', kind: 'grimpe', title: 'Grimpe', items: [{ id: 'a', label: '10 blocs', n: 10, unit: 'Bloc', rest: 90 }] },
+    { id: 'd1', kind: 'doigts', title: 'Doigts', finger: { load: 9, unit: 'kg' }, items: [
+      { id: 'ech', label: 'Échauffement', n: 1 },
+      { id: 'f', label: 'Finger lift · semi-arqué', det: '9 kg', n: 6, unit: 'Série', lib: 'finger-lift', load: 9, timer: { kind: 'interval', name: 'Finger lift', work: 10, rest: 6, reps: 6, sets: 1, markEach: 'rep', workLabel: 'Lève' } }] }] };
+  C.loadJSON(JSON.stringify(Object.fromEntries(Object.entries(docs))));
+  const d1 = call('plan.blocks', sd).find(b => b.id === 'd1');
+  ok('swap : plan inchangé au départ', d1.items[1].label.startsWith('Finger lift'));
+  const pi = call('plan.plannedIntensity', sd, d1, d1.items[1]);
+  ok('swap : charge prévue lue (9 kg)', pi && pi.v === 9 && pi.u === 'kg', JSON.stringify(pi));
+  const ch = call('plan.swapChoices', sd, d1, d1.items[1]);
+  ok('swap : propositions = exercices de doigts, sans celui du plan', ch.some(x => x.id === 'max-hangs' && x.name === 'Suspensions 20 mm') && !ch.some(x => x.id === 'finger-lift'), ch.map(x => x.name).join(', '));
+  call('plan.setSwap', sd, d1, d1.items[1], { lib: 'max-hangs', label: 'Suspensions 20 mm', v: 9, u: 'kg', how: ['pieds'] });
+  const it = call('plan.blocks', sd).find(b => b.id === 'd1').items[1];
+  ok('swap : libellé et détail', it.label === 'Suspensions 20 mm' && it.det.includes('pieds en appui') && it.det.includes('9 kg'), it.det);
+  ok('swap : minuteur du plan gardé (10/6)', it.timer && it.timer.work === 10 && it.timer.rest === 6 && it.timer.workLabel === 'Suspends');
+  ok('swap : charge en kilos du plan retirée, origine gardée', it.load === undefined && it.swap && it.swap.from.startsWith('Finger lift'));
+  call('plan.placeBlock', sd, d1, 'g1');
+  ok('ordre : doigts après grimpe', call('plan.blocks', sd).map(b => b.id).join() === 'g1,d1');
+  call('plan.placeBlock', sd, d1, null);
+  ok('ordre : doigts en premier', call('plan.blocks', sd).map(b => b.id).join() === 'd1,g1');
+  call('plan.resetOrder', sd);
+  ok('ordre : retour au plan', call('plan.blocks', sd).map(b => b.id).join() === 'g1,d1');
+}
 console.log(fails ? fails + ' échec(s)' : 'Tout est bon');
 process.exit(fails ? 1 : 0);

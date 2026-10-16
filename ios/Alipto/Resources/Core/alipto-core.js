@@ -259,6 +259,7 @@
     PHASE_LABEL: () => PHASE_LABEL,
     PHASE_Z: () => PHASE_Z,
     SKIP: () => SKIP,
+    SWAP_HOW: () => SWAP_HOW,
     addWeeks: () => addWeeks,
     allItems: () => allItems,
     allKeys: () => allKeys,
@@ -277,6 +278,7 @@
     eventOn: () => eventOn,
     exerciseNames: () => exerciseNames,
     fingerCalc: () => fingerCalc,
+    fingerRef: () => fingerRef,
     isRestDay: () => isRestDay,
     isTestDay: () => isTestDay,
     itemKey: () => itemKey,
@@ -293,6 +295,7 @@
     ownBlocks: () => ownBlocks,
     phaseOf: () => phaseOf,
     placeBlock: () => placeBlock,
+    plannedIntensity: () => plannedIntensity,
     plusN: () => plusN,
     progress: () => progress,
     rawBlocks: () => rawBlocks,
@@ -315,6 +318,9 @@
     setsText: () => setsText,
     skipLabel: () => skipLabel,
     stamp: () => stamp,
+    swapChoices: () => swapChoices,
+    swapDetail: () => swapDetail,
+    swapName: () => swapName,
     swapSessions: () => swapSessions,
     target: () => target,
     testIdsOf: () => testIdsOf,
@@ -871,6 +877,211 @@
     putFor(SELF, "t:" + k, Object.assign({}, cur, { res }));
   }
 
+  // src/lib/library.js
+  var library_exports = {};
+  __export(library_exports, {
+    EQUIP: () => EQUIP,
+    GOALS: () => GOALS,
+    GOAL_BY_ID: () => GOAL_BY_ID,
+    LIB: () => LIB,
+    LIB_BY_ID: () => LIB_BY_ID,
+    SYSTEMS: () => SYSTEMS,
+    equipSet: () => equipSet,
+    libMatch: () => libMatch,
+    norm: () => norm,
+    quiz: () => quiz,
+    quizResult: () => quizResult
+  });
+  var EQUIP = [
+    ["salle", "Salle de muscu"],
+    ["halteres", "Halt\xE8res / kettlebell"],
+    ["traction", "Barre de traction"],
+    ["poutre", "Poutre (pan, fingerboard)"],
+    ["salle-esc", "Salle d\u2019escalade"],
+    ["elastique", "\xC9lastiques"],
+    ["exterieur", "Ext\xE9rieur (piste, route)"],
+    ["velo", "V\xE9lo / home-trainer"],
+    ["piscine", "Piscine"],
+    ["bfr", "Brassards BFR"]
+  ];
+  function equipSet(list) {
+    const s = /* @__PURE__ */ new Set(["rien"]);
+    for (const e of list || []) {
+      s.add(e);
+      if (e === "salle") ["barre", "halteres", "machines", "traction", "elastique"].forEach((x) => s.add(x));
+      if (e === "salle-esc") ["poutre", "traction", "pan"].forEach((x) => s.add(x));
+    }
+    return s;
+  }
+  var E = (id, n, k, o) => Object.assign({ id, n, k, sp: ["all"], q: [], g: [], eq: ["rien"], lvl: 1, t: "reps", ld: "kg", heavy: false, pat: "" }, o);
+  var LIB = [
+    // ---- Jambes : squat
+    E("squat", "Squat barre", "muscu", { q: ["force", "hyper", "endu_f"], g: ["jambes"], eq: ["barre"], heavy: true, pat: "squat", c: "Cuisses au moins parall\xE8les, dos neutre, genoux dans l\u2019axe des pieds." }),
+    E("front-squat", "Squat avant", "muscu", { q: ["force", "hyper"], g: ["jambes"], eq: ["barre"], lvl: 2, heavy: true, pat: "squat", c: "Coudes hauts, buste droit." }),
+    E("presse", "Presse \xE0 cuisses", "muscu", { q: ["force", "hyper", "endu_f"], g: ["jambes"], eq: ["machines"], heavy: true, pat: "squat", c: "Bas du dos plaqu\xE9 au dossier, amplitude sans d\xE9coller le bassin." }),
+    E("goblet", "Goblet squat", "muscu", { q: ["hyper", "endu_f", "force"], g: ["jambes"], eq: ["halteres"], pat: "squat", c: "Halt\xE8re ou kettlebell contre la poitrine, descente contr\xF4l\xE9e." }),
+    E("squat-pdc", "Squat au poids du corps", "muscu", { q: ["endu_f"], g: ["jambes"], ld: "bw", pat: "squat", c: "Tempo contr\xF4l\xE9, amplitude compl\xE8te." }),
+    // ---- Jambes : unilatéral
+    E("bulgare", "Squat bulgare", "muscu", { q: ["hyper", "force", "endu_f", "prev"], g: ["jambes"], eq: ["halteres", "rien"], pat: "unilat", c: "Pied arri\xE8re sur un banc, genou avant dans l\u2019axe. Charges en main si possible." }),
+    E("fentes", "Fentes march\xE9es", "muscu", { q: ["hyper", "endu_f"], g: ["jambes"], eq: ["halteres", "rien"], pat: "unilat", c: "Grand pas, genou arri\xE8re qui fr\xF4le le sol." }),
+    E("step-up", "Mont\xE9es sur banc", "muscu", { q: ["endu_f", "prev", "hyper"], g: ["jambes"], eq: ["halteres", "rien"], pat: "unilat", c: "Pousser avec la jambe du haut, sans \xE9lan de la jambe d\u2019appui." }),
+    // ---- Chaîne postérieure
+    E("sdt", "Soulev\xE9 de terre", "muscu", { q: ["force", "hyper"], g: ["jambes", "dos"], eq: ["barre"], heavy: true, pat: "hinge", c: "Dos neutre, barre au contact des jambes, pouss\xE9e dans le sol." }),
+    E("rdl", "Soulev\xE9 de terre jambes tendues", "muscu", { q: ["hyper", "force", "endu_f"], g: ["jambes", "dos"], eq: ["barre", "halteres"], heavy: true, pat: "hinge", c: "Genoux l\xE9g\xE8rement fl\xE9chis, on recule les hanches, dos neutre." }),
+    E("hip-thrust", "Hip thrust", "muscu", { q: ["hyper", "force", "endu_f"], g: ["jambes"], eq: ["barre", "halteres"], pat: "hinge", c: "Haut du dos sur un banc, extension compl\xE8te des hanches en serrant les fessiers." }),
+    E("swing", "Kettlebell swing", "muscu", { q: ["puiss", "endu_f"], g: ["jambes", "dos"], eq: ["halteres"], pat: "hinge", c: "Mouvement de hanches explosif, bras rel\xE2ch\xE9s." }),
+    E("nordic", "Nordic hamstring", "renfo", { q: ["prev", "hyper"], g: ["jambes"], ld: "bw", heavy: true, rr: [4, 6], pat: "ischio", c: "Chevilles bloqu\xE9es, descente la plus lente possible, on se rattrape avec les mains.", src: ["vandyk2019"] }),
+    E("pont", "Pont fessier unipodal", "renfo", { q: ["prev", "endu_f"], g: ["jambes"], ld: "bw", pat: "ischio", c: "Bassin align\xE9, 2 s en haut." }),
+    E("iso-mollets", "Isom\xE9trie lourde des mollets", "renfo", { q: ["prev"], g: [], eq: ["halteres", "machines", "rien"], t: "iso", hold: "3 s", ld: "kg", pat: "tendon", c: "Pointe de pied sur une marche, genou tendu (et genou pli\xE9 pour le sol\xE9aire) : pousser 3 s presque au maximum contre une charge ou un point fixe.", src: ["bohm2015"] }),
+    E("iso-quad", "Isom\xE9trie lourde des quadriceps", "renfo", { q: ["prev"], g: ["jambes"], eq: ["machines", "halteres", "rien"], t: "iso", hold: "3 s", ld: "kg", pat: "tendon", c: "Leg extension bloqu\xE9 ou chaise lest\xE9e, genou vers 60\xB0 : pousser 3 s presque au maximum.", src: ["bohm2015"] }),
+    E("leg-ext", "Leg extension", "muscu", { q: ["hyper"], g: ["jambes"], eq: ["machines", "elastique"], pat: "quad-iso", c: "Assis, tendre les genoux puis redescendre en 2 s. Se fait aussi avec un \xE9lastique accroch\xE9 \xE0 la cheville." }),
+    E("curl", "Curl biceps", "muscu", { q: ["hyper"], g: [], eq: ["halteres", "elastique", "machines"], pat: "bras", c: "Coudes pr\xE8s du corps, monter puis redescendre en 2 s, sans balancer le buste." }),
+    E("mollets", "Extensions de mollets", "renfo", { q: ["prev", "endu_f"], g: [], eq: ["halteres", "rien"], pat: "mollet", c: "Sur une marche, mont\xE9e sur la pointe, descente lente talon sous la marche." }),
+    // ---- Poussée
+    E("dc", "D\xE9velopp\xE9 couch\xE9", "muscu", { q: ["force", "hyper"], g: ["poussee"], eq: ["barre"], heavy: true, pat: "push-h", c: "Omoplates serr\xE9es, barre au bas des pectoraux, pieds ancr\xE9s." }),
+    E("dc-halt", "D\xE9velopp\xE9 couch\xE9 halt\xE8res", "muscu", { q: ["hyper", "force", "endu_f"], g: ["poussee"], eq: ["halteres"], pat: "push-h", c: "Descente contr\xF4l\xE9e, coudes \xE0 45\xB0." }),
+    E("pompes", "Pompes", "muscu", { q: ["endu_f", "hyper", "prev"], g: ["poussee"], ld: "bw", pat: "push-h", c: "Corps gain\xE9, poitrine \xE0 un poing du sol. Pieds sur\xE9lev\xE9s ou lest pour durcir." }),
+    E("dips", "Dips", "muscu", { q: ["force", "hyper"], g: ["poussee"], eq: ["machines"], ld: "+kg", lvl: 2, heavy: true, pat: "push-h", c: "\xC9paule qui descend sous le coude sans douleur, remont\xE9e compl\xE8te." }),
+    E("dm", "D\xE9velopp\xE9 militaire", "muscu", { q: ["force", "hyper"], g: ["poussee", "epaule"], eq: ["barre"], heavy: true, pat: "push-v", c: "Debout, fessiers serr\xE9s, barre qui passe pr\xE8s du visage." }),
+    E("dm-halt", "D\xE9velopp\xE9 \xE9paules halt\xE8res", "muscu", { q: ["hyper", "endu_f", "force"], g: ["poussee", "epaule"], eq: ["halteres"], pat: "push-v", c: "Assis ou debout, sans cambrer." }),
+    E("pike", "Pompes piqu\xE9es", "muscu", { q: ["endu_f", "hyper"], g: ["poussee", "epaule"], ld: "bw", pat: "push-v", c: "Bassin haut, t\xEAte qui descend entre les mains." }),
+    // ---- Tirage
+    E("tractions", "Tractions", "muscu", { q: ["force", "hyper", "endu_f"], g: ["tirage"], eq: ["traction"], ld: "bw", heavy: true, pat: "pull-v", c: "D\xE9part bras tendus \xE9paules engag\xE9es, menton au-dessus de la barre." }),
+    E("tractions-lest", "Tractions lest\xE9es", "muscu", { q: ["force"], g: ["tirage"], eq: ["traction"], ld: "+kg", lvl: 2, heavy: true, pat: "pull-v", c: "Lest \xE0 la ceinture, r\xE9p\xE9titions strictes sans \xE9lan." }),
+    E("tirage-poulie", "Tirage vertical \xE0 la poulie", "muscu", { q: ["hyper", "endu_f", "force"], g: ["tirage"], eq: ["machines"], pat: "pull-v", c: "Barre vers le haut de la poitrine, buste l\xE9g\xE8rement inclin\xE9." }),
+    E("rowing", "Rowing barre", "muscu", { q: ["force", "hyper"], g: ["tirage", "dos"], eq: ["barre"], heavy: true, pat: "pull-h", c: "Buste pench\xE9 \xE0 45\xB0, dos neutre, barre vers le nombril." }),
+    E("rowing-halt", "Rowing halt\xE8re un bras", "muscu", { q: ["hyper", "endu_f", "force"], g: ["tirage"], eq: ["halteres"], pat: "pull-h", c: "Main et genou sur un banc, coude le long du corps." }),
+    E("rowing-inv", "Rowing invers\xE9", "muscu", { q: ["endu_f", "hyper", "prev"], g: ["tirage"], eq: ["traction", "barre"], ld: "bw", pat: "pull-h", c: "Barre basse ou anneaux, corps gain\xE9, poitrine \xE0 la barre." }),
+    E("tirage-elast", "Tirage horizontal \xE0 l\u2019\xE9lastique", "muscu", { q: ["endu_f", "prev"], g: ["tirage"], eq: ["elastique"], pat: "pull-h", c: "Omoplates qui se rapprochent en fin de mouvement." }),
+    // ---- Tronc
+    E("gainage", "Gainage ventral", "renfo", { q: ["prev", "endu_f"], t: "iso", ld: "bw", pat: "core", c: "Bassin align\xE9, on respire. Arr\xEAt d\xE8s que le dos se creuse." }),
+    E("gainage-lat", "Gainage lat\xE9ral", "renfo", { q: ["prev", "endu_f"], t: "iso", ld: "bw", pat: "core", c: "Sur l\u2019avant-bras, corps align\xE9, chaque c\xF4t\xE9." }),
+    E("releve-jambes", "Relev\xE9s de jambes suspendu", "renfo", { q: ["force", "endu_f"], eq: ["traction"], ld: "bw", pat: "core", c: "Sans balancer, bassin qui s\u2019enroule." }),
+    E("pallof", "Pallof press", "renfo", { q: ["prev", "endu_f"], eq: ["elastique", "machines"], pat: "core", c: "\xC9lastique sur le c\xF4t\xE9, bras tendus devant sans laisser tourner le buste." }),
+    E("dead-bug", "Dead bug", "renfo", { q: ["prev"], ld: "bw", pat: "core", c: "Bas du dos plaqu\xE9 au sol, bras et jambe oppos\xE9s qui s\u2019allongent lentement." }),
+    // ---- Épaules, avant-bras : prévention et antagonistes
+    E("rot-ext", "Rotation externe \xE0 l\u2019\xE9lastique", "epaule", { q: ["prev"], eq: ["elastique", "halteres"], pat: "epaule", c: "Coude au corps, rotation lente, 2 s de retour." }),
+    E("face-pull", "Face pull", "epaule", { q: ["prev", "hyper"], eq: ["elastique", "machines"], pat: "epaule", c: "Corde vers le front, coudes hauts, rotation externe en fin de mouvement." }),
+    E("ytw", "Y-T-W allong\xE9", "epaule", { q: ["prev"], eq: ["halteres", "rien"], pat: "epaule", c: "\xC0 plat ventre sur un banc inclin\xE9, charges tr\xE8s l\xE9g\xE8res." }),
+    E("scap-pull", "Tractions scapulaires", "epaule", { q: ["prev"], sp: ["escalade"], eq: ["traction"], ld: "bw", pat: "epaule", c: "Bras tendus, on monte et descend seulement avec les omoplates." }),
+    E("ext-poignet", "Extenseurs du poignet", "renfo", { q: ["prev"], sp: ["escalade"], eq: ["halteres", "elastique"], pat: "avantbras", c: "Avant-bras pos\xE9, halt\xE8re l\xE9ger, descente lente (3 s). Antagoniste des fl\xE9chisseurs des doigts." }),
+    // ---- Puissance, pliométrie, vitesse
+    E("cmj", "Sauts verticaux", "muscu", { q: ["puiss", "vit"], g: ["jambes"], ld: "bw", pat: "plyo", c: "Contre-mouvement rapide, saut maximal, r\xE9ception amortie genoux dans l\u2019axe." }),
+    E("box-jump", "Sauts sur box", "muscu", { q: ["puiss", "vit"], g: ["jambes"], ld: "bw", pat: "plyo", c: "Saut maximal, on descend du box en marchant." }),
+    E("saut-longueur", "Sauts en longueur sans \xE9lan", "muscu", { q: ["puiss", "vit"], g: ["jambes"], ld: "bw", pat: "plyo", c: "Bras qui lancent, r\xE9ception stable." }),
+    E("squat-saute", "Squat saut\xE9 charg\xE9 l\xE9ger", "muscu", { q: ["puiss"], g: ["jambes"], eq: ["barre", "halteres"], lvl: 2, pat: "squat-puiss", c: "20 \xE0 30 % de la charge max, intention maximale de vitesse." }),
+    E("pompes-expl", "Pompes explosives", "muscu", { q: ["puiss"], g: ["poussee"], ld: "bw", lvl: 2, pat: "push-puiss", c: "Mains qui d\xE9collent du sol \xE0 chaque r\xE9p\xE9tition." }),
+    E("tractions-expl", "Tractions explosives", "muscu", { q: ["puiss"], g: ["tirage"], eq: ["traction"], ld: "bw", lvl: 2, pat: "pull-puiss", c: "Tirage le plus rapide possible, poitrine vers la barre." }),
+    E("sprint", "Sprints 20 m d\xE9part arr\xEAt\xE9", "course", { q: ["vit", "puiss"], g: ["jambes"], eq: ["exterieur"], t: "essai", ld: "bw", heavy: true, pat: "sprint", c: "Effort maximal (environ 3 \xE0 4 s), r\xE9cup\xE9ration compl\xE8te." }),
+    E("sprint-lance", "Sprints lanc\xE9s 20 m", "course", { q: ["vit"], g: ["jambes"], eq: ["exterieur"], t: "essai", ld: "bw", lvl: 2, heavy: true, pat: "sprint", c: "20 m d\u2019\xE9lan progressif puis 20 m \xE0 vitesse maximale." }),
+    E("cote", "Sprints en c\xF4te 8 s", "course", { q: ["vit", "puiss"], g: ["jambes"], eq: ["exterieur"], t: "essai", ld: "bw", heavy: true, pat: "sprint", c: "C\xF4te \xE0 5-10 %, 8 s \xE0 fond, retour en marchant." }),
+    // ---- Course
+    E("ef", "Footing en endurance fondamentale", "course", { q: ["aero"], sp: ["course", "trail", "hyrox", "collectif", "combat", "autre", "muscu"], g: [], eq: ["exterieur"], t: "cont", ld: "bw", pat: "run-easy", c: "Zone 1-2 : tu peux parler en phrases compl\xE8tes." }),
+    E("sortie-longue", "Sortie longue", "course", { q: ["aero"], sp: ["course", "trail", "hyrox"], eq: ["exterieur"], t: "cont", ld: "bw", pat: "run-long", c: "Allure facile du d\xE9but \xE0 la fin. En trail, du d\xE9nivel\xE9." }),
+    E("30-30", "Intervalles 30/30", "course", { q: ["aero"], g: ["cardio"], eq: ["exterieur"], t: "int", ld: "bw", pat: "run-int", c: "30 s vite (proche de ta VMA), 30 s en trottinant.", src: ["buchheit2013"] }),
+    E("3min", "Intervalles longs 3 min", "course", { q: ["aero"], g: ["cardio"], eq: ["exterieur"], t: "int", ld: "bw", lvl: 2, pat: "run-int", c: "3 min \xE0 allure 3 000-5 000 m, 2 min de trot.", src: ["buchheit2013"] }),
+    E("300m", "R\xE9p\xE9titions de 300 m", "course", { q: ["endu_f", "vit"], g: ["cardio", "jambes"], eq: ["exterieur"], t: "int", ld: "bw", lvl: 2, pat: "run-lact", c: "Environ 60 s tr\xE8s vite, 3 \xE0 4 min de r\xE9cup\xE9ration (1:3 \xE0 1:4).", src: ["nsca2016"] }),
+    E("lignes", "Lignes droites", "course", { q: ["vit", "aero"], eq: ["exterieur"], t: "essai", ld: "bw", pat: "run-strides", c: "20 s en acc\xE9l\xE9rant progressivement jusqu\u2019\xE0 90 %, retour en marchant." }),
+    // ---- Vélo, rameur, natation, circuit
+    E("velo-z2", "V\xE9lo en endurance", "velo", { q: ["aero"], eq: ["velo"], t: "cont", ld: "bw", pat: "bike-easy", c: "Zone 1-2, cadence souple." }),
+    E("velo-4x4", "V\xE9lo 4 \xD7 4 min", "velo", { q: ["aero"], g: ["cardio"], eq: ["velo"], t: "int", ld: "bw", pat: "bike-int", c: "4 min \xE0 90-95 % de ta FC max, 3 min faciles.", src: ["helgerud2007"] }),
+    E("velo-sprint", "Sprints v\xE9lo 10 s", "velo", { q: ["vit", "puiss"], g: ["jambes"], eq: ["velo"], t: "int", ld: "bw", pat: "bike-sprint", c: "10 s \xE0 fond, 2 min tr\xE8s faciles (1:12)." }),
+    E("rameur", "Rameur 500 m", "velo", { q: ["endu_f", "aero"], g: ["cardio"], eq: ["machines"], t: "int", ld: "bw", pat: "row-int", c: "500 m vite, 2 min de r\xE9cup\xE9ration." }),
+    E("nage-ef", "Natation en endurance", "velo", { q: ["aero"], sp: ["natation"], eq: ["piscine"], t: "cont", ld: "bw", pat: "swim-easy", c: "Nage continue \xE0 allure confortable." }),
+    E("nage-100", "Natation 100 m", "velo", { q: ["aero", "endu_f"], sp: ["natation"], g: ["cardio"], eq: ["piscine"], t: "int", ld: "bw", pat: "swim-int", c: "100 m soutenu, 20 \xE0 30 s de repos." }),
+    E("circuit", "Circuit fonctionnel", "velo", { q: ["endu_f", "aero"], sp: ["hyrox", "collectif", "combat", "autre", "muscu"], g: ["cardio"], eq: ["rien", "halteres"], t: "int", ld: "bw", pat: "circuit", c: "Burpees, fentes, squats, pompes, gainage : 40 s par atelier, 20 s de transition." }),
+    // ---- Escalade
+    E("max-hangs", "Suspensions max", "doigts", { q: ["force", "doigts"], sp: ["escalade"], g: ["doigts"], eq: ["poutre"], t: "hang", ld: "+kg", lvl: 2, heavy: true, u18: false, pat: "finger-max", c: "20 mm, semi-arqu\xE9. Charge (lest ou d\xE9charge) que tu tiendrais environ 13 s : marge de 3 s.", src: ["lopezrivera2012"] }),
+    E("repeaters", "Suspensions 7/3", "doigts", { q: ["endu_f", "resist"], sp: ["escalade"], g: ["doigts"], eq: ["poutre"], t: "hang", ld: "+kg", lvl: 2, u18: false, pat: "finger-endu", c: "7 s suspendu, 3 s de pause, 6 fois. Prise moyenne, sans aller \xE0 l\u2019\xE9chec." }),
+    E("limite", "Blocs \xE0 ta limite", "grimpe", { q: ["puiss", "force", "bloc", "doigts"], sp: ["escalade"], g: ["doigts", "tirage"], eq: ["pan", "salle-esc"], t: "essai", ld: "bw", heavy: true, pat: "climb-limit", c: "3 \xE0 6 mouvements tr\xE8s durs, frais \xE0 chaque essai.", src: ["nsca2016"] }),
+    E("pan-dur", "Pan : blocs durs", "grimpe", { q: ["puiss", "bloc", "force"], sp: ["escalade"], g: ["doigts", "tirage"], eq: ["pan"], t: "essai", ld: "bw", lvl: 2, heavy: true, pat: "climb-limit", c: "Moonboard, Kilter ou pan maison : mouvements de puissance sur petites prises." }),
+    E("campus", "Campus sur prises larges", "grimpe", { q: ["puiss", "bloc"], sp: ["escalade"], g: ["doigts", "tirage"], eq: ["pan"], t: "essai", ld: "bw", lvl: 3, heavy: true, u18: false, pat: "climb-power", c: "\xC9chelons larges, mont\xE9es 1-3-5, arr\xEAt d\xE8s que la qualit\xE9 baisse." }),
+    E("4x4", "4 blocs encha\xEEn\xE9s (4 \xD7 4)", "grimpe", { q: ["resist", "endu_f"], sp: ["escalade"], g: ["doigts"], eq: ["salle-esc", "pan"], t: "serie", ld: "bw", pat: "climb-lact", c: "4 blocs encha\xEEn\xE9s sans pause, 2 \xE0 3 niveaux sous ta limite." }),
+    E("int-pan", "Intervalles 1 min sur pan", "grimpe", { q: ["resist", "endu_f"], sp: ["escalade"], g: ["doigts"], eq: ["pan", "salle-esc"], t: "int", ld: "bw", pat: "climb-lact", c: "1 min de grimpe soutenue, 3 min de repos (1:3).", src: ["nsca2016"] }),
+    E("enchainement", "Encha\xEEnement de deux voies", "grimpe", { q: ["resist"], sp: ["escalade"], g: ["doigts"], eq: ["salle-esc"], t: "serie", ld: "bw", pat: "climb-lact", c: "Deux voies d\u2019affil\xE9e sans redescendre au sol si possible, niveau \xE0 vue moins 2." }),
+    E("volume-blocs", "Volume de blocs faciles", "grimpe", { q: ["aero", "conti", "tech"], sp: ["escalade"], eq: ["salle-esc", "pan"], t: "bloc", ld: "bw", pat: "climb-aero", c: "Beaucoup de blocs nettement sous ton flash, 1 min de repos : encha\xEEner sans \xAB bouteiller \xBB." }),
+    E("compet-sim", "Simulation de comp\xE9tition", "grimpe", { q: ["puiss", "bloc", "compet"], sp: ["escalade"], g: ["doigts", "tirage"], eq: ["salle-esc"], t: "essai", ld: "bw", heavy: true, pat: "climb-comp", c: "Blocs nouveaux, temps limit\xE9 par bloc, autant de repos : lecture, engagement, gestion des essais." }),
+    E("flash", "Flash de blocs nouveaux", "grimpe", { q: ["compet", "tech"], sp: ["escalade"], eq: ["salle-esc"], t: "essai", ld: "bw", pat: "climb-comp", c: "Un seul essai apr\xE8s une lecture d\u20191 min : comme en qualification." }),
+    E("finger-lift", "Finger lift", "doigts", { q: ["force", "doigts"], sp: ["escalade"], g: ["doigts"], eq: ["halteres", "salle"], t: "hang", ld: "kg", lvl: 2, heavy: true, u18: false, pat: "finger-max", c: "Bloc ou r\xE9glette charg\xE9, une main, semi-arqu\xE9 : lev\xE9e de 7 s sans \xE0-coup." }),
+    E("conti", "Continuit\xE9", "grimpe", { q: ["aero", "conti"], sp: ["escalade"], eq: ["salle-esc", "pan"], t: "bloc", ld: "bw", pat: "climb-aero", c: "Grimpe facile sans t\u2019arr\xEAter, avant-bras chauds mais jamais \xAB bouteill\xE9s \xBB." }),
+    E("volume", "Volume de voies faciles", "grimpe", { q: ["aero", "conti", "tech"], sp: ["escalade"], eq: ["salle-esc"], t: "essai", ld: "bw", pat: "climb-aero", c: "Beaucoup de voies 2 \xE0 3 niveaux sous ton max, en soignant les placements." }),
+    E("technique", "Technique", "grimpe", { q: ["tech"], sp: ["escalade"], eq: ["salle-esc", "pan"], t: "essai", ld: "bw", pat: "climb-tech", c: "Un th\xE8me par s\xE9ance : pieds pr\xE9cis, lecture, chutes, dynamique." }),
+    E("blocage", "Blocages bras \xE0 90\xB0", "muscu", { q: ["force"], sp: ["escalade"], g: ["tirage"], eq: ["traction"], t: "iso", hold: "5-10 s", ld: "bw", lvl: 2, pat: "pull-iso", c: "Coude \xE0 90\xB0, 5 \xE0 10 s, une ou deux mains selon le niveau." }),
+    // ---- Mobilité
+    E("mob-hanches", "Mobilit\xE9 des hanches", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "90/90, fente basse, papillon : 1 min par position." }),
+    E("mob-epaules", "Mobilit\xE9 des \xE9paules", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "Passages de b\xE2ton, ouvertures thoraciques au sol." }),
+    E("mob-chevilles", "Mobilit\xE9 des chevilles", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "Genou au mur, 10 r\xE9p\xE9titions par c\xF4t\xE9." }),
+    E("mob-doigts", "\xC9tirements des fl\xE9chisseurs", "recup", { q: ["mobi"], sp: ["escalade"], t: "mob", ld: "bw", pat: "mobi", c: "Doigts en extension, poignet en arri\xE8re, 30 s, sans douleur." }),
+    E("mob-dos", "Mobilit\xE9 du dos", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "Chat-vache, rotations thoraciques allong\xE9." })
+  ];
+  var LIB_BY_ID = Object.fromEntries(LIB.map((x) => [x.id, x]));
+  var norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\[[a-z]+\]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  var BY_NAME = new Map(LIB.map((x) => [norm(x.n), x]));
+  function libMatch(label) {
+    const n = norm(label);
+    if (!n) return null;
+    if (BY_NAME.has(n)) return BY_NAME.get(n);
+    let best = null;
+    for (const [k, x] of BY_NAME) if (n.startsWith(k) && (!best || k.length > norm(best.n).length)) best = x;
+    return best;
+  }
+  var GOALS = [
+    { id: "force", l: "Force maximale", d: "Soulever, tirer ou pousser plus lourd", sys: "neuro" },
+    { id: "hyper", l: "Masse musculaire", d: "Prendre du muscle", sys: "hyper" },
+    { id: "puiss", l: "Puissance", d: "Sauter, lancer, \xEAtre explosif", sys: "alac" },
+    { id: "vit", l: "Vitesse", d: "D\xE9marrer et sprinter plus vite", sys: "alac" },
+    { id: "endu_f", l: "Endurance de force", d: "R\xE9p\xE9ter des efforts intenses sans s\u2019effondrer", sys: "lact" },
+    { id: "aero", l: "Endurance", d: "Tenir longtemps, courir ou p\xE9daler plus loin", sys: "aero" },
+    { id: "doigts", l: "Force des doigts", d: "Tenir des prises plus petites", sys: "neuro", sp: "escalade" },
+    { id: "bloc", l: "Puissance en bloc", d: "Passer les mouvements durs", sys: "alac", sp: "escalade" },
+    { id: "resist", l: "R\xE9sistance", d: "Ne plus \xAB bouteiller \xBB dans les voies", sys: "lact", sp: "escalade" },
+    { id: "conti", l: "Continuit\xE9", d: "Grimper longtemps sans fatigue", sys: "aero", sp: "escalade" },
+    { id: "compet", l: "Comp\xE9tition de bloc", d: "Passer des blocs nouveaux, vite et sous pression", sys: "alac", sp: "escalade" },
+    { id: "prev", l: "Pr\xE9vention", d: "Se blesser moins : \xE9paules, doigts, dos, genoux", sys: "prev" }
+  ];
+  var GOAL_BY_ID = Object.fromEntries(GOALS.map((g) => [g.id, g]));
+  var SYSTEMS = {
+    neuro: { l: "Force neuromusculaire", d: "Charges lourdes (environ 80 % du max et plus), 1 \xE0 6 r\xE9p\xE9titions, 2 \xE0 5 min de r\xE9cup\xE9ration : le syst\xE8me nerveux apprend \xE0 recruter plus de fibres.", src: ["acsm2009", "nsca2016"] },
+    hyper: { l: "Hypertrophie", d: "6 \xE0 12 r\xE9p\xE9titions proches de l\u2019\xE9chec, au moins 10 s\xE9ries par muscle et par semaine, 1 min 30 \xE0 3 min de repos.", src: ["schoenfeld2017", "schoenfeld2016"] },
+    alac: { l: "Fili\xE8re ana\xE9robie alactique", d: "Efforts quasi maximaux de moins de 10 s, aliment\xE9s par la phosphocr\xE9atine. R\xE9cup\xE9ration longue : 1:12 \xE0 1:20 (2 \xE0 3 min pour 10 s).", src: ["nsca2016"] },
+    lact: { l: "Fili\xE8re ana\xE9robie lactique", d: "Efforts intenses de 20 s \xE0 2 min, ceux qui \xAB br\xFBlent \xBB. R\xE9cup\xE9ration de 1:3 \xE0 1:5.", src: ["nsca2016", "buchheit2013"] },
+    aero: { l: "Fili\xE8re a\xE9robie", d: "Efforts de plus de 2 \xE0 3 min. Environ 80 % du temps en facile et 20 % en intervalles intenses (entra\xEEnement polaris\xE9).", src: ["stoggl2014", "buchheit2013"] },
+    prev: { l: "Pr\xE9vention", d: "Renforcer les zones fragiles de ton sport et les antagonistes, entretenir la mobilit\xE9.", src: ["vandyk2019"] }
+  };
+  function quiz(cl) {
+    return [
+      { id: "lim", q: cl ? "En voie ou en bloc, tu \xE9choues plut\xF4t parce que\u2026" : "Dans ton sport, ce qui te limite le plus, c\u2019est\u2026", opts: [
+        { id: "force", l: cl ? "Les prises sont trop petites ou les mouvements trop durs, m\xEAme frais" : "La force : charges lourdes, duels, contacts", w: cl ? { doigts: 3, bloc: 1 } : { force: 3, puiss: 1 } },
+        { id: "expl", l: cl ? "Il manque de l\u2019explosivit\xE9 : jet\xE9s, mouvements dynamiques" : "L\u2019explosivit\xE9 : sauts, d\xE9marrages, lancers", w: cl ? { bloc: 3, puiss: 1 } : { puiss: 3, vit: 1 } },
+        { id: "lact", l: cl ? "Les avant-bras \xAB bouteillent \xBB au bout de 20 \xE0 40 mouvements" : "\xC7a br\xFBle et je l\xE2che apr\xE8s 30 s \xE0 2 min d\u2019effort intense", w: cl ? { resist: 3 } : { endu_f: 3 } },
+        { id: "aero", l: cl ? "Je fatigue sur les longues voies ou les longues s\xE9ances" : "Je m\u2019essouffle ou je ralentis quand \xE7a dure", w: cl ? { conti: 3, aero: 1 } : { aero: 3 } },
+        { id: "vit", l: "La vitesse : les premiers m\xE8tres, les sprints r\xE9p\xE9t\xE9s", w: { vit: 3, puiss: 1 }, hide: cl },
+        { id: "hyper", l: "Je veux surtout prendre du muscle", w: { hyper: 3 } },
+        { id: "blesse", l: "Je me blesse souvent ou j\u2019ai des douleurs qui reviennent", w: { prev: 3 } }
+      ].filter((o) => !o.hide) },
+      { id: "duree", q: "L\u2019effort le plus important de ton sport dure\u2026", opts: [
+        { id: "court", l: "Moins de 10 s (un mouvement, un sprint, un saut)", w: { force: 1, puiss: 1, vit: 1, doigts: 1, bloc: 1 } },
+        { id: "moyen", l: "De 20 s \xE0 2 min", w: { endu_f: 1, resist: 1 } },
+        { id: "long", l: "Plusieurs minutes ou plus", w: { aero: 1, conti: 1 } },
+        { id: "mixte", l: "Un peu de tout", w: {} }
+      ] },
+      { id: "pref", q: "Ce qui te motive le plus en ce moment\u2026", opts: [
+        { id: "perf", l: "Un objectif de performance (comp\xE9tition, projet, chrono)", w: cl ? { compet: 1 } : {} },
+        { id: "phys", l: "Mon physique", w: { hyper: 1 } },
+        { id: "sante", l: "\xCAtre en forme et sans douleur", w: { prev: 1, aero: 1 } }
+      ] }
+    ];
+  }
+  function quizResult(answers, cl) {
+    const sc = {};
+    for (const q of quiz(cl)) {
+      const o = q.opts.find((x) => x.id === answers[q.id]);
+      if (o) for (const [g, v] of Object.entries(o.w)) sc[g] = (sc[g] || 0) + v;
+    }
+    const ok = GOALS.filter((g) => cl || g.sp !== "escalade").map((g) => g.id);
+    return Object.entries(sc).filter(([g]) => ok.includes(g)).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
+  }
+
   // src/lib/plan.js
   var KIND = { grimpe: "Escalade", doigts: "Doigts", muscu: "Muscu", renfo: "Renfo", epaule: "\xC9paule", kine: "Kin\xE9", velo: "Cardio", course: "Course", sport: "Sport", test: "Test", compet: "Comp\xE9tition", affut: "Aff\xFBtage", recup: "R\xE9cup\xE9ration", autre: "Autre", rest: "Repos" };
   var KIND_ORDER = ["grimpe", "doigts", "muscu", "renfo", "epaule", "kine", "velo", "course", "sport", "test", "compet", "affut", "recup", "autre", "rest"];
@@ -892,15 +1103,40 @@
     _adjCache.set(k, { bl, a, o, s, out });
     return out;
   };
+  var SWAP_NAME = { "max-hangs": "Suspensions 20 mm" };
+  var swapName = (x) => SWAP_NAME[x.id] || x.n;
+  function swapChoices(k, b, it) {
+    const rb = rawBlocks(k).find((x) => x.id === b.id), planned = rb && (rb.items || []).find((x) => x.id === it.id);
+    return LIB.filter((x) => x.k === b.kind && !(planned && x.id === planned.lib)).map((x) => ({ id: x.id, name: swapName(x), c: x.c || "" }));
+  }
+  function plannedIntensity(k, b, it) {
+    const rb = rawBlocks(k).find((x) => x.id === b.id), pi = rb && (rb.items || []).find((x) => x.id === it.id), f = (rb || b).finger;
+    if (f && typeof f.load === "number") return { v: f.load, u: f.unit === "%" ? "pct" : "kg" };
+    const m = String(pi && pi.det || "").match(/(\d+(?:[.,]\d+)?)\s*kg/);
+    return m ? { v: parseFloat(m[1].replace(",", ".")), u: "kg" } : null;
+  }
+  var SWAP_HOW = [["pieds", "Pieds en appui", "pieds en appui"], ["lest", "Lest", "lest\xE9"], ["poulie", "Poulie (d\xE9charge)", "d\xE9charge \xE0 la poulie"]];
+  function fingerRef(k) {
+    const lt = latestTest(k);
+    return lt && lt.te && lt.te.semi ? lt.te.semi : null;
+  }
+  function swapDetail(k, x) {
+    const parts = (x.how || []).map((h) => (SWAP_HOW.find((y) => y[0] === h) || [])[2]).filter(Boolean), mx = fingerRef(k), v = Number(x.v);
+    if (v > 0) {
+      if (x.u === "pct") parts.push(fmtNum(v) + " % de ton max" + (mx ? " (\u2248 " + fmtNum(r05(mx * v / 100)) + " kg)" : ""));
+      else parts.push(fmtNum(v) + " kg" + (mx ? " (\u2248 " + Math.round(v / mx * 100) + " % de ton max)" : ""));
+    }
+    return parts.join(" \xB7 ");
+  }
   function swapItem(it, x) {
-    const c = Object.assign({}, it, { label: x.label || it.label, det: [x.det, x.pct ? "\u2248 " + x.pct + " % de ton max" : ""].filter(Boolean).join(" \xB7 "), swap: { from: it.label, pct: x.pct || null } });
-    delete c.timer;
+    const c = Object.assign({}, it, { label: x.label || it.label, det: x.det || "", swap: { from: it.label, lib: x.lib || null } });
     delete c.load;
     delete c.unit_load;
     delete c.repsBySet;
     delete c.lib;
     delete c.adj;
     if (x.lib) c.lib = x.lib;
+    if (c.timer) c.timer = Object.assign({}, c.timer, { name: c.label }, c.timer.workLabel === "L\xE8ve" ? { workLabel: "Suspends" } : {});
     return c;
   }
   function applySwap(bl, s) {
@@ -932,8 +1168,8 @@
   }
   var resetOrder = (k) => jset(k, { order: null });
   function setSwap(k, b, it, x) {
-    const s = Object.assign({}, jget(k).swap);
-    s[itemKey(b, it)] = { label: x.label, det: x.det || null, pct: x.pct || null, lib: x.lib || null };
+    const s = Object.assign({}, jget(k).swap), v = Number(x.v) > 0 ? Number(x.v) : null;
+    s[itemKey(b, it)] = { lib: x.lib, label: x.label, v, u: v ? x.u === "pct" ? "pct" : "kg" : null, how: x.how || [], det: swapDetail(k, { v, u: x.u, how: x.how }) || null };
     jset(k, { swap: s });
   }
   function clearSwap(k, b, it) {
@@ -1839,211 +2075,6 @@
   function maxGrade(list, disc) {
     const ix = (list || []).map((g) => gradeIdx(g, disc)).filter((i) => i != null);
     return ix.length ? gradeAt(Math.max(...ix), disc) : null;
-  }
-
-  // src/lib/library.js
-  var library_exports = {};
-  __export(library_exports, {
-    EQUIP: () => EQUIP,
-    GOALS: () => GOALS,
-    GOAL_BY_ID: () => GOAL_BY_ID,
-    LIB: () => LIB,
-    LIB_BY_ID: () => LIB_BY_ID,
-    SYSTEMS: () => SYSTEMS,
-    equipSet: () => equipSet,
-    libMatch: () => libMatch,
-    norm: () => norm,
-    quiz: () => quiz,
-    quizResult: () => quizResult
-  });
-  var EQUIP = [
-    ["salle", "Salle de muscu"],
-    ["halteres", "Halt\xE8res / kettlebell"],
-    ["traction", "Barre de traction"],
-    ["poutre", "Poutre (pan, fingerboard)"],
-    ["salle-esc", "Salle d\u2019escalade"],
-    ["elastique", "\xC9lastiques"],
-    ["exterieur", "Ext\xE9rieur (piste, route)"],
-    ["velo", "V\xE9lo / home-trainer"],
-    ["piscine", "Piscine"],
-    ["bfr", "Brassards BFR"]
-  ];
-  function equipSet(list) {
-    const s = /* @__PURE__ */ new Set(["rien"]);
-    for (const e of list || []) {
-      s.add(e);
-      if (e === "salle") ["barre", "halteres", "machines", "traction", "elastique"].forEach((x) => s.add(x));
-      if (e === "salle-esc") ["poutre", "traction", "pan"].forEach((x) => s.add(x));
-    }
-    return s;
-  }
-  var E = (id, n, k, o) => Object.assign({ id, n, k, sp: ["all"], q: [], g: [], eq: ["rien"], lvl: 1, t: "reps", ld: "kg", heavy: false, pat: "" }, o);
-  var LIB = [
-    // ---- Jambes : squat
-    E("squat", "Squat barre", "muscu", { q: ["force", "hyper", "endu_f"], g: ["jambes"], eq: ["barre"], heavy: true, pat: "squat", c: "Cuisses au moins parall\xE8les, dos neutre, genoux dans l\u2019axe des pieds." }),
-    E("front-squat", "Squat avant", "muscu", { q: ["force", "hyper"], g: ["jambes"], eq: ["barre"], lvl: 2, heavy: true, pat: "squat", c: "Coudes hauts, buste droit." }),
-    E("presse", "Presse \xE0 cuisses", "muscu", { q: ["force", "hyper", "endu_f"], g: ["jambes"], eq: ["machines"], heavy: true, pat: "squat", c: "Bas du dos plaqu\xE9 au dossier, amplitude sans d\xE9coller le bassin." }),
-    E("goblet", "Goblet squat", "muscu", { q: ["hyper", "endu_f", "force"], g: ["jambes"], eq: ["halteres"], pat: "squat", c: "Halt\xE8re ou kettlebell contre la poitrine, descente contr\xF4l\xE9e." }),
-    E("squat-pdc", "Squat au poids du corps", "muscu", { q: ["endu_f"], g: ["jambes"], ld: "bw", pat: "squat", c: "Tempo contr\xF4l\xE9, amplitude compl\xE8te." }),
-    // ---- Jambes : unilatéral
-    E("bulgare", "Squat bulgare", "muscu", { q: ["hyper", "force", "endu_f", "prev"], g: ["jambes"], eq: ["halteres", "rien"], pat: "unilat", c: "Pied arri\xE8re sur un banc, genou avant dans l\u2019axe. Charges en main si possible." }),
-    E("fentes", "Fentes march\xE9es", "muscu", { q: ["hyper", "endu_f"], g: ["jambes"], eq: ["halteres", "rien"], pat: "unilat", c: "Grand pas, genou arri\xE8re qui fr\xF4le le sol." }),
-    E("step-up", "Mont\xE9es sur banc", "muscu", { q: ["endu_f", "prev", "hyper"], g: ["jambes"], eq: ["halteres", "rien"], pat: "unilat", c: "Pousser avec la jambe du haut, sans \xE9lan de la jambe d\u2019appui." }),
-    // ---- Chaîne postérieure
-    E("sdt", "Soulev\xE9 de terre", "muscu", { q: ["force", "hyper"], g: ["jambes", "dos"], eq: ["barre"], heavy: true, pat: "hinge", c: "Dos neutre, barre au contact des jambes, pouss\xE9e dans le sol." }),
-    E("rdl", "Soulev\xE9 de terre jambes tendues", "muscu", { q: ["hyper", "force", "endu_f"], g: ["jambes", "dos"], eq: ["barre", "halteres"], heavy: true, pat: "hinge", c: "Genoux l\xE9g\xE8rement fl\xE9chis, on recule les hanches, dos neutre." }),
-    E("hip-thrust", "Hip thrust", "muscu", { q: ["hyper", "force", "endu_f"], g: ["jambes"], eq: ["barre", "halteres"], pat: "hinge", c: "Haut du dos sur un banc, extension compl\xE8te des hanches en serrant les fessiers." }),
-    E("swing", "Kettlebell swing", "muscu", { q: ["puiss", "endu_f"], g: ["jambes", "dos"], eq: ["halteres"], pat: "hinge", c: "Mouvement de hanches explosif, bras rel\xE2ch\xE9s." }),
-    E("nordic", "Nordic hamstring", "renfo", { q: ["prev", "hyper"], g: ["jambes"], ld: "bw", heavy: true, rr: [4, 6], pat: "ischio", c: "Chevilles bloqu\xE9es, descente la plus lente possible, on se rattrape avec les mains.", src: ["vandyk2019"] }),
-    E("pont", "Pont fessier unipodal", "renfo", { q: ["prev", "endu_f"], g: ["jambes"], ld: "bw", pat: "ischio", c: "Bassin align\xE9, 2 s en haut." }),
-    E("iso-mollets", "Isom\xE9trie lourde des mollets", "renfo", { q: ["prev"], g: [], eq: ["halteres", "machines", "rien"], t: "iso", hold: "3 s", ld: "kg", pat: "tendon", c: "Pointe de pied sur une marche, genou tendu (et genou pli\xE9 pour le sol\xE9aire) : pousser 3 s presque au maximum contre une charge ou un point fixe.", src: ["bohm2015"] }),
-    E("iso-quad", "Isom\xE9trie lourde des quadriceps", "renfo", { q: ["prev"], g: ["jambes"], eq: ["machines", "halteres", "rien"], t: "iso", hold: "3 s", ld: "kg", pat: "tendon", c: "Leg extension bloqu\xE9 ou chaise lest\xE9e, genou vers 60\xB0 : pousser 3 s presque au maximum.", src: ["bohm2015"] }),
-    E("leg-ext", "Leg extension", "muscu", { q: ["hyper"], g: ["jambes"], eq: ["machines", "elastique"], pat: "quad-iso", c: "Assis, tendre les genoux puis redescendre en 2 s. Se fait aussi avec un \xE9lastique accroch\xE9 \xE0 la cheville." }),
-    E("curl", "Curl biceps", "muscu", { q: ["hyper"], g: [], eq: ["halteres", "elastique", "machines"], pat: "bras", c: "Coudes pr\xE8s du corps, monter puis redescendre en 2 s, sans balancer le buste." }),
-    E("mollets", "Extensions de mollets", "renfo", { q: ["prev", "endu_f"], g: [], eq: ["halteres", "rien"], pat: "mollet", c: "Sur une marche, mont\xE9e sur la pointe, descente lente talon sous la marche." }),
-    // ---- Poussée
-    E("dc", "D\xE9velopp\xE9 couch\xE9", "muscu", { q: ["force", "hyper"], g: ["poussee"], eq: ["barre"], heavy: true, pat: "push-h", c: "Omoplates serr\xE9es, barre au bas des pectoraux, pieds ancr\xE9s." }),
-    E("dc-halt", "D\xE9velopp\xE9 couch\xE9 halt\xE8res", "muscu", { q: ["hyper", "force", "endu_f"], g: ["poussee"], eq: ["halteres"], pat: "push-h", c: "Descente contr\xF4l\xE9e, coudes \xE0 45\xB0." }),
-    E("pompes", "Pompes", "muscu", { q: ["endu_f", "hyper", "prev"], g: ["poussee"], ld: "bw", pat: "push-h", c: "Corps gain\xE9, poitrine \xE0 un poing du sol. Pieds sur\xE9lev\xE9s ou lest pour durcir." }),
-    E("dips", "Dips", "muscu", { q: ["force", "hyper"], g: ["poussee"], eq: ["machines"], ld: "+kg", lvl: 2, heavy: true, pat: "push-h", c: "\xC9paule qui descend sous le coude sans douleur, remont\xE9e compl\xE8te." }),
-    E("dm", "D\xE9velopp\xE9 militaire", "muscu", { q: ["force", "hyper"], g: ["poussee", "epaule"], eq: ["barre"], heavy: true, pat: "push-v", c: "Debout, fessiers serr\xE9s, barre qui passe pr\xE8s du visage." }),
-    E("dm-halt", "D\xE9velopp\xE9 \xE9paules halt\xE8res", "muscu", { q: ["hyper", "endu_f", "force"], g: ["poussee", "epaule"], eq: ["halteres"], pat: "push-v", c: "Assis ou debout, sans cambrer." }),
-    E("pike", "Pompes piqu\xE9es", "muscu", { q: ["endu_f", "hyper"], g: ["poussee", "epaule"], ld: "bw", pat: "push-v", c: "Bassin haut, t\xEAte qui descend entre les mains." }),
-    // ---- Tirage
-    E("tractions", "Tractions", "muscu", { q: ["force", "hyper", "endu_f"], g: ["tirage"], eq: ["traction"], ld: "bw", heavy: true, pat: "pull-v", c: "D\xE9part bras tendus \xE9paules engag\xE9es, menton au-dessus de la barre." }),
-    E("tractions-lest", "Tractions lest\xE9es", "muscu", { q: ["force"], g: ["tirage"], eq: ["traction"], ld: "+kg", lvl: 2, heavy: true, pat: "pull-v", c: "Lest \xE0 la ceinture, r\xE9p\xE9titions strictes sans \xE9lan." }),
-    E("tirage-poulie", "Tirage vertical \xE0 la poulie", "muscu", { q: ["hyper", "endu_f", "force"], g: ["tirage"], eq: ["machines"], pat: "pull-v", c: "Barre vers le haut de la poitrine, buste l\xE9g\xE8rement inclin\xE9." }),
-    E("rowing", "Rowing barre", "muscu", { q: ["force", "hyper"], g: ["tirage", "dos"], eq: ["barre"], heavy: true, pat: "pull-h", c: "Buste pench\xE9 \xE0 45\xB0, dos neutre, barre vers le nombril." }),
-    E("rowing-halt", "Rowing halt\xE8re un bras", "muscu", { q: ["hyper", "endu_f", "force"], g: ["tirage"], eq: ["halteres"], pat: "pull-h", c: "Main et genou sur un banc, coude le long du corps." }),
-    E("rowing-inv", "Rowing invers\xE9", "muscu", { q: ["endu_f", "hyper", "prev"], g: ["tirage"], eq: ["traction", "barre"], ld: "bw", pat: "pull-h", c: "Barre basse ou anneaux, corps gain\xE9, poitrine \xE0 la barre." }),
-    E("tirage-elast", "Tirage horizontal \xE0 l\u2019\xE9lastique", "muscu", { q: ["endu_f", "prev"], g: ["tirage"], eq: ["elastique"], pat: "pull-h", c: "Omoplates qui se rapprochent en fin de mouvement." }),
-    // ---- Tronc
-    E("gainage", "Gainage ventral", "renfo", { q: ["prev", "endu_f"], t: "iso", ld: "bw", pat: "core", c: "Bassin align\xE9, on respire. Arr\xEAt d\xE8s que le dos se creuse." }),
-    E("gainage-lat", "Gainage lat\xE9ral", "renfo", { q: ["prev", "endu_f"], t: "iso", ld: "bw", pat: "core", c: "Sur l\u2019avant-bras, corps align\xE9, chaque c\xF4t\xE9." }),
-    E("releve-jambes", "Relev\xE9s de jambes suspendu", "renfo", { q: ["force", "endu_f"], eq: ["traction"], ld: "bw", pat: "core", c: "Sans balancer, bassin qui s\u2019enroule." }),
-    E("pallof", "Pallof press", "renfo", { q: ["prev", "endu_f"], eq: ["elastique", "machines"], pat: "core", c: "\xC9lastique sur le c\xF4t\xE9, bras tendus devant sans laisser tourner le buste." }),
-    E("dead-bug", "Dead bug", "renfo", { q: ["prev"], ld: "bw", pat: "core", c: "Bas du dos plaqu\xE9 au sol, bras et jambe oppos\xE9s qui s\u2019allongent lentement." }),
-    // ---- Épaules, avant-bras : prévention et antagonistes
-    E("rot-ext", "Rotation externe \xE0 l\u2019\xE9lastique", "epaule", { q: ["prev"], eq: ["elastique", "halteres"], pat: "epaule", c: "Coude au corps, rotation lente, 2 s de retour." }),
-    E("face-pull", "Face pull", "epaule", { q: ["prev", "hyper"], eq: ["elastique", "machines"], pat: "epaule", c: "Corde vers le front, coudes hauts, rotation externe en fin de mouvement." }),
-    E("ytw", "Y-T-W allong\xE9", "epaule", { q: ["prev"], eq: ["halteres", "rien"], pat: "epaule", c: "\xC0 plat ventre sur un banc inclin\xE9, charges tr\xE8s l\xE9g\xE8res." }),
-    E("scap-pull", "Tractions scapulaires", "epaule", { q: ["prev"], sp: ["escalade"], eq: ["traction"], ld: "bw", pat: "epaule", c: "Bras tendus, on monte et descend seulement avec les omoplates." }),
-    E("ext-poignet", "Extenseurs du poignet", "renfo", { q: ["prev"], sp: ["escalade"], eq: ["halteres", "elastique"], pat: "avantbras", c: "Avant-bras pos\xE9, halt\xE8re l\xE9ger, descente lente (3 s). Antagoniste des fl\xE9chisseurs des doigts." }),
-    // ---- Puissance, pliométrie, vitesse
-    E("cmj", "Sauts verticaux", "muscu", { q: ["puiss", "vit"], g: ["jambes"], ld: "bw", pat: "plyo", c: "Contre-mouvement rapide, saut maximal, r\xE9ception amortie genoux dans l\u2019axe." }),
-    E("box-jump", "Sauts sur box", "muscu", { q: ["puiss", "vit"], g: ["jambes"], ld: "bw", pat: "plyo", c: "Saut maximal, on descend du box en marchant." }),
-    E("saut-longueur", "Sauts en longueur sans \xE9lan", "muscu", { q: ["puiss", "vit"], g: ["jambes"], ld: "bw", pat: "plyo", c: "Bras qui lancent, r\xE9ception stable." }),
-    E("squat-saute", "Squat saut\xE9 charg\xE9 l\xE9ger", "muscu", { q: ["puiss"], g: ["jambes"], eq: ["barre", "halteres"], lvl: 2, pat: "squat-puiss", c: "20 \xE0 30 % de la charge max, intention maximale de vitesse." }),
-    E("pompes-expl", "Pompes explosives", "muscu", { q: ["puiss"], g: ["poussee"], ld: "bw", lvl: 2, pat: "push-puiss", c: "Mains qui d\xE9collent du sol \xE0 chaque r\xE9p\xE9tition." }),
-    E("tractions-expl", "Tractions explosives", "muscu", { q: ["puiss"], g: ["tirage"], eq: ["traction"], ld: "bw", lvl: 2, pat: "pull-puiss", c: "Tirage le plus rapide possible, poitrine vers la barre." }),
-    E("sprint", "Sprints 20 m d\xE9part arr\xEAt\xE9", "course", { q: ["vit", "puiss"], g: ["jambes"], eq: ["exterieur"], t: "essai", ld: "bw", heavy: true, pat: "sprint", c: "Effort maximal (environ 3 \xE0 4 s), r\xE9cup\xE9ration compl\xE8te." }),
-    E("sprint-lance", "Sprints lanc\xE9s 20 m", "course", { q: ["vit"], g: ["jambes"], eq: ["exterieur"], t: "essai", ld: "bw", lvl: 2, heavy: true, pat: "sprint", c: "20 m d\u2019\xE9lan progressif puis 20 m \xE0 vitesse maximale." }),
-    E("cote", "Sprints en c\xF4te 8 s", "course", { q: ["vit", "puiss"], g: ["jambes"], eq: ["exterieur"], t: "essai", ld: "bw", heavy: true, pat: "sprint", c: "C\xF4te \xE0 5-10 %, 8 s \xE0 fond, retour en marchant." }),
-    // ---- Course
-    E("ef", "Footing en endurance fondamentale", "course", { q: ["aero"], sp: ["course", "trail", "hyrox", "collectif", "combat", "autre", "muscu"], g: [], eq: ["exterieur"], t: "cont", ld: "bw", pat: "run-easy", c: "Zone 1-2 : tu peux parler en phrases compl\xE8tes." }),
-    E("sortie-longue", "Sortie longue", "course", { q: ["aero"], sp: ["course", "trail", "hyrox"], eq: ["exterieur"], t: "cont", ld: "bw", pat: "run-long", c: "Allure facile du d\xE9but \xE0 la fin. En trail, du d\xE9nivel\xE9." }),
-    E("30-30", "Intervalles 30/30", "course", { q: ["aero"], g: ["cardio"], eq: ["exterieur"], t: "int", ld: "bw", pat: "run-int", c: "30 s vite (proche de ta VMA), 30 s en trottinant.", src: ["buchheit2013"] }),
-    E("3min", "Intervalles longs 3 min", "course", { q: ["aero"], g: ["cardio"], eq: ["exterieur"], t: "int", ld: "bw", lvl: 2, pat: "run-int", c: "3 min \xE0 allure 3 000-5 000 m, 2 min de trot.", src: ["buchheit2013"] }),
-    E("300m", "R\xE9p\xE9titions de 300 m", "course", { q: ["endu_f", "vit"], g: ["cardio", "jambes"], eq: ["exterieur"], t: "int", ld: "bw", lvl: 2, pat: "run-lact", c: "Environ 60 s tr\xE8s vite, 3 \xE0 4 min de r\xE9cup\xE9ration (1:3 \xE0 1:4).", src: ["nsca2016"] }),
-    E("lignes", "Lignes droites", "course", { q: ["vit", "aero"], eq: ["exterieur"], t: "essai", ld: "bw", pat: "run-strides", c: "20 s en acc\xE9l\xE9rant progressivement jusqu\u2019\xE0 90 %, retour en marchant." }),
-    // ---- Vélo, rameur, natation, circuit
-    E("velo-z2", "V\xE9lo en endurance", "velo", { q: ["aero"], eq: ["velo"], t: "cont", ld: "bw", pat: "bike-easy", c: "Zone 1-2, cadence souple." }),
-    E("velo-4x4", "V\xE9lo 4 \xD7 4 min", "velo", { q: ["aero"], g: ["cardio"], eq: ["velo"], t: "int", ld: "bw", pat: "bike-int", c: "4 min \xE0 90-95 % de ta FC max, 3 min faciles.", src: ["helgerud2007"] }),
-    E("velo-sprint", "Sprints v\xE9lo 10 s", "velo", { q: ["vit", "puiss"], g: ["jambes"], eq: ["velo"], t: "int", ld: "bw", pat: "bike-sprint", c: "10 s \xE0 fond, 2 min tr\xE8s faciles (1:12)." }),
-    E("rameur", "Rameur 500 m", "velo", { q: ["endu_f", "aero"], g: ["cardio"], eq: ["machines"], t: "int", ld: "bw", pat: "row-int", c: "500 m vite, 2 min de r\xE9cup\xE9ration." }),
-    E("nage-ef", "Natation en endurance", "velo", { q: ["aero"], sp: ["natation"], eq: ["piscine"], t: "cont", ld: "bw", pat: "swim-easy", c: "Nage continue \xE0 allure confortable." }),
-    E("nage-100", "Natation 100 m", "velo", { q: ["aero", "endu_f"], sp: ["natation"], g: ["cardio"], eq: ["piscine"], t: "int", ld: "bw", pat: "swim-int", c: "100 m soutenu, 20 \xE0 30 s de repos." }),
-    E("circuit", "Circuit fonctionnel", "velo", { q: ["endu_f", "aero"], sp: ["hyrox", "collectif", "combat", "autre", "muscu"], g: ["cardio"], eq: ["rien", "halteres"], t: "int", ld: "bw", pat: "circuit", c: "Burpees, fentes, squats, pompes, gainage : 40 s par atelier, 20 s de transition." }),
-    // ---- Escalade
-    E("max-hangs", "Suspensions max", "doigts", { q: ["force", "doigts"], sp: ["escalade"], g: ["doigts"], eq: ["poutre"], t: "hang", ld: "+kg", lvl: 2, heavy: true, u18: false, pat: "finger-max", c: "20 mm, semi-arqu\xE9. Charge (lest ou d\xE9charge) que tu tiendrais environ 13 s : marge de 3 s.", src: ["lopezrivera2012"] }),
-    E("repeaters", "Suspensions 7/3", "doigts", { q: ["endu_f", "resist"], sp: ["escalade"], g: ["doigts"], eq: ["poutre"], t: "hang", ld: "+kg", lvl: 2, u18: false, pat: "finger-endu", c: "7 s suspendu, 3 s de pause, 6 fois. Prise moyenne, sans aller \xE0 l\u2019\xE9chec." }),
-    E("limite", "Blocs \xE0 ta limite", "grimpe", { q: ["puiss", "force", "bloc", "doigts"], sp: ["escalade"], g: ["doigts", "tirage"], eq: ["pan", "salle-esc"], t: "essai", ld: "bw", heavy: true, pat: "climb-limit", c: "3 \xE0 6 mouvements tr\xE8s durs, frais \xE0 chaque essai.", src: ["nsca2016"] }),
-    E("pan-dur", "Pan : blocs durs", "grimpe", { q: ["puiss", "bloc", "force"], sp: ["escalade"], g: ["doigts", "tirage"], eq: ["pan"], t: "essai", ld: "bw", lvl: 2, heavy: true, pat: "climb-limit", c: "Moonboard, Kilter ou pan maison : mouvements de puissance sur petites prises." }),
-    E("campus", "Campus sur prises larges", "grimpe", { q: ["puiss", "bloc"], sp: ["escalade"], g: ["doigts", "tirage"], eq: ["pan"], t: "essai", ld: "bw", lvl: 3, heavy: true, u18: false, pat: "climb-power", c: "\xC9chelons larges, mont\xE9es 1-3-5, arr\xEAt d\xE8s que la qualit\xE9 baisse." }),
-    E("4x4", "4 blocs encha\xEEn\xE9s (4 \xD7 4)", "grimpe", { q: ["resist", "endu_f"], sp: ["escalade"], g: ["doigts"], eq: ["salle-esc", "pan"], t: "serie", ld: "bw", pat: "climb-lact", c: "4 blocs encha\xEEn\xE9s sans pause, 2 \xE0 3 niveaux sous ta limite." }),
-    E("int-pan", "Intervalles 1 min sur pan", "grimpe", { q: ["resist", "endu_f"], sp: ["escalade"], g: ["doigts"], eq: ["pan", "salle-esc"], t: "int", ld: "bw", pat: "climb-lact", c: "1 min de grimpe soutenue, 3 min de repos (1:3).", src: ["nsca2016"] }),
-    E("enchainement", "Encha\xEEnement de deux voies", "grimpe", { q: ["resist"], sp: ["escalade"], g: ["doigts"], eq: ["salle-esc"], t: "serie", ld: "bw", pat: "climb-lact", c: "Deux voies d\u2019affil\xE9e sans redescendre au sol si possible, niveau \xE0 vue moins 2." }),
-    E("volume-blocs", "Volume de blocs faciles", "grimpe", { q: ["aero", "conti", "tech"], sp: ["escalade"], eq: ["salle-esc", "pan"], t: "bloc", ld: "bw", pat: "climb-aero", c: "Beaucoup de blocs nettement sous ton flash, 1 min de repos : encha\xEEner sans \xAB bouteiller \xBB." }),
-    E("compet-sim", "Simulation de comp\xE9tition", "grimpe", { q: ["puiss", "bloc", "compet"], sp: ["escalade"], g: ["doigts", "tirage"], eq: ["salle-esc"], t: "essai", ld: "bw", heavy: true, pat: "climb-comp", c: "Blocs nouveaux, temps limit\xE9 par bloc, autant de repos : lecture, engagement, gestion des essais." }),
-    E("flash", "Flash de blocs nouveaux", "grimpe", { q: ["compet", "tech"], sp: ["escalade"], eq: ["salle-esc"], t: "essai", ld: "bw", pat: "climb-comp", c: "Un seul essai apr\xE8s une lecture d\u20191 min : comme en qualification." }),
-    E("finger-lift", "Finger lift", "doigts", { q: ["force", "doigts"], sp: ["escalade"], g: ["doigts"], eq: ["halteres", "salle"], t: "hang", ld: "kg", lvl: 2, heavy: true, u18: false, pat: "finger-max", c: "Bloc ou r\xE9glette charg\xE9, une main, semi-arqu\xE9 : lev\xE9e de 7 s sans \xE0-coup." }),
-    E("conti", "Continuit\xE9", "grimpe", { q: ["aero", "conti"], sp: ["escalade"], eq: ["salle-esc", "pan"], t: "bloc", ld: "bw", pat: "climb-aero", c: "Grimpe facile sans t\u2019arr\xEAter, avant-bras chauds mais jamais \xAB bouteill\xE9s \xBB." }),
-    E("volume", "Volume de voies faciles", "grimpe", { q: ["aero", "conti", "tech"], sp: ["escalade"], eq: ["salle-esc"], t: "essai", ld: "bw", pat: "climb-aero", c: "Beaucoup de voies 2 \xE0 3 niveaux sous ton max, en soignant les placements." }),
-    E("technique", "Technique", "grimpe", { q: ["tech"], sp: ["escalade"], eq: ["salle-esc", "pan"], t: "essai", ld: "bw", pat: "climb-tech", c: "Un th\xE8me par s\xE9ance : pieds pr\xE9cis, lecture, chutes, dynamique." }),
-    E("blocage", "Blocages bras \xE0 90\xB0", "muscu", { q: ["force"], sp: ["escalade"], g: ["tirage"], eq: ["traction"], t: "iso", hold: "5-10 s", ld: "bw", lvl: 2, pat: "pull-iso", c: "Coude \xE0 90\xB0, 5 \xE0 10 s, une ou deux mains selon le niveau." }),
-    // ---- Mobilité
-    E("mob-hanches", "Mobilit\xE9 des hanches", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "90/90, fente basse, papillon : 1 min par position." }),
-    E("mob-epaules", "Mobilit\xE9 des \xE9paules", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "Passages de b\xE2ton, ouvertures thoraciques au sol." }),
-    E("mob-chevilles", "Mobilit\xE9 des chevilles", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "Genou au mur, 10 r\xE9p\xE9titions par c\xF4t\xE9." }),
-    E("mob-doigts", "\xC9tirements des fl\xE9chisseurs", "recup", { q: ["mobi"], sp: ["escalade"], t: "mob", ld: "bw", pat: "mobi", c: "Doigts en extension, poignet en arri\xE8re, 30 s, sans douleur." }),
-    E("mob-dos", "Mobilit\xE9 du dos", "recup", { q: ["mobi"], t: "mob", ld: "bw", pat: "mobi", c: "Chat-vache, rotations thoraciques allong\xE9." })
-  ];
-  var LIB_BY_ID = Object.fromEntries(LIB.map((x) => [x.id, x]));
-  var norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\[[a-z]+\]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-  var BY_NAME = new Map(LIB.map((x) => [norm(x.n), x]));
-  function libMatch(label) {
-    const n = norm(label);
-    if (!n) return null;
-    if (BY_NAME.has(n)) return BY_NAME.get(n);
-    let best = null;
-    for (const [k, x] of BY_NAME) if (n.startsWith(k) && (!best || k.length > norm(best.n).length)) best = x;
-    return best;
-  }
-  var GOALS = [
-    { id: "force", l: "Force maximale", d: "Soulever, tirer ou pousser plus lourd", sys: "neuro" },
-    { id: "hyper", l: "Masse musculaire", d: "Prendre du muscle", sys: "hyper" },
-    { id: "puiss", l: "Puissance", d: "Sauter, lancer, \xEAtre explosif", sys: "alac" },
-    { id: "vit", l: "Vitesse", d: "D\xE9marrer et sprinter plus vite", sys: "alac" },
-    { id: "endu_f", l: "Endurance de force", d: "R\xE9p\xE9ter des efforts intenses sans s\u2019effondrer", sys: "lact" },
-    { id: "aero", l: "Endurance", d: "Tenir longtemps, courir ou p\xE9daler plus loin", sys: "aero" },
-    { id: "doigts", l: "Force des doigts", d: "Tenir des prises plus petites", sys: "neuro", sp: "escalade" },
-    { id: "bloc", l: "Puissance en bloc", d: "Passer les mouvements durs", sys: "alac", sp: "escalade" },
-    { id: "resist", l: "R\xE9sistance", d: "Ne plus \xAB bouteiller \xBB dans les voies", sys: "lact", sp: "escalade" },
-    { id: "conti", l: "Continuit\xE9", d: "Grimper longtemps sans fatigue", sys: "aero", sp: "escalade" },
-    { id: "compet", l: "Comp\xE9tition de bloc", d: "Passer des blocs nouveaux, vite et sous pression", sys: "alac", sp: "escalade" },
-    { id: "prev", l: "Pr\xE9vention", d: "Se blesser moins : \xE9paules, doigts, dos, genoux", sys: "prev" }
-  ];
-  var GOAL_BY_ID = Object.fromEntries(GOALS.map((g) => [g.id, g]));
-  var SYSTEMS = {
-    neuro: { l: "Force neuromusculaire", d: "Charges lourdes (environ 80 % du max et plus), 1 \xE0 6 r\xE9p\xE9titions, 2 \xE0 5 min de r\xE9cup\xE9ration : le syst\xE8me nerveux apprend \xE0 recruter plus de fibres.", src: ["acsm2009", "nsca2016"] },
-    hyper: { l: "Hypertrophie", d: "6 \xE0 12 r\xE9p\xE9titions proches de l\u2019\xE9chec, au moins 10 s\xE9ries par muscle et par semaine, 1 min 30 \xE0 3 min de repos.", src: ["schoenfeld2017", "schoenfeld2016"] },
-    alac: { l: "Fili\xE8re ana\xE9robie alactique", d: "Efforts quasi maximaux de moins de 10 s, aliment\xE9s par la phosphocr\xE9atine. R\xE9cup\xE9ration longue : 1:12 \xE0 1:20 (2 \xE0 3 min pour 10 s).", src: ["nsca2016"] },
-    lact: { l: "Fili\xE8re ana\xE9robie lactique", d: "Efforts intenses de 20 s \xE0 2 min, ceux qui \xAB br\xFBlent \xBB. R\xE9cup\xE9ration de 1:3 \xE0 1:5.", src: ["nsca2016", "buchheit2013"] },
-    aero: { l: "Fili\xE8re a\xE9robie", d: "Efforts de plus de 2 \xE0 3 min. Environ 80 % du temps en facile et 20 % en intervalles intenses (entra\xEEnement polaris\xE9).", src: ["stoggl2014", "buchheit2013"] },
-    prev: { l: "Pr\xE9vention", d: "Renforcer les zones fragiles de ton sport et les antagonistes, entretenir la mobilit\xE9.", src: ["vandyk2019"] }
-  };
-  function quiz(cl) {
-    return [
-      { id: "lim", q: cl ? "En voie ou en bloc, tu \xE9choues plut\xF4t parce que\u2026" : "Dans ton sport, ce qui te limite le plus, c\u2019est\u2026", opts: [
-        { id: "force", l: cl ? "Les prises sont trop petites ou les mouvements trop durs, m\xEAme frais" : "La force : charges lourdes, duels, contacts", w: cl ? { doigts: 3, bloc: 1 } : { force: 3, puiss: 1 } },
-        { id: "expl", l: cl ? "Il manque de l\u2019explosivit\xE9 : jet\xE9s, mouvements dynamiques" : "L\u2019explosivit\xE9 : sauts, d\xE9marrages, lancers", w: cl ? { bloc: 3, puiss: 1 } : { puiss: 3, vit: 1 } },
-        { id: "lact", l: cl ? "Les avant-bras \xAB bouteillent \xBB au bout de 20 \xE0 40 mouvements" : "\xC7a br\xFBle et je l\xE2che apr\xE8s 30 s \xE0 2 min d\u2019effort intense", w: cl ? { resist: 3 } : { endu_f: 3 } },
-        { id: "aero", l: cl ? "Je fatigue sur les longues voies ou les longues s\xE9ances" : "Je m\u2019essouffle ou je ralentis quand \xE7a dure", w: cl ? { conti: 3, aero: 1 } : { aero: 3 } },
-        { id: "vit", l: "La vitesse : les premiers m\xE8tres, les sprints r\xE9p\xE9t\xE9s", w: { vit: 3, puiss: 1 }, hide: cl },
-        { id: "hyper", l: "Je veux surtout prendre du muscle", w: { hyper: 3 } },
-        { id: "blesse", l: "Je me blesse souvent ou j\u2019ai des douleurs qui reviennent", w: { prev: 3 } }
-      ].filter((o) => !o.hide) },
-      { id: "duree", q: "L\u2019effort le plus important de ton sport dure\u2026", opts: [
-        { id: "court", l: "Moins de 10 s (un mouvement, un sprint, un saut)", w: { force: 1, puiss: 1, vit: 1, doigts: 1, bloc: 1 } },
-        { id: "moyen", l: "De 20 s \xE0 2 min", w: { endu_f: 1, resist: 1 } },
-        { id: "long", l: "Plusieurs minutes ou plus", w: { aero: 1, conti: 1 } },
-        { id: "mixte", l: "Un peu de tout", w: {} }
-      ] },
-      { id: "pref", q: "Ce qui te motive le plus en ce moment\u2026", opts: [
-        { id: "perf", l: "Un objectif de performance (comp\xE9tition, projet, chrono)", w: cl ? { compet: 1 } : {} },
-        { id: "phys", l: "Mon physique", w: { hyper: 1 } },
-        { id: "sante", l: "\xCAtre en forme et sans douleur", w: { prev: 1, aero: 1 } }
-      ] }
-    ];
-  }
-  function quizResult(answers, cl) {
-    const sc = {};
-    for (const q of quiz(cl)) {
-      const o = q.opts.find((x) => x.id === answers[q.id]);
-      if (o) for (const [g, v] of Object.entries(o.w)) sc[g] = (sc[g] || 0) + v;
-    }
-    const ok = GOALS.filter((g) => cl || g.sp !== "escalade").map((g) => g.id);
-    return Object.entries(sc).filter(([g]) => ok.includes(g)).sort((a, b) => b[1] - a[1]).map((x) => x[0]);
   }
 
   // src/lib/levels.js
