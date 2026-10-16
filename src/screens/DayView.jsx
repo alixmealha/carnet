@@ -4,7 +4,7 @@ import { blocks, target, weekOf, weekLabel, itemKey, doneN, progress, itemLoad, 
 import { BlockMenu } from '../ui/BlockMenu.jsx';
 import { SessionMenu } from '../ui/SessionMenu.jsx';
 import { adjSummary, clearAdjust } from '../lib/adapt.js';
-import { Bilan } from './Session.jsx';
+import { Bilan, PlusChip } from './Session.jsx';
 import { WELL, FLAGS, REPAS, RPE, STATUS, SIV, score, verdict, rpeCmp, rng, NSTAGE, NMET, parseDur, durShort, durLong, nightTotal, vfcAvg } from '../lib/rules.js';
 import { dayInsights } from '../lib/insights.js';
 import { testById, valueKeys, resultsOn, saveResults, lastResult, pct } from '../lib/tests.js';
@@ -207,6 +207,7 @@ export function ItemRow({ k, b, it, e, color }) {
       {it.n > 1 && <div class="pips" role="group" aria-label={it.label + ' : ' + v + ' sur ' + it.n}>
         {Array.from({ length: it.n }, (_, i) => i + 1).map(i => <button type="button" class="pip" style={'--c:' + color} aria-pressed={i <= v ? 'true' : 'false'} aria-label={(it.unit || 'Série') + ' ' + i} onClick={() => setDone(v === i ? i - 1 : i)}>{i}</button>)}
       </div>}
+      {full && ['Bloc', 'Essai', 'Voie'].includes(it.unit) && it.n > 1 && <div class="pips"><PlusChip k={k} b={b} it={it} /></div>}
     </div>
   );
 }

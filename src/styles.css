@@ -924,3 +924,8 @@ html,body{overflow-x:clip}
 /* vidéos de démo */
 .demo-l{display:inline-block;margin-top:4px;font-size:13px;font-weight:600;color:var(--accent);text-decoration:none}
 .demo-b{display:inline-flex;align-items:center;gap:6px;margin-top:8px;min-height:36px;padding:0 12px;font-size:14px;text-decoration:none}
+
+.plus-chip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 0}
+.plus-chip button{border:1px solid var(--rule);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600}
+.plus-chip b{font-family:var(--f-mono);font-size:13px;color:var(--accent)}
+.plus-chip .plus-go{background:var(--accent-soft);border-color:transparent}

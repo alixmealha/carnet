@@ -396,7 +396,7 @@ struct ItemRow: View {
     let color: Color
     let ro: Bool
     var body: some View {
-        let key = PlanReader.itemKey(b, it), v = PlanReader.doneN(e, key, it.n), full = v >= it.n
+        let key = PlanReader.itemKey(b, it), v = PlanReader.doneN(e, key, it.n), full = v >= it.n, plus = PlanReader.plusN(e, key)
         let ld = PlanReader.itemLoad(b, it, e)
         let w = JournalWriter()
         VStack(alignment: .leading, spacing: 8) {
@@ -417,7 +417,7 @@ struct ItemRow: View {
                         rich(it.label).font(Typo.sans(15.5, .semibold)).foregroundStyle(full ? Palette.muted : Palette.ink).strikethrough(full, color: Palette.muted)
                         if let ld { Text(PlanReader.loadText(ld.v, ld.u)).font(Typo.mono(12.5, .semibold)).foregroundStyle(ld.changed ? Palette.oil : Palette.accent) }
                         Spacer(minLength: 0)
-                        if it.n > 1 { Text("\(v)/\(it.n)").font(Typo.mono(12.5, .medium)).foregroundStyle(Palette.muted) }
+                        if it.n > 1 { Text("\(v)/\(it.n)" + (plus > 0 ? " +\(plus)" : "")).font(Typo.mono(12.5, .medium)).foregroundStyle(Palette.muted) }
                     }
                     if let det = it.det { GlossText(det).font(Typo.sans(13.5)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
                     DemoLink(it: it)
@@ -434,6 +434,7 @@ struct ItemRow: View {
                     .padding(.leading, 38)
                     .disabled(ro)
             }
+            if full && it.climbable && it.n > 1 && !ro { PlusRow(k: k, b: b, it: it).padding(.leading, 38) }
         }
         .padding(.vertical, 9)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: v)
@@ -441,6 +442,28 @@ struct ItemRow: View {
 }
 
 /// Pastilles des séries : appuyer sur la n-ième coche jusqu'à elle, la rappuyer revient en arrière
+/// Blocs, voies ou essais faits en plus du plan : « + 1 bloc en plus », corrigeable avec −
+struct PlusRow: View {
+    @State private var store = Store.shared
+    let k: String, b: Block, it: Item
+    var more: (() -> Void)? = nil
+    var body: some View {
+        let _ = store.version
+        let key = PlanReader.itemKey(b, it), p = PlanReader.plusN(store.journal(k), key), w = JournalWriter()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Button { Haptics.select(); w.setPlus(k, b, it, p + 1) } label: { Text("+ 1 \(it.unitWord) en plus") }.buttonStyle(SmallButton())
+                if p > 0 {
+                    Text("\(p) en plus").font(Typo.mono(12.5, .semibold)).foregroundStyle(Palette.accent)
+                    Button { Haptics.select(); w.setPlus(k, b, it, p - 1) } label: { Image(systemName: "minus") }
+                        .buttonStyle(SmallButton()).accessibilityLabel("Retirer un \(it.unitWord)")
+                }
+            }
+            if let more { Button("En plein écran", action: more).buttonStyle(SmallButton()) }
+        }
+    }
+}
+
 struct Pips: View {
     let n: Int, v: Int
     var color: Color = Palette.accent

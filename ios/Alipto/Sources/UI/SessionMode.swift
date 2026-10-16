@@ -365,6 +365,7 @@ struct StepView: View {
             if full && STRENGTH.contains(b.kind) && !["Bloc", "Essai"].contains(it.unit) && T?.kind != "interval" {
                 Reserve(k: run.k, b: b, it: it)
             }
+            if full && it.climbable { PlusRow(k: run.k, b: b, it: it, more: it.rest != nil && !STRENGTH.contains(b.kind) ? { Haptics.firm(); run.openClimb(b, it) } : nil) }
             if full { nextButton }
             else { action(it, v, T) }
             if !full, let r = it.rest, T == nil, !(it.climbable && !STRENGTH.contains(b.kind)) {

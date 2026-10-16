@@ -1,7 +1,7 @@
 // Bilan chiffré d'une séance : escalade (blocs, chutes, temps sur le mur, cotation par rapport à ton niveau)
 // et muscu (tonnage, % du 1RM). Plus le conseil pour la prochaine séance de grimpe (chutes + ressenti).
 import { jget, get, put, planLocked, ids } from './store.js';
-import { blocks, itemKey, doneN, setLoadsOf, itemLoad, target, blockState, day } from './plan.js';
+import { blocks, itemKey, doneN, plusN, setLoadsOf, itemLoad, target, blockState, day } from './plan.js';
 import { meanGrade, maxGrade, gapText, shiftGrade } from './grades.js';
 import { climbLevel, oneRM, LIFT_OF_LIB } from './levels.js';
 import { libMatch, norm } from './library.js';
@@ -18,7 +18,7 @@ const isClimb = it => ['Bloc', 'Voie', 'Essai'].includes(it.unit);
 export function climbBilan(k, b, it) {
   const e = jget(k), key = itemKey(b, it), n = doneN(e, key, it.n), disc = discOf(it);
   const log = (e.cl || {})[key] || [], falls = (e.falls || {})[key] || 0, wall = (e.wall || {})[key] || 0;
-  const out = [pl(n, UNIT[it.unit] || 'bloc')];
+  const plus = plusN(e, key), out = [pl(n + plus, UNIT[it.unit] || 'bloc') + (plus ? ' (dont ' + plus + ' en plus)' : '')];
   if (falls || log.length) out.push(pl(falls, 'chute'));
   if (wall) out.push(mmss(wall) + ' sur ' + (disc === 'voie' ? 'les voies' : 'le mur'));
   const gs = log.map(x => x.g).filter(Boolean);
@@ -69,7 +69,7 @@ export function sessionBilan(k, part) {
       if (!isClimb(it)) continue;
       const key = itemKey(b, it);
       if (!((e.cl || {})[key] || (e.falls || {})[key] != null || (e.wall || {})[key])) continue;
-      out.push({ label: it.label + ' · ' + doneN(e, key, it.n) + '/' + it.n, lines: climbBilan(k, b, it).slice(1) });
+      out.push({ label: it.label + ' · ' + doneN(e, key, it.n) + '/' + it.n + (plusN(e, key) ? ' +' + plusN(e, key) : ''), lines: climbBilan(k, b, it).slice(1) });
     }
   }
   const sb = strengthBilan(k, part); if (sb.length) out.push({ label: 'Muscu', lines: sb });

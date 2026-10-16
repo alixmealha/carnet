@@ -291,6 +291,7 @@
     okUrl: () => okUrl,
     ownBlocks: () => ownBlocks,
     phaseOf: () => phaseOf,
+    plusN: () => plusN,
     progress: () => progress,
     rawBlocks: () => rawBlocks,
     removeLastWeek: () => removeLastWeek,
@@ -305,6 +306,7 @@
     setDemo: () => setDemo,
     setDoneCount: () => setDoneCount,
     setLoadsOf: () => setLoadsOf,
+    setPlus: () => setPlus,
     setWeek: () => setWeek,
     setsText: () => setsText,
     skipLabel: () => skipLabel,
@@ -942,6 +944,16 @@
   function doneN(e, key, n) {
     const v = e && e.done && e.done[key];
     return typeof v === "number" ? Math.min(n, Math.max(0, v)) : 0;
+  }
+  function plusN(e, key) {
+    const v = e && e.plus && e.plus[key];
+    return typeof v === "number" ? Math.max(0, Math.min(99, Math.floor(v))) : 0;
+  }
+  function setPlus(k, key, val) {
+    const e = jget(k), plus = Object.assign({}, e.plus), v = Math.max(0, Math.min(99, Math.floor(val)));
+    if (v > 0) plus[key] = v;
+    else delete plus[key];
+    jset(k, { plus: Object.keys(plus).length ? plus : null });
   }
   function progress(k, part) {
     const e = jget(k);
@@ -3018,7 +3030,7 @@
   function climbBilan(k, b, it) {
     const e = jget(k), key = itemKey(b, it), n = doneN(e, key, it.n), disc = discOf2(it);
     const log = (e.cl || {})[key] || [], falls = (e.falls || {})[key] || 0, wall = (e.wall || {})[key] || 0;
-    const out = [pl(n, UNIT[it.unit] || "bloc")];
+    const plus = plusN(e, key), out = [pl(n + plus, UNIT[it.unit] || "bloc") + (plus ? " (dont " + plus + " en plus)" : "")];
     if (falls || log.length) out.push(pl(falls, "chute"));
     if (wall) out.push(mmss(wall) + " sur " + (disc === "voie" ? "les voies" : "le mur"));
     const gs = log.map((x) => x.g).filter(Boolean);
@@ -3072,7 +3084,7 @@
         if (!isClimb(it)) continue;
         const key = itemKey(b, it);
         if (!((e.cl || {})[key] || (e.falls || {})[key] != null || (e.wall || {})[key])) continue;
-        out.push({ label: it.label + " \xB7 " + doneN(e, key, it.n) + "/" + it.n, lines: climbBilan(k, b, it).slice(1) });
+        out.push({ label: it.label + " \xB7 " + doneN(e, key, it.n) + "/" + it.n + (plusN(e, key) ? " +" + plusN(e, key) : ""), lines: climbBilan(k, b, it).slice(1) });
       }
     }
     const sb = strengthBilan(k, part);

@@ -58,6 +58,13 @@ export function weekKeys(w) { return rangeKeys(w.start, w.end); }
 export const itemKey = (b, it) => b.id + '.' + it.id;
 export function allItems(k) { const out = []; for (const b of blocks(k)) if (b.kind !== 'rest') for (const it of (b.items || [])) out.push({ b, it, key: itemKey(b, it) }); return out; }
 export function doneN(e, key, n) { const v = e && e.done && e.done[key]; return typeof v === 'number' ? Math.min(n, Math.max(0, v)) : 0; }
+// Blocs (voies, essais) faits en plus du plan : compteur séparé, le « fait / prévu » reste plafonné au plan
+export function plusN(e, key) { const v = e && e.plus && e.plus[key]; return typeof v === 'number' ? Math.max(0, Math.min(99, Math.floor(v))) : 0; }
+export function setPlus(k, key, val) {
+  const e = jget(k), plus = Object.assign({}, e.plus), v = Math.max(0, Math.min(99, Math.floor(val)));
+  if (v > 0) plus[key] = v; else delete plus[key];
+  jset(k, { plus: Object.keys(plus).length ? plus : null });
+}
 // Progression de la séance (ou d'un bloc fait à part si part = id du bloc).
 // Les blocs faits à part ou déplacés sortent de la séance principale ; un bloc « pas fait » est compté à part (skipped).
 export function progress(k, part) {

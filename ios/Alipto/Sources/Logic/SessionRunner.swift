@@ -55,7 +55,7 @@ final class SessionRunner {
         var pausedAt: Date?
         var acc: Double = 0
         var grade: String?
-        var last: (ws: Int, fell: Bool, t0: Date, acc: Double)?
+        var last: (ws: Int, fell: Bool, t0: Date, acc: Double, over: Bool)?
         var lastSec = -1
         func t(_ now: Date) -> Double { max(0, (pausedAt ?? now).timeIntervalSince(t0) - acc) }
     }
@@ -162,7 +162,9 @@ final class SessionRunner {
         guard var c = climb else { return }
         let key = PlanReader.itemKey(c.b, c.it), e = store.journal(k)
         let cur = PlanReader.doneN(e, key, c.it.n), ws = c.ph == "wall" ? Int(c.t(Date()).rounded()) : 0
-        JournalWriter(store).setDone(k, c.b, c.it, min(c.it.n, cur + 1))
+        // au-delà du plan : le bloc compte « en plus », le fait / prévu reste à son maximum
+        let over = cur >= c.it.n, plus0 = PlanReader.plusN(e, key)
+        if over { JournalWriter(store).setPlus(k, c.b, c.it, plus0 + 1) } else { JournalWriter(store).setDone(k, c.b, c.it, min(c.it.n, cur + 1)) }
         let e2 = store.journal(k)
         var wall = e2["wall"]?.object ?? [:]; wall[key] = .num(Double((wall[key]?.int ?? 0) + ws))
         var patch: [String: JSON?] = ["wall": .obj(wall)]
@@ -173,13 +175,14 @@ final class SessionRunner {
         if fell { entry["f"] = 1 }
         cl[key] = .arr((cl[key]?.array ?? []) + [.obj(entry)]); patch["cl"] = .obj(cl)
         store.jset(k, patch)
-        c.last = (ws, fell, c.t0, c.acc)
-        if cur + 1 >= c.it.n { Signals.done(); Signals.say("Terminé"); c.ph = "done" }
+        c.last = (ws, fell, c.t0, c.acc, over)
+        if !over && cur + 1 >= c.it.n { Signals.done(); Signals.say("Terminé"); c.ph = "done" }
         else {
             Signals.rest(); c.ph = "rest"; c.t0 = Date(); c.acc = 0; c.pausedAt = nil; c.dur = c.it.rest ?? 60
             let unit = c.it.unit == "Essai" ? "Essai" : c.it.unit == "Voie" ? "Voie" : "Bloc"
-            Signals.schedule("rest", at: Date().addingTimeInterval(c.dur), title: "Repos terminé", body: "\(unit) \(cur + 2) : c’est reparti")
-            LiveRest.show(title: c.it.label, until: Date().addingTimeInterval(c.dur), label: "Repos · ensuite " + unit.lowercased() + " \(cur + 2)", next: c.grade, phase: "rest")
+            let nextNo = over ? cur + plus0 + 2 : cur + 2
+            Signals.schedule("rest", at: Date().addingTimeInterval(c.dur), title: "Repos terminé", body: "\(unit) \(nextNo) : c’est reparti")
+            LiveRest.show(title: c.it.label, until: Date().addingTimeInterval(c.dur), label: "Repos · ensuite " + unit.lowercased() + " \(nextNo)", next: c.grade, phase: "rest")
         }
         climb = c
     }
@@ -187,7 +190,7 @@ final class SessionRunner {
         guard var c = climb, let L = c.last else { return }
         let key = PlanReader.itemKey(c.b, c.it), e = store.journal(k)
         let cur = PlanReader.doneN(e, key, c.it.n)
-        JournalWriter(store).setDone(k, c.b, c.it, max(0, cur - 1))
+        if L.over { JournalWriter(store).setPlus(k, c.b, c.it, PlanReader.plusN(e, key) - 1) } else { JournalWriter(store).setDone(k, c.b, c.it, max(0, cur - 1)) }
         let e2 = store.journal(k)
         var wall = e2["wall"]?.object ?? [:]; wall[key] = .num(Double(max(0, (wall[key]?.int ?? 0) - L.ws)))
         var patch: [String: JSON?] = ["wall": .obj(wall)]

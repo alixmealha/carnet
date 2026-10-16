@@ -150,6 +150,8 @@ struct PlanReader {
     func week(_ k: String) -> Week? { weeks().first { k >= $0.start && k <= $0.end } }
     static func itemKey(_ b: Block, _ it: Item) -> String { b.id + "." + it.id }
     static func doneN(_ e: JSON, _ key: String, _ n: Int) -> Int { min(n, max(0, e["done"]?[key]?.int ?? 0)) }
+    /// Blocs (voies, essais) faits en plus du plan : compteur séparé, le « fait / prévu » reste plafonné au plan
+    static func plusN(_ e: JSON, _ key: String) -> Int { min(99, max(0, e["plus"]?[key]?.int ?? 0)) }
     static func blockState(_ e: JSON, _ b: Block) -> String? {
         if e["apart"]?[b.id] != nil { return "apart" }
         if e["moved"]?[b.id] != nil { return "moved" }
@@ -232,6 +234,13 @@ struct JournalWriter {
         // tout est fait : la séance passe en « faite » (ou « adaptée » s'il manque des blocs)
         let p = PlanReader(s).progress(k)
         if p.total > 0 && p.done == p.total && s.journal(k)["status"] == nil { s.jset(k, ["status": .str(p.skipped > 0 ? "adaptee" : "faite")]) }
+    }
+    func setPlus(_ k: String, _ b: Block, _ it: Item, _ val: Int) {
+        let e = s.journal(k), key = PlanReader.itemKey(b, it)
+        var plus = e["plus"]?.object ?? [:]
+        let v = max(0, min(99, val))
+        if v > 0 { plus[key] = .num(Double(v)) } else { plus.removeValue(forKey: key) }
+        s.jset(k, ["plus": plus.isEmpty ? nil : .obj(plus)])
     }
     func setLoad(_ k: String, _ b: Block, _ it: Item, _ v: Double) {
         let e = s.journal(k), key = PlanReader.itemKey(b, it)

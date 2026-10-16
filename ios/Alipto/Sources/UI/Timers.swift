@@ -143,7 +143,7 @@ struct ClimbView: View {
     var body: some View {
         if let c = run.climb {
             let n = run.now, it = c.it, key = PlanReader.itemKey(c.b, it), e = Store.shared.journal(run.k)
-            let v = PlanReader.doneN(e, key, it.n), falls = e["falls"]?[key]?.int ?? 0, t = c.t(n)
+            let v = PlanReader.doneN(e, key, it.n), p = PlanReader.plusN(e, key), over = v >= it.n, no = v + p + 1, falls = e["falls"]?[key]?.int ?? 0, t = c.t(n)
             let W = it.unit == "Essai" ? "Essai" : it.unit == "Voie" ? "Voie" : "Bloc", wl = W.lowercased()
             let restLeft = c.ph == "rest" ? max(0, c.dur - t) : 0
             let (bg, fg): (Color, Color) = c.ph == "wall" ? (Palette.accent, Palette.accentInk) : c.ph == "rest" ? (Palette.ink, Palette.bg) : (Palette.good, .white)
@@ -170,20 +170,20 @@ struct ClimbView: View {
                     switch c.ph {
                     case "wall":
                         Text("\(W) en cours".uppercased()).font(Typo.display(28)).foregroundStyle(fg)
-                        (Text("\(min(v + 1, it.n))").font(Typo.display(170)) + Text("/\(it.n)").font(Typo.display(50)))
+                        (Text("\(no)").font(Typo.display(170)) + Text(over ? " · en plus" : "/\(it.n)").font(Typo.display(over ? 36 : 50)))
                             .foregroundStyle(fg).contentTransition(.numericText())
                         Text("sur \(it.unit == "Voie" ? "la" : "le") \(wl) depuis " + Fmt.mmss(t) + (c.pausedAt != nil ? " · en pause" : ""))
                             .font(Typo.sans(17, .medium)).foregroundStyle(fg.opacity(0.8)).monospacedDigit()
                     case "rest":
-                        Text("Repos · ensuite \(wl) \(v + 1)".uppercased()).font(Typo.display(28)).foregroundStyle(fg)
+                        Text("Repos · ensuite \(wl) \(no)".uppercased()).font(Typo.display(28)).foregroundStyle(fg)
                         Text(Fmt.mmss(restLeft)).font(Typo.display(150)).foregroundStyle(fg).monospacedDigit()
                             .contentTransition(.numericText(countsDown: true)).animation(.snappy, value: Int(restLeft.rounded(.up)))
-                        Text("\(v) fait\(v > 1 ? "s" : "") · \(it.n - v) restant\(it.n - v > 1 ? "s" : "")" + (falls > 0 ? " · \(falls) chute\(falls > 1 ? "s" : "")" : ""))
+                        Text("\(v + p) fait\(v + p > 1 ? "s" : "")" + (over ? " (\(p) en plus)" : " · \(it.n - v) restant\(it.n - v > 1 ? "s" : "")") + (falls > 0 ? " · \(falls) chute\(falls > 1 ? "s" : "")" : ""))
                             .font(Typo.sans(17, .medium)).foregroundStyle(fg.opacity(0.8))
                     default:
                         Text("TERMINÉ").font(Typo.display(34)).foregroundStyle(fg)
                         Text("✓").font(Typo.display(150)).foregroundStyle(fg)
-                        Text("\(v) \(wl)\(v > 1 ? "s" : "")" + (falls > 0 ? " · \(falls) chute\(falls > 1 ? "s" : "")" : "")).font(Typo.sans(17, .medium)).foregroundStyle(fg.opacity(0.8))
+                        Text("\(v + p) \(wl)\(v + p > 1 ? "s" : "")" + (p > 0 ? " (dont \(p) en plus)" : "") + (falls > 0 ? " · \(falls) chute\(falls > 1 ? "s" : "")" : "")).font(Typo.sans(17, .medium)).foregroundStyle(fg.opacity(0.8))
                     }
                     if it.n <= 40 && c.ph != "done" {
                         HStack(spacing: 5) { ForEach(0..<it.n, id: \.self) { i in Circle().fill(i < v ? fg : fg.opacity(0.2)).frame(width: 9, height: 9) } }
@@ -202,6 +202,13 @@ struct ClimbView: View {
                                 ctl(c.pausedAt != nil ? "Reprendre" : "Pause", fg) { run.climbToggle() }
                                 ctl("Tombé · " + (it.unit == "Essai" ? "essai compté" : "compte quand même"), fg) { Haptics.warning(); run.climbFinish(fell: true) }
                             }
+                        } else if c.ph == "done" {
+                            Button { Haptics.firm(); run.climbGo() } label: {
+                                Text("Un \(wl) de plus").font(Typo.display(30))
+                                    .foregroundStyle(bg).frame(maxWidth: .infinity, minHeight: 92)
+                                    .background(fg, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                            }
+                            .buttonStyle(PressStyle())
                         } else if c.ph == "rest" {
                             HStack(spacing: 10) {
                                 ctl("−15 s", fg) { run.climbAdd(-15) }

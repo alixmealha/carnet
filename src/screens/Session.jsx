@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { jget, jset } from '../lib/store.js';
-import { blocks, itemKey, doneN, progress, itemLoad, fingerCalc, target, KIND, setDoneCount, setLoadsOf, setsText, blockState, setBlockState, apartOf, setApart, SKIP, skipLabel, demoOf } from '../lib/plan.js';
+import { blocks, itemKey, doneN, plusN, setPlus, progress, itemLoad, fingerCalc, target, KIND, setDoneCount, setLoadsOf, setsText, blockState, setBlockState, apartOf, setApart, SKIP, skipLabel, demoOf } from '../lib/plan.js';
 import { BlockMenu } from '../ui/BlockMenu.jsx';
 import { setAlert, clearAlert } from '../lib/restpush.js';
 import { Warmup } from '../ui/Warmup.jsx';
@@ -252,32 +252,33 @@ function ClimbTimer({ k, b, it, onClose, mini, onMini }) {
   const bumpG = n => setGrade(g => g ? shiftGrade(g, n, disc) : (disc === 'voie' ? '6a' : '6A'));
   const [st, setSt] = useState(() => ({ ph: 'wall', t0: Date.now(), dur: it.rest || 60, pausedAt: null, acc: 0, last: null }));
   const now = useNow(200);
-  const e = jget(k), v = doneN(e, key, it.n), falls = (e.falls && e.falls[key]) || 0, wall = (e.wall && e.wall[key]) || 0;
+  const e = jget(k), v = doneN(e, key, it.n), p = plusN(e, key), no = v + p + 1, over = v >= it.n, falls = (e.falls && e.falls[key]) || 0, wall = (e.wall && e.wall[key]) || 0;
   const t = Math.max(0, (st.pausedAt || now) - st.t0 - st.acc);
   const restLeft = st.ph === 'rest' ? Math.max(0, st.dur * 1000 - t) : 0, sec = Math.ceil(restLeft / 1000);
   const lastTick = useRef(null);
   useEffect(() => {
     if (st.ph !== 'rest' || st.pausedAt) return;
-    if (restLeft <= 0) { goSignal(); say(W + ' ' + (v + 1)); setSt(s => ({ ...s, ph: 'wall', t0: s.t0 + s.acc + s.dur * 1000, acc: 0 })); return; }
+    if (restLeft <= 0) { goSignal(); say(W + ' ' + no); setSt(s => ({ ...s, ph: 'wall', t0: s.t0 + s.acc + s.dur * 1000, acc: 0 })); return; }
     if (lastTick.current !== sec) { lastTick.current = sec; if (sec > 0 && sec <= 3) tick(); }
   }, [sec, st.ph, st.pausedAt]);
   const finish = fell => {
     const ee = jget(k), cur = doneN(ee, key, it.n), ws = st.ph === 'wall' ? Math.round(t / 1000) : 0;
-    setDoneCount(k, b, it, Math.min(it.n, cur + 1));
+    const over = cur >= it.n;
+    if (over) setPlus(k, key, plusN(ee, key) + 1); else setDoneCount(k, b, it, Math.min(it.n, cur + 1));
     const patch = { wall: Object.assign({}, ee.wall, { [key]: ((ee.wall || {})[key] || 0) + ws }) };
     if (fell) patch.falls = Object.assign({}, ee.falls, { [key]: ((ee.falls || {})[key] || 0) + 1 });
     // journal bloc par bloc : cotation, chute, temps sur le bloc
     patch.cl = Object.assign({}, ee.cl, { [key]: ((ee.cl || {})[key] || []).concat([Object.assign({ t: ws }, grade ? { g: grade } : {}, fell ? { f: 1 } : {})]) });
     jset(k, patch);
-    const last = { ws, fell, t0: st.t0, acc: st.acc };
-    if (cur + 1 >= it.n) { doneSignal(); say('Terminé'); setSt(s => ({ ...s, ph: 'done', last })); }
+    const last = { ws, fell, t0: st.t0, acc: st.acc, over };
+    if (!over && cur + 1 >= it.n) { doneSignal(); say('Terminé'); setSt(s => ({ ...s, ph: 'done', last })); }
     else { restSignal(); setSt({ ph: 'rest', t0: Date.now(), dur: it.rest || 60, pausedAt: null, acc: 0, last }); }
   };
   // appui par erreur : on revient sur le bloc, son chrono continue
   const undo = () => {
     const L = st.last; if (!L) return;
     const ee = jget(k), cur = doneN(ee, key, it.n);
-    setDoneCount(k, b, it, Math.max(0, cur - 1));
+    if (L.over) setPlus(k, key, plusN(ee, key) - 1); else setDoneCount(k, b, it, Math.max(0, cur - 1));
     const patch = { wall: Object.assign({}, ee.wall, { [key]: Math.max(0, ((ee.wall || {})[key] || 0) - L.ws) }) };
     if (L.fell) patch.falls = Object.assign({}, ee.falls, { [key]: Math.max(0, ((ee.falls || {})[key] || 0) - 1) });
     patch.cl = Object.assign({}, ee.cl, { [key]: ((ee.cl || {})[key] || []).slice(0, -1) });
@@ -288,12 +289,12 @@ function ClimbTimer({ k, b, it, onClose, mini, onMini }) {
   const go = () => { goSignal(); setSt(s => ({ ...s, ph: 'wall', t0: Date.now(), acc: 0, pausedAt: null })); };
   useEffect(() => {
     if (st.ph !== 'rest' || st.pausedAt) { clearAlert('climb'); return; }
-    setAlert('climb', () => ({ at: st.t0 + st.acc + st.dur * 1000, title: 'Repos terminé', body: W + ' ' + (v + 1) + ' : c’est reparti' }));
+    setAlert('climb', () => ({ at: st.t0 + st.acc + st.dur * 1000, title: 'Repos terminé', body: W + ' ' + no + ' : c’est reparti' }));
     return () => clearAlert('climb');
-  }, [st.ph, st.t0, st.acc, st.dur, st.pausedAt, v]);
+  }, [st.ph, st.t0, st.acc, st.dur, st.pausedAt, no]);
   const cls = st.ph === 'wall' ? 'work' : st.ph === 'rest' ? 'pause' : 'done';
-  const shown = st.ph === 'wall' ? v + 1 : v;
-  if (mini) return <MiniBar cls={cls} label={st.ph === 'wall' ? W + ' ' + Math.min(shown, it.n) + '/' + it.n + ' en cours' : st.ph === 'rest' ? 'Repos · ensuite ' + w + ' ' + (v + 1) : 'Terminé'} big={st.ph === 'wall' ? mmss(t / 1000) : st.ph === 'rest' ? mmss(sec) : '✓'} sub={grade || null} onOpen={() => onMini(false)}
+  const shown = st.ph === 'wall' ? no : v + p;
+  if (mini) return <MiniBar cls={cls} label={st.ph === 'wall' ? W + ' ' + shown + (over ? ' · en plus' : '/' + it.n) + ' en cours' : st.ph === 'rest' ? 'Repos · ensuite ' + w + ' ' + no : 'Terminé'} big={st.ph === 'wall' ? mmss(t / 1000) : st.ph === 'rest' ? mmss(sec) : '✓'} sub={grade || null} onOpen={() => onMini(false)}
     action={st.ph === 'wall' ? <button type="button" class="sm-act" onClick={() => finish(false)}>{essai ? 'Réussi' : W + ' fini' + (voie ? 'e' : '')}</button> : st.ph === 'rest' ? <button type="button" class="sm-act" onClick={go}>Go</button> : null} />;
   return (
     <div class={'tmr climb ' + cls} role="timer">
@@ -306,13 +307,13 @@ function ClimbTimer({ k, b, it, onClose, mini, onMini }) {
         </div>}
         {st.ph === 'wall' && <>
           <div class="tmr-ph">{W} en cours</div>
-          <div class="tmr-big">{Math.min(shown, it.n)}<small>/{it.n}</small></div>
+          <div class="tmr-big">{shown}<small>{over ? ' · en plus' : '/' + it.n}</small></div>
           <div class="tmr-sub">sur {voie ? 'la' : 'le'} {w} depuis {mmss(t / 1000)}{st.pausedAt ? ' · en pause' : ''}</div>
         </>}
         {st.ph === 'rest' && <>
-          <div class="tmr-ph">Repos · ensuite {w} {v + 1}</div>
+          <div class="tmr-ph">Repos · ensuite {w} {no}</div>
           <div class="tmr-big">{mmss(sec)}</div>
-          <div class="tmr-sub">{pl(v, 'fait')} · {it.n - v} restant{it.n - v > 1 ? 's' : ''}{falls ? ' · ' + pl(falls, 'chute') : ''}{st.pausedAt ? ' · en pause' : ''}</div>
+          <div class="tmr-sub">{pl(v + p, 'fait')}{over ? ' (' + p + ' en plus)' : ' · ' + (it.n - v) + ' restant' + (it.n - v > 1 ? 's' : '')}{falls ? ' · ' + pl(falls, 'chute') : ''}{st.pausedAt ? ' · en pause' : ''}</div>
         </>}
         {st.ph === 'done' && <>
           <div class="tmr-ph">Terminé</div>
@@ -325,6 +326,7 @@ function ClimbTimer({ k, b, it, onClose, mini, onMini }) {
         <button class="cl-big" onClick={() => finish(false)}>{essai ? 'Réussi' : W + ' fini' + (voie ? 'e' : '')}</button>
         <div class="cl-sub"><button onClick={toggle}>{st.pausedAt ? 'Reprendre' : 'Pause'}</button><button onClick={() => finish(true)}>Tombé · {essai ? 'essai compté' : 'compte quand même'}</button></div>
       </>}
+      {st.ph === 'done' && <button class="cl-big" onClick={go}>Un {w} de plus</button>}
       {st.ph === 'rest' && <>
         <div class="tmr-bar"><i style={'width:' + Math.min(100, t / (st.dur * 10)) + '%'} /></div>
         <div class="tmr-ctl">
@@ -337,6 +339,15 @@ function ClimbTimer({ k, b, it, onClose, mini, onMini }) {
     </div>
   );
 }
+export function PlusChip({ k, b, it, onMore }) {
+  const key = itemKey(b, it), p = plusN(jget(k), key), w = it.unit === 'Voie' ? 'voie' : it.unit === 'Essai' ? 'essai' : 'bloc';
+  return <div class="plus-chip">
+    <button type="button" onClick={() => setPlus(k, key, p + 1)}>+ 1 {w} en plus</button>
+    {p > 0 && <><b>{p} en plus</b><button type="button" aria-label={'Retirer un ' + w} onClick={() => setPlus(k, key, p - 1)}>−</button></>}
+    {onMore && <button type="button" class="plus-go" onClick={onMore}>En plein écran</button>}
+  </div>;
+}
+const isClimbUnit = it => ['Bloc', 'Essai', 'Voie'].includes(it.unit) && it.n > 1;
 const climbable = (b, it) => !it.timer && it.n > 1 && it.rest > 0 && ['Bloc', 'Essai', 'Voie'].includes(it.unit) && !STRENGTH.includes(b.kind);
 
 /* ---------- Une étape ---------- */
@@ -505,6 +516,7 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
     <Pips k={k} b={b} it={it} color={color} onTick={nv => { if (it.rest && !T && nv < it.n) startRest(it.rest, 'Repos'); }} />
     {b.sub && !it.extra && <p class="small" style="margin-top:12px"><Rich text={b.sub} g /></p>}
     {askRir && <Reserve k={k} b={b} it={it} />}
+    {full && isClimbUnit(it) && <PlusChip k={k} b={b} it={it} onMore={openClimb && climbable(b, it) ? () => openClimb(b, it) : null} />}
     {full ? nextBtn : action}
     {!full && it.rest && !T && !(openClimb && climbable(b, it)) && <p class="small">{mmss(it.rest)} de repos se lancent tout seuls après chaque {it.unit === 'Bloc' ? 'bloc' : it.unit === 'Essai' ? 'essai' : 'série'}.</p>}
   </div>;
