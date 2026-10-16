@@ -226,8 +226,17 @@ struct BlockMenuSheet: View {
     let b: Block
     @Environment(\.dismiss) private var dismiss
     @State private var mode: String?
+    @State private var pick: String?
+    @State private var label = ""
+    @State private var det = ""
+    @State private var pct = ""
+    @State private var lib = ""
     var body: some View {
         let s = Store.shared, e = s.journal(k), st = PlanReader.blockState(e, b), t = D.today, name = plain(b.title)
+        let real = PlanReader(s).blocks(k).filter { !$0.isRest && $0.id != b.id && PlanReader.blockState(e, $0) == nil }
+        let isFirst = PlanReader(s).blocks(k).first { !$0.isRest && PlanReader.blockState(e, $0) == nil }?.id == b.id
+        let hasOrder = !(e["order"]?.array ?? []).isEmpty
+        let swappable = b.items.filter { !$0.isWarmup && !$0.isCooldown && !$0.opt }
         let days = Core.shared.call("plan.moveTargets", .str(k))?.array.compactMap { $0.string } ?? [], apart = e["apart"]?[b.id]
         let coach = s.isSelf && !s.coaches.isEmpty
         NavigationStack {
@@ -268,6 +277,23 @@ struct BlockMenuSheet: View {
                             }
                         }
                     }
+                    if st == nil, !real.isEmpty {
+                        OptionRow(title: "Je l’ai fait à un autre moment de la séance", text: "Par exemple après la grimpe au lieu d’avant. Le plan ne change pas, ton journal garde l’ordre réel.", icon: "arrow.up.arrow.down", on: mode == "order") { mode = mode == "order" ? nil : "order" }
+                        if mode == "order" {
+                            if !isFirst { choice("En premier", nil) { JournalWriter(s).placeBlock(k, b, after: nil); done(name + " : fait en premier") } }
+                            ForEach(real) { x in
+                                choice("Juste après", plain(x.title)) { JournalWriter(s).placeBlock(k, b, after: x.id); done(name + " : fait après " + plain(x.title).lowercased()) }
+                            }
+                            if hasOrder { choice("Remettre l’ordre prévu", nil) { JournalWriter(s).resetOrder(k); done("Ordre prévu remis") } }
+                        }
+                    }
+                    if st == nil, !swappable.isEmpty {
+                        OptionRow(title: "J’ai fait un autre exercice", text: "Matériel absent, autre choix : tu notes ce que tu as fait à la place. Le plan ne change pas.", icon: "arrow.triangle.swap", on: mode == "swap") {
+                            mode = mode == "swap" ? nil : "swap"
+                            if mode == "swap", swappable.count == 1 { openSwap(swappable[0], e) }
+                        }
+                        if mode == "swap" { swapForm(swappable, e) }
+                    }
                     if st != "skip" {
                         OptionRow(title: "Je ne le fais pas", text: "La raison est gardée dans le journal" + (coach ? " et ton coach la voit." : "."), icon: "xmark.circle", on: mode == "skip", danger: true) { mode = mode == "skip" ? nil : "skip" }
                         if mode == "skip" {
@@ -288,6 +314,72 @@ struct BlockMenuSheet: View {
         }
     }
     private func done(_ msg: String) { Haptics.success(); toast(msg); dismiss() }
+
+    private func choice(_ title: String, _ sub: String?, _ a: @escaping () -> Void) -> some View {
+        Button(action: a) {
+            HStack {
+                Text(title).font(Typo.sans(15, .semibold)).foregroundStyle(Palette.ink)
+                if let sub { Text(sub).font(Typo.sans(14)).foregroundStyle(Palette.muted).lineLimit(1) }
+                Spacer()
+            }
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(PressStyle())
+    }
+    private func openSwap(_ it: Item, _ e: JSON) {
+        let x = e["swap"]?[PlanReader.itemKey(b, it)]
+        pick = it.id
+        label = x?["label"]?.string ?? ""
+        det = x?["det"]?.string ?? ""
+        lib = x?["lib"]?.string ?? ""
+        let planned = b.raw["finger"]?["unit"]?.string == "%" ? b.raw["finger"]?["load"]?.double : nil
+        if let v = x?["pct"]?.double ?? planned { pct = Fmt.num(v) } else { pct = "" }
+    }
+    @ViewBuilder private func swapForm(_ items: [Item], _ e: JSON) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if items.count > 1 {
+                Flow(spacing: 6) { ForEach(items) { x in Chip(label: plain(x.label), on: pick == x.id) { openSwap(x, e) } } }
+            }
+            if let cur = items.first(where: { $0.id == pick }) {
+                if let from = cur.swapFrom { Text("Fait à la place de : " + plain(from)).font(Typo.sans(13.5)).foregroundStyle(Palette.muted) }
+                let sugg = Array(Core.shared.constant("library.LIB").array.filter { $0["k"]?.string == b.kind && $0["id"]?.string != cur.lib }.prefix(8))
+                if !sugg.isEmpty {
+                    Flow(spacing: 6) {
+                        ForEach(Array(sugg.enumerated()), id: \.offset) { _, x in
+                            Chip(label: x["n"]?.string ?? "", on: false) {
+                                label = x["n"]?.string ?? ""; lib = x["id"]?.string ?? ""
+                                if det.isEmpty { det = x["c"]?.string ?? "" }
+                            }
+                        }
+                    }
+                }
+                swapField("Ce que tu as fait", "ex. Suspension 20 mm, pieds en appui", $label)
+                swapField("Détail (facultatif)", "ex. pieds au sol pour alléger, 10 s", $det)
+                swapField("% de ton max visé (facultatif)", "ex. 85", $pct, decimal: true)
+                Button("Enregistrer") {
+                    let l = label.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !l.isEmpty else { return }
+                    let p = Double(pct.replacingOccurrences(of: ",", with: "."))
+                    JournalWriter(Store.shared).setSwap(k, b, cur, label: l, det: det.trimmingCharacters(in: .whitespacesAndNewlines), pct: (p ?? 0) > 0 ? p : nil, lib: lib)
+                    done(l + " : fait à la place")
+                }
+                .buttonStyle(BigButton()).disabled(label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                if cur.swapFrom != nil {
+                    Button("Remettre l’exercice prévu") { JournalWriter(Store.shared).clearSwap(k, b, cur); done("Exercice prévu remis") }.buttonStyle(SmallButton(color: Palette.muted))
+                }
+            }
+        }
+    }
+    private func swapField(_ title: String, _ ph: String, _ text: Binding<String>, decimal: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+            TextField(ph, text: text)
+                .keyboardType(decimal ? .decimalPad : .default)
+                .font(Typo.sans(16)).padding(12)
+                .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+    }
 }
 
 // MARK: charges du finger lift
@@ -295,7 +387,7 @@ struct BlockMenuSheet: View {
 struct FingerCalcView: View {
     let k: String, b: Block
     var body: some View {
-        if b.kind == "doigts", let fc = Core.shared.call("plan.fingerCalc", b.raw, .str(k)) {
+        if b.kind == "doigts", !b.items.contains(where: { $0.swapFrom != nil }), let fc = Core.shared.call("plan.fingerCalc", b.raw, .str(k)) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(fc["text"]?.string ?? "").font(Typo.mono(14, .semibold)).foregroundStyle(Palette.kind("doigts"))
                 if let h = fc["hint"]?.string { Text(h).font(Typo.sans(12.5)).foregroundStyle(Palette.muted) }

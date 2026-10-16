@@ -421,6 +421,7 @@ struct ItemRow: View {
                     }
                     if let det = it.det { GlossText(det).font(Typo.sans(13.5)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
                     DemoLink(it: it)
+                    if let from = it.swapFrom { Text("Fait à la place de : " + plain(from)).font(Typo.sans(12.5, .medium)).foregroundStyle(Palette.accent) }
                     if let note = it.adjNote ?? (it.adjN0.flatMap { $0 != it.n ? "Adapté : \(it.n) au lieu de \($0)" : nil }) {
                         Text(note).font(Typo.sans(12.5, .medium)).foregroundStyle(Palette.accent)
                     }

@@ -435,7 +435,7 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
   const sk = b.id + ':' + items.map(x => x.id).join(',');
   useEffect(() => { setSub({ rep: 0, phase: 'heavy' }); }, [k, sk]);
   const it = items[0];
-  const fc = b.kind === 'doigts' ? fingerCalc(b, k) : null;
+  const fc = b.kind === 'doigts' && !(b.items || []).some(x => x.swap) ? fingerCalc(b, k) : null;
   const nextBtn = <button class="btn big ink" style="margin-top:18px" onClick={onNext}>{isLast ? 'Terminer la séance' : 'Étape suivante'}<Icon name="right" size={20} /></button>;
   const ttl = step.pair ? items.map(x => x.label).join(' + ') : step.group ? (b.timer && b.timer.name) || b.title : step.list || !it ? b.title : it.label;
   const head = <>
@@ -443,6 +443,7 @@ function StepBody({ k, step, startRest, openTimer, openClimb, onNext, isLast }) 
     <h2 class={'step-t' + (String(ttl).length > 34 ? ' long' : '')}><Rich text={ttl} /></h2>
     {!step.group && !step.list && !step.pair && it && it.det && <p class="step-d"><Rich text={it.det} g /></p>}
     {!step.group && !step.list && !step.pair && it && demoOf(it) && <a class="btn demo-b" href={demoOf(it)} target="_blank" rel="noopener noreferrer"><Icon name="play" size={16} />Voir la démo</a>}
+    {!step.group && !step.list && !step.pair && it && it.swap && <p class="adj-l" style="font-size:14px">Fait à la place de : {plainT(it.swap.from)}</p>}
     {!step.group && !step.list && !step.pair && it && it.adj && (it.adj.note || it.adj.n0 !== it.n) && <p class="adj-l" style="font-size:14px">{it.adj.note || 'Séance adaptée : ' + it.n + ' au lieu de ' + it.adj.n0}</p>}
     {!step.group && !step.list && !step.pair && it && it.warn && <p class="warn-l">{it.warn}</p>}
     {!step.group && !step.list && !step.pair && it && (STRENGTH.includes(b.kind) || climbable(b, it)) && it.id !== 'ech' && <LastTime k={k} it={it} />}

@@ -267,6 +267,7 @@
     blockState: () => blockState,
     blocks: () => blocks,
     cancelSession: () => cancelSession,
+    clearSwap: () => clearSwap,
     clone: () => clone,
     copyDay: () => copyDay,
     copyWeek: () => copyWeek,
@@ -291,11 +292,13 @@
     okUrl: () => okUrl,
     ownBlocks: () => ownBlocks,
     phaseOf: () => phaseOf,
+    placeBlock: () => placeBlock,
     plusN: () => plusN,
     progress: () => progress,
     rawBlocks: () => rawBlocks,
     removeLastWeek: () => removeLastWeek,
     renameExercise: () => renameExercise,
+    resetOrder: () => resetOrder,
     restoreSession: () => restoreSession,
     saveDay: () => saveDay,
     savePlan: () => savePlan,
@@ -307,6 +310,7 @@
     setDoneCount: () => setDoneCount,
     setLoadsOf: () => setLoadsOf,
     setPlus: () => setPlus,
+    setSwap: () => setSwap,
     setWeek: () => setWeek,
     setsText: () => setsText,
     skipLabel: () => skipLabel,
@@ -878,14 +882,65 @@
   };
   var _adjCache = /* @__PURE__ */ new Map();
   var blocks = (k) => {
-    const bl = rawBlocks(k), a = jget(k).adj;
-    if (!a || !a.items) return bl;
+    const bl = rawBlocks(k), j = jget(k), a = j.adj && j.adj.items ? j.adj : null, o = Array.isArray(j.order) && j.order.length ? j.order : null, s = j.swap && Object.keys(j.swap).length ? j.swap : null;
+    if (!a && !o && !s) return bl;
     const c = _adjCache.get(k);
-    if (c && c.bl === bl && c.a === a) return c.out;
-    const out = applyAdj(bl, a);
-    _adjCache.set(k, { bl, a, out });
+    if (c && c.bl === bl && c.a === a && c.o === o && c.s === s) return c.out;
+    let out = a ? applyAdj(bl, a) : bl;
+    if (s) out = applySwap(out, s);
+    if (o) out = applyOrder(out, o);
+    _adjCache.set(k, { bl, a, o, s, out });
     return out;
   };
+  function swapItem(it, x) {
+    const c = Object.assign({}, it, { label: x.label || it.label, det: [x.det, x.pct ? "\u2248 " + x.pct + " % de ton max" : ""].filter(Boolean).join(" \xB7 "), swap: { from: it.label, pct: x.pct || null } });
+    delete c.timer;
+    delete c.load;
+    delete c.unit_load;
+    delete c.repsBySet;
+    delete c.lib;
+    delete c.adj;
+    if (x.lib) c.lib = x.lib;
+    return c;
+  }
+  function applySwap(bl, s) {
+    return bl.map((b) => {
+      if (!(b.items || []).some((it) => s[b.id + "." + it.id])) return b;
+      return Object.assign({}, b, { items: b.items.map((it) => s[b.id + "." + it.id] ? swapItem(it, s[b.id + "." + it.id]) : it) });
+    });
+  }
+  function applyOrder(bl, order) {
+    const rank = new Map(order.map((id, i) => [id, i]));
+    const slots = [], list = [];
+    bl.forEach((b, i) => {
+      if (b.kind !== "rest" && rank.has(b.id)) {
+        slots.push(i);
+        list.push(b);
+      }
+    });
+    list.sort((a, b) => rank.get(a.id) - rank.get(b.id));
+    const out = bl.slice();
+    slots.forEach((s, n) => {
+      out[s] = list[n];
+    });
+    return out;
+  }
+  function placeBlock(k, b, afterId) {
+    const ids2 = blocks(k).filter((x) => x.kind !== "rest" && x.id !== b.id).map((x) => x.id);
+    ids2.splice(afterId ? ids2.indexOf(afterId) + 1 : 0, 0, b.id);
+    jset(k, { order: ids2 });
+  }
+  var resetOrder = (k) => jset(k, { order: null });
+  function setSwap(k, b, it, x) {
+    const s = Object.assign({}, jget(k).swap);
+    s[itemKey(b, it)] = { label: x.label, det: x.det || null, pct: x.pct || null, lib: x.lib || null };
+    jset(k, { swap: s });
+  }
+  function clearSwap(k, b, it) {
+    const s = Object.assign({}, jget(k).swap);
+    delete s[itemKey(b, it)];
+    jset(k, { swap: Object.keys(s).length ? s : null });
+  }
   function adjItem(it, n, note) {
     const c = Object.assign({}, it, { adj: { n0: it.n, note: note || null } });
     if (n == null || n === it.n) return c;

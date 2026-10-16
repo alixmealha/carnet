@@ -216,6 +216,7 @@ struct StepView: View {
             if single, let it {
                 if let det = it.det { GlossText(det).font(Typo.sans(16)).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true) }
                 DemoLink(it: it, big: true)
+                if let from = it.swapFrom { Text("Fait à la place de : " + plain(from)).font(Typo.sans(14, .medium)).foregroundStyle(Palette.accent) }
                 if let note = it.adjNote ?? (it.adjN0.flatMap { $0 != it.n ? "Séance adaptée : \(it.n) au lieu de \($0)" : nil }) {
                     Text(note).font(Typo.sans(14, .medium)).foregroundStyle(Palette.accent)
                 }

@@ -49,6 +49,8 @@ struct Item: Identifiable, Equatable {
     /// Séance adaptée : nombre prévu à l'origine, note (« 25 min au lieu de 35 »)
     var adjN0: Int? { raw["adj"]?["n0"]?.int }
     var adjNote: String? { raw["adj"]?["note"]?.string }
+    /// Exercice fait à la place de celui du plan : nom de l'exercice prévu
+    var swapFrom: String? { raw["swap"]?["from"]?.string }
     var isWarmup: Bool { id == "ech" }
     var isCooldown: Bool { id == "rac" }
     var unitWord: String {
@@ -105,10 +107,15 @@ struct PlanReader {
 
     /// Blocs du jour, avec l'adaptation éventuelle (moins de temps, allégée) appliquée — comme la version web
     func blocks(_ k: String) -> [Block] {
-        let bl = rawBlocks(k)
-        let a = s.journal(k)["adj"]
-        guard let a, let items = a["items"]?.object else { return bl.map { Block(raw: $0) } }
-        var out: [Block] = []
+        let j = s.journal(k)
+        var arr = rawBlocks(k)
+        if let items = j["adj"]?["items"]?.object { arr = Self.applyAdj(arr, items) }
+        if let sw = j["swap"]?.object, !sw.isEmpty { arr = Self.applySwap(arr, sw) }
+        if let o = j["order"]?.array, !o.isEmpty { arr = Self.applyOrder(arr, o.compactMap { $0.string }) }
+        return arr.map { Block(raw: $0) }
+    }
+    private static func applyAdj(_ bl: [JSON], _ items: [String: JSON]) -> [JSON] {
+        var out: [JSON] = []
         for b in bl {
             let bid = b["id"]?.string ?? ""
             let g = items["b:" + bid]
@@ -125,8 +132,42 @@ struct PlanReader {
             if !(b["items"]?.array ?? []).isEmpty && its.isEmpty { continue }
             var nb = b; nb["items"] = .arr(its)
             if let g, hasTimer, let n = g["n"]?.int, var t = b["timer"] { t["sets"] = .num(Double(n)); nb["timer"] = t }
-            out.append(Block(raw: nb))
+            out.append(nb)
         }
+        return out
+    }
+    /// Exercice fait à la place de celui du plan : même clé (les séries cochées restent), sans minuteur ni charge en kilos
+    private static func applySwap(_ bl: [JSON], _ sw: [String: JSON]) -> [JSON] {
+        bl.map { b in
+            let bid = b["id"]?.string ?? ""
+            guard let its = b["items"]?.array, its.contains(where: { sw[bid + "." + ($0["id"]?.string ?? "")] != nil }) else { return b }
+            var nb = b
+            nb["items"] = .arr(its.map { it in
+                guard let x = sw[bid + "." + (it["id"]?.string ?? "")] else { return it }
+                var c = it
+                let pct = x["pct"]?.double
+                let parts = [x["det"]?.string, pct.map { "≈ \(Fmt.num($0)) % de ton max" }].compactMap { $0 }.filter { !$0.isEmpty }
+                c["label"] = .str(x["label"]?.string ?? it["label"]?.string ?? "Exercice")
+                c["det"] = .str(parts.joined(separator: " · "))
+                c["swap"] = .obj(["from": it["label"] ?? .str("Exercice")])
+                for key in ["timer", "load", "unit_load", "repsBySet", "lib", "adj"] { c[key] = nil }
+                if let l = x["lib"]?.string, !l.isEmpty { c["lib"] = .str(l) }
+                return c
+            })
+            return nb
+        }
+    }
+    /// Ordre réellement suivi : les blocs listés reprennent, dans l'ordre noté, les places qu'ils occupent
+    private static func applyOrder(_ bl: [JSON], _ order: [String]) -> [JSON] {
+        var rank: [String: Int] = [:]
+        for (i, id) in order.enumerated() { rank[id] = i }
+        var slots: [Int] = [], list: [JSON] = []
+        for (i, b) in bl.enumerated() where b["kind"]?.string != "rest" {
+            if let id = b["id"]?.string, rank[id] != nil { slots.append(i); list.append(b) }
+        }
+        list.sort { (rank[$0["id"]?.string ?? ""] ?? 0) < (rank[$1["id"]?.string ?? ""] ?? 0) }
+        var out = bl
+        for (n, i) in slots.enumerated() { out[i] = list[n] }
         return out
     }
     private static func adjItem(_ it: JSON, _ n: Int?, _ note: String?) -> JSON {
@@ -241,6 +282,28 @@ struct JournalWriter {
         let v = max(0, min(99, val))
         if v > 0 { plus[key] = .num(Double(v)) } else { plus.removeValue(forKey: key) }
         s.jset(k, ["plus": plus.isEmpty ? nil : .obj(plus)])
+    }
+    /// Faire un bloc après un autre (after : le bloc qui le précède, nil pour en premier) : le plan ne change pas
+    func placeBlock(_ k: String, _ b: Block, after: String?) {
+        var ids = PlanReader(s).blocks(k).filter { $0.kind != "rest" && $0.id != b.id }.map { $0.id }
+        let at = after.flatMap { ids.firstIndex(of: $0) }.map { $0 + 1 } ?? 0
+        ids.insert(b.id, at: at)
+        s.jset(k, ["order": .arr(ids.map { JSON.str($0) })])
+    }
+    func resetOrder(_ k: String) { s.jset(k, ["order": nil]) }
+    func setSwap(_ k: String, _ b: Block, _ it: Item, label: String, det: String, pct: Double?, lib: String?) {
+        var sw = s.journal(k)["swap"]?.object ?? [:]
+        var o: [String: JSON] = ["label": .str(label)]
+        if !det.isEmpty { o["det"] = .str(det) }
+        if let pct { o["pct"] = .num(pct) }
+        if let lib, !lib.isEmpty { o["lib"] = .str(lib) }
+        sw[PlanReader.itemKey(b, it)] = .obj(o)
+        s.jset(k, ["swap": .obj(sw)])
+    }
+    func clearSwap(_ k: String, _ b: Block, _ it: Item) {
+        var sw = s.journal(k)["swap"]?.object ?? [:]
+        sw.removeValue(forKey: PlanReader.itemKey(b, it))
+        s.jset(k, ["swap": sw.isEmpty ? nil : .obj(sw)])
     }
     func setLoad(_ k: String, _ b: Block, _ it: Item, _ v: Double) {
         let e = s.journal(k), key = PlanReader.itemKey(b, it)

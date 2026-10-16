@@ -14,11 +14,52 @@ export const rawBlocks = k => { const d = day(k); return d && d.blocks ? d.block
 // on revient à la séance prévue en retirant adj (et ça marche aussi quand le coach a verrouillé le plan).
 const _adjCache = new Map();
 export const blocks = k => {
-  const bl = rawBlocks(k), a = jget(k).adj;
-  if (!a || !a.items) return bl;
-  const c = _adjCache.get(k); if (c && c.bl === bl && c.a === a) return c.out;
-  const out = applyAdj(bl, a); _adjCache.set(k, { bl, a, out }); return out;
+  const bl = rawBlocks(k), j = jget(k), a = j.adj && j.adj.items ? j.adj : null, o = Array.isArray(j.order) && j.order.length ? j.order : null, s = j.swap && Object.keys(j.swap).length ? j.swap : null;
+  if (!a && !o && !s) return bl;
+  const c = _adjCache.get(k); if (c && c.bl === bl && c.a === a && c.o === o && c.s === s) return c.out;
+  let out = a ? applyAdj(bl, a) : bl;
+  if (s) out = applySwap(out, s);
+  if (o) out = applyOrder(out, o);
+  _adjCache.set(k, { bl, a, o, s, out }); return out;
 };
+// Exercice fait à la place de celui du plan (matériel absent, autre choix) : gardé dans le journal du jour, le plan reste intact.
+// Même clé d'exercice (les séries déjà cochées restent), mais sans minuteur ni charge en kilos du plan.
+function swapItem(it, x) {
+  const c = Object.assign({}, it, { label: x.label || it.label, det: [x.det, x.pct ? '≈ ' + x.pct + ' % de ton max' : ''].filter(Boolean).join(' · '), swap: { from: it.label, pct: x.pct || null } });
+  delete c.timer; delete c.load; delete c.unit_load; delete c.repsBySet; delete c.lib; delete c.adj;
+  if (x.lib) c.lib = x.lib;
+  return c;
+}
+function applySwap(bl, s) {
+  return bl.map(b => {
+    if (!(b.items || []).some(it => s[b.id + '.' + it.id])) return b;
+    return Object.assign({}, b, { items: b.items.map(it => s[b.id + '.' + it.id] ? swapItem(it, s[b.id + '.' + it.id]) : it) });
+  });
+}
+// Ordre réellement suivi : les blocs listés reprennent, dans l'ordre noté, les places qu'ils occupent ; les autres ne bougent pas
+function applyOrder(bl, order) {
+  const rank = new Map(order.map((id, i) => [id, i]));
+  const slots = [], list = [];
+  bl.forEach((b, i) => { if (b.kind !== 'rest' && rank.has(b.id)) { slots.push(i); list.push(b); } });
+  list.sort((a, b) => rank.get(a.id) - rank.get(b.id));
+  const out = bl.slice(); slots.forEach((s, n) => { out[s] = list[n]; });
+  return out;
+}
+// Faire un bloc avant ou après un autre : afterId = le bloc qui le précède (null : en premier)
+export function placeBlock(k, b, afterId) {
+  const ids = blocks(k).filter(x => x.kind !== 'rest' && x.id !== b.id).map(x => x.id);
+  ids.splice(afterId ? ids.indexOf(afterId) + 1 : 0, 0, b.id);
+  jset(k, { order: ids });
+}
+export const resetOrder = k => jset(k, { order: null });
+export function setSwap(k, b, it, x) {
+  const s = Object.assign({}, jget(k).swap); s[itemKey(b, it)] = { label: x.label, det: x.det || null, pct: x.pct || null, lib: x.lib || null };
+  jset(k, { swap: s });
+}
+export function clearSwap(k, b, it) {
+  const s = Object.assign({}, jget(k).swap); delete s[itemKey(b, it)];
+  jset(k, { swap: Object.keys(s).length ? s : null });
+}
 function adjItem(it, n, note) {
   const c = Object.assign({}, it, { adj: { n0: it.n, note: note || null } });
   if (n == null || n === it.n) return c;

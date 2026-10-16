@@ -203,7 +203,7 @@ export function ItemRow({ k, b, it, e, color }) {
   return (
     <div class={'it' + (full ? ' done' : '')}>
       <button type="button" class="ck" aria-pressed={full ? 'true' : 'false'} aria-label={it.label} onClick={() => setDone(full ? 0 : it.n)}>✓</button>
-      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed || varied ? ' chg' : '')}>{varied ? setsText(sl, ld.u) : ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}{e.falls && e.falls[key] ? ' · ' + e.falls[key] + ' chute' + (e.falls[key] > 1 ? 's' : '') : ''}</em>}</b>{it.det && <span><Rich text={it.det} g /></span>}{demoOf(it) && <a class="demo-l" href={demoOf(it)} target="_blank" rel="noopener noreferrer" onClick={ev => ev.stopPropagation()}>▶ Démo</a>}{it.adj && (it.adj.note || it.adj.n0 !== it.n) && <span class="adj-l">{it.adj.note || 'Adapté : ' + it.n + ' au lieu de ' + it.adj.n0}</span>}{it.warn && <span class="warn-l">{it.warn}</span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} />{it.id === 'ech' && <Warmup k={k} b={b} fold />}</div>
+      <div class="it-txt"><b><i class="lt" style="font-style:normal"><Rich text={it.label} />{ld && <span class={'load-tag' + (ld.changed || varied ? ' chg' : '')}>{varied ? setsText(sl, ld.u) : ld.text}</span>}</i>{it.n > 1 && <em class="pn" style="font-style:normal">{v}/{it.n}{e.falls && e.falls[key] ? ' · ' + e.falls[key] + ' chute' + (e.falls[key] > 1 ? 's' : '') : ''}</em>}</b>{it.det && <span><Rich text={it.det} g /></span>}{demoOf(it) && <a class="demo-l" href={demoOf(it)} target="_blank" rel="noopener noreferrer" onClick={ev => ev.stopPropagation()}>▶ Démo</a>}{it.swap && <span class="adj-l">Fait à la place de : {it.swap.from}</span>}{it.adj && (it.adj.note || it.adj.n0 !== it.n) && <span class="adj-l">{it.adj.note || 'Adapté : ' + it.n + ' au lieu de ' + it.adj.n0}</span>}{it.warn && <span class="warn-l">{it.warn}</span>}<LastLine k={k} b={b} it={it} ld={ld} full={full} />{it.id === 'ech' && <Warmup k={k} b={b} fold />}</div>
       {it.n > 1 && <div class="pips" role="group" aria-label={it.label + ' : ' + v + ' sur ' + it.n}>
         {Array.from({ length: it.n }, (_, i) => i + 1).map(i => <button type="button" class="pip" style={'--c:' + color} aria-pressed={i <= v ? 'true' : 'false'} aria-label={(it.unit || 'Série') + ' ' + i} onClick={() => setDone(v === i ? i - 1 : i)}>{i}</button>)}
       </div>}
@@ -258,7 +258,7 @@ function SessionCard({ k, onStart, onEdit, ro }) {
         {bl.length === 0 && <p class="small" style="margin:0">Rien de prévu ce jour-là.</p>}
         <fieldset class="ro stack" disabled={ro}>
           {bl.map(b => {
-            const color = 'var(--k-' + (b.kind === 'rest' ? 'rest' : b.kind) + ')', fc = b.kind === 'doigts' ? fingerCalc(b, k) : null, bs = blockState(e, b), off = bs === 'moved' || bs === 'skip';
+            const color = 'var(--k-' + (b.kind === 'rest' ? 'rest' : b.kind) + ')', fc = b.kind === 'doigts' && !(b.items || []).some(x => x.swap) ? fingerCalc(b, k) : null, bs = blockState(e, b), off = bs === 'moved' || bs === 'skip';
             return (
               <div class={'blk' + (off ? ' off' : bs === 'apart' ? ' apart' : '')}>
                 <span class="tape" style={'background:' + color} />
