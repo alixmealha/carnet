@@ -53,6 +53,14 @@ final class Backend {
             var r = URLRequest(url: Config.supabaseURL.appendingPathComponent("auth/v1/logout"))
             r.httpMethod = "POST"; r.setValue(Config.anonKey, forHTTPHeaderField: "apikey"); r.setValue("Bearer " + t, forHTTPHeaderField: "Authorization")
             urlSession.dataTask(with: r).resume()
+            // cet iPhone ne reçoit plus les notifications de ce compte
+            if let tok = Push.token {
+                var u = URLRequest(url: Config.supabaseURL.appendingPathComponent("rest/v1/rpc/unregister_apns"))
+                u.httpMethod = "POST"; u.setValue(Config.anonKey, forHTTPHeaderField: "apikey"); u.setValue("Bearer " + t, forHTTPHeaderField: "Authorization")
+                u.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                u.httpBody = try? JSONSerialization.data(withJSONObject: ["tok": tok])
+                urlSession.dataTask(with: u).resume()
+            }
         }
         session = nil
     }

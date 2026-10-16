@@ -3,6 +3,7 @@ import UserNotifications
 
 @main
 struct AliptoApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     init() {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
         if Launch.demo {

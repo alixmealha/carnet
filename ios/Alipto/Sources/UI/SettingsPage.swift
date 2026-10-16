@@ -205,6 +205,7 @@ private struct RemindersSection: View {
         Task { @MainActor in
             if enabled { _ = await Reminders.requestAuth() }
             status = await Reminders.status()
+            Push.refreshIfAllowed()
             Reminders.reschedule()
         }
     }

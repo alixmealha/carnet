@@ -34,6 +34,7 @@ targets:
         com.apple.security.application-groups: [group.app.alipto]
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+        aps-environment: development
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.alipto.Alipto

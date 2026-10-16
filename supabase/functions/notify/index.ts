@@ -61,6 +61,33 @@ export async function sendPush(sub, message, env) {
   });
 }
 
+/* ---------- APNs (appli iPhone) ---------- */
+// Secrets : APNS_KEY (contenu du fichier .p8), APNS_KEY_ID, APNS_TEAM_ID ; APNS_TOPIC facultatif (défaut : app.alipto.Alipto).
+let apnsCache = { jwt: '', at: 0 };
+async function apnsJwt() {
+  if (apnsCache.jwt && Date.now() - apnsCache.at < 40 * 60000) return apnsCache.jwt;
+  const pem = (env('APNS_KEY', '') || '').replace(/\\n/g, '\n').replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  const key = await crypto.subtle.importKey('pkcs8', Uint8Array.from(atob(pem), c => c.charCodeAt(0)), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const h = b64u.enc(te.encode(JSON.stringify({ alg: 'ES256', kid: env('APNS_KEY_ID') })));
+  const c = b64u.enc(te.encode(JSON.stringify({ iss: env('APNS_TEAM_ID'), iat: Math.floor(Date.now() / 1000) })));
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, te.encode(h + '.' + c));
+  apnsCache = { jwt: h + '.' + c + '.' + b64u.enc(sig), at: Date.now() };
+  return apnsCache.jwt;
+}
+const apnsReady = () => !!(env('APNS_KEY') && env('APNS_KEY_ID') && env('APNS_TEAM_ID'));
+async function sendApns(row, msg, extra) {
+  const host = row.environment === 'sandbox' ? 'api.sandbox.push.apple.com' : 'api.push.apple.com';
+  const payload = Object.assign({ aps: { alert: { title: msg.title, body: msg.body }, sound: 'default', 'thread-id': msg.tag } }, extra);
+  return fetch('https://' + host + '/3/device/' + row.token, {
+    method: 'POST',
+    headers: {
+      authorization: 'bearer ' + await apnsJwt(), 'apns-topic': env('APNS_TOPIC', 'app.alipto.Alipto'),
+      'apns-push-type': 'alert', 'apns-priority': '10', 'apns-collapse-id': String(msg.tag || '').slice(0, 64), 'content-type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
 /* ---------- Contenu des notifications ---------- */
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -138,7 +165,25 @@ export async function handle(req) {
       if (r.status === 404 || r.status === 410) await rest('push_subs?endpoint=eq.' + encodeURIComponent(s.endpoint), { method: 'DELETE' });
     } catch (e) { out.push(String(e)); }
   }
-  return new Response(JSON.stringify({ sent: out }), { headers: { 'Content-Type': 'application/json' } });
+  // appli iPhone (APNs) : « a » = l'athlète concerné, quand le message part vers le coach
+  const apns = [];
+  if (apnsReady()) {
+    try {
+      const toks = await rest('apns_tokens?select=token,environment&user_id=in.(' + targets.join(',') + ')');
+      const extra = Object.assign({ d: day }, targets.length === 1 && targets[0] === uid ? {} : { a: uid });
+      for (const t of toks) {
+        try {
+          const r = await sendApns(t, msg, extra);
+          apns.push(r.status);
+          if (r.status !== 200) {
+            const reason = String((await r.json().catch(() => ({}))).reason || '');
+            if (r.status === 410 || /BadDeviceToken|Unregistered|DeviceTokenNotForTopic/.test(reason)) await rest('apns_tokens?token=eq.' + encodeURIComponent(t.token), { method: 'DELETE' });
+          }
+        } catch (e) { apns.push(String(e)); }
+      }
+    } catch (e) { apns.push(String(e)); }
+  }
+  return new Response(JSON.stringify({ sent: out, apns }), { headers: { 'Content-Type': 'application/json' } });
 }
 
 Deno.serve(handle);

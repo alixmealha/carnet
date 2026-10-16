@@ -42,6 +42,7 @@ struct RootView: View {
                 Reminders.reschedule()
                 if Health.shared.auto { Task { _ = await Health.shared.importNight(D.today) } }
                 if Whoop.shared.wanted { Task { await Whoop.shared.sync(days: 3) } }
+                Push.refreshIfAllowed()
             }
             if p == .background { WidgetSync.write(); Reminders.reschedule() }
         }
@@ -108,7 +109,7 @@ struct MainTabs: View {
         .fullScreenCover(item: $app.session) { ref in
             SessionModeView(ref: ref)
         }
-        .onAppear(perform: coachStart)
+        .onAppear { coachStart(); Push.offerOnce() }
         .onChange(of: store.athletes) { _, _ in coachStart() }
     }
     /// Un coach n'a pas de carnet : il ouvre sur ses athlètes, avec le carnet du premier
