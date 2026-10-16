@@ -1,0 +1,300 @@
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Native.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/NutritionView.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Model/Plan.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/PlanEditors.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Model/PlanOps.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/PlanTab.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/ProfilePage.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Push.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Reminders.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/ReperesView.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Shared/RestActivity.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/App/RootView.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Logic/Rules.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/SessionMenu.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal arm64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/SessionMode.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 Compiling\ Account.swift,\ Adapt.swift,\ AdminView.swift,\ AliptoApp.swift,\ AthletesView.swift,\ Backend.swift,\ BuilderView.swift,\ Config.swift,\ Core.swift,\ Dates.swift,\ DayCards.swift,\ DayDetail.swift,\ DayExtras.swift,\ DemoData.swift,\ JSON.swift,\ Kit.swift,\ LevelsForm.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Account.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Logic/Adapt.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/AdminView.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/App/AliptoApp.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/AthletesView.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Backend.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/BuilderView.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Config.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Core.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Logic/Dates.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/DayCards.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/DayDetail.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/DayExtras.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Demo/DemoData.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/JSON.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/Kit.swift /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/LevelsForm.swift (in target 'Alipto' from project 'Alipto')
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Account.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Logic/Adapt.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/AdminView.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/App/AliptoApp.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/AthletesView.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Backend.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/BuilderView.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Config.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/Core.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Logic/Dates.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/DayCards.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/DayDetail.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/DayExtras.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Demo/DemoData.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/Core/JSON.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/Kit.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftCompile normal x86_64 /Users/runner/work/carnet/carnet/ios/Alipto/Sources/UI/LevelsForm.swift (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling Account.swift, Adapt.swift, AdminView.swift, AliptoApp.swift, AthletesView.swift, Backend.swift, BuilderView.swift, Config.swift, Core.swift, Dates.swift, DayCards.swift, DayDetail.swift, DayExtras.swift, DemoData.swift, JSON.swift, Kit.swift, LevelsForm.swift (in target 'Alipto' from project 'Alipto')
+
+SwiftDriverJobDiscovery normal x86_64 Compiling LoginView.swift, MoreView.swift, Native.swift, NutritionView.swift, Plan.swift, PlanEditors.swift, PlanOps.swift, PlanTab.swift, ProfilePage.swift, Push.swift, Reminders.swift, ReperesView.swift, RestActivity.swift, RootView.swift, Rules.swift, SessionMenu.swift, SessionMode.swift (in target 'Alipto' from project 'Alipto')
+
+ExtractAppIntentsMetadata (in target 'AliptoWidgets' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name AliptoWidgets --sdk-root /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk --xcode-version 16F6 --platform-family iOS --deployment-target 17.0 --bundle-identifier app.alipto.Alipto.Widgets --output /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex --target-triple arm64-apple-ios17.0-simulator --target-triple x86_64-apple-ios17.0-simulator --binary-file /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex/AliptoWidgets --dependency-file /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/Objects-normal/arm64/AliptoWidgets_dependency_info.dat --dependency-file /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/Objects-normal/x86_64/AliptoWidgets_dependency_info.dat --stringsdata-file /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --stringsdata-file /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/Objects-normal/x86_64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/Objects-normal/arm64/AliptoWidgets.SwiftFileList --source-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/Objects-normal/x86_64/AliptoWidgets.SwiftFileList --metadata-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/AliptoWidgets.DependencyMetadataFileList --static-metadata-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/AliptoWidgets.DependencyStaticMetadataFileList --swift-const-vals-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/Objects-normal/arm64/AliptoWidgets.SwiftConstValuesFileList --swift-const-vals-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/Objects-normal/x86_64/AliptoWidgets.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-10-16 20:34:03.287 appintentsmetadataprocessor[10179:34012] Starting appintentsmetadataprocessor export
+2026-10-16 20:34:03.362 appintentsmetadataprocessor[10179:34012] Extracted no relevant App Intents symbols, skipping writing output
+
+AppIntentsSSUTraining (in target 'AliptoWidgets' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex/Info.plist --temp-dir-path /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/ssu --bundle-id app.alipto.Alipto.Widgets --product-path /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex --extracted-metadata-path /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex/Metadata.appintents --metadata-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/AliptoWidgets.build/AliptoWidgets.DependencyMetadataFileList --archive-ssu-assets
+2026-10-16 20:34:03.393 appintentsnltrainingprocessor[10245:34162] Parsing options for appintentsnltrainingprocessor
+2026-10-16 20:34:03.394 appintentsnltrainingprocessor[10245:34162] No AppShortcuts found - Skipping.
+
+RegisterExecutionPolicyException /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex (in target 'AliptoWidgets' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-RegisterExecutionPolicyException /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex
+
+Touch /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex (in target 'AliptoWidgets' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /usr/bin/touch -c /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex
+
+Ld /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/__preview.dylib normal x86_64 (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target x86_64-apple-ios17.0-simulator -dynamiclib -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -F/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -install_name @rpath/Alipto.debug.dylib -dead_strip -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto_dependency_info.dat -o /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/__preview.dylib
+
+Ld /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/__preview.dylib normal arm64 (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -dynamiclib -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -F/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -install_name @rpath/Alipto.debug.dylib -dead_strip -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto_dependency_info.dat -o /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/__preview.dylib
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/OFL-IBMPlex.txt /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/OFL-IBMPlex.txt (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/OFL-IBMPlex.txt /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CreateUniversalBinary /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/__preview.dylib normal arm64\ x86_64 (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo -create /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/__preview.dylib /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/__preview.dylib -output /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/__preview.dylib
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/OFL-BigShoulders.txt /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/OFL-BigShoulders.txt (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/OFL-BigShoulders.txt /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/IBMPlexSans-SemiBold.ttf /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexSans-SemiBold.ttf (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexSans-SemiBold.ttf /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/IBMPlexSans-Regular.ttf /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexSans-Regular.ttf (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexSans-Regular.ttf /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/IBMPlexSans-Medium.ttf /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexSans-Medium.ttf (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexSans-Medium.ttf /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/IBMPlexSans-Bold.ttf /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexSans-Bold.ttf (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexSans-Bold.ttf /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/IBMPlexMono-SemiBold.ttf /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexMono-SemiBold.ttf (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexMono-SemiBold.ttf /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/IBMPlexMono-Regular.ttf /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexMono-Regular.ttf (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexMono-Regular.ttf /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/IBMPlexMono-Medium.ttf /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexMono-Medium.ttf (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/IBMPlexMono-Medium.ttf /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Core /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Core (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Core /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+CpResource /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/BigShouldersDisplay-ExtraBold.ttf /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/BigShouldersDisplay-ExtraBold.ttf (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/runner/work/carnet/carnet/ios/Alipto/Resources/Fonts/BigShouldersDisplay-ExtraBold.ttf /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+SwiftDriverJobDiscovery normal arm64 Compiling LoginView.swift, MoreView.swift, Native.swift, NutritionView.swift, Plan.swift, PlanEditors.swift, PlanOps.swift, PlanTab.swift, ProfilePage.swift, Push.swift, Reminders.swift, ReperesView.swift, RestActivity.swift, RootView.swift, Rules.swift, SessionMenu.swift, SessionMode.swift (in target 'Alipto' from project 'Alipto')
+
+SwiftDriver\ Compilation Alipto normal arm64 com.apple.xcode.tools.swift.compiler (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-Swift-Compilation -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Alipto -Onone -enforce-exclusivity\=checked @/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/runner/work/carnet/carnet/ios/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/work/carnet/carnet/ios/build/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -F /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/carnet/carnet/ios/build/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/carnet/carnet/ios/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-generated-files.hmap -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-own-target-headers.hmap -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-project-headers.hmap -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/DerivedSources-normal/arm64 -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/DerivedSources/arm64 -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto-Swift.h -working-directory /Users/runner/work/carnet/carnet/ios -experimental-emit-module-separately -disable-cmo
+
+Ld /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/Alipto.debug.dylib normal arm64 (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -dynamiclib -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -F/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -filelist /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto.LinkFileList -install_name @rpath/Alipto.debug.dylib -Xlinker -rpath -Xlinker @executable_path/Frameworks -dead_strip -Xlinker -object_path_lto -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto.swiftmodule -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -o /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/Alipto.debug.dylib
+
+ConstructStubExecutorLinkFileList /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-ExecutorLinkFileList-normal-arm64.txt (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    construct-stub-executor-link-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/Alipto.debug.dylib /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-ExecutorLinkFileList-normal-arm64.txt
+note: Using stub executor library with Swift entry point. (in target 'Alipto' from project 'Alipto')
+
+Ld /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/Alipto normal arm64 (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -F/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker @executable_path/Frameworks -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-ExecutorLinkFileList-normal-arm64.txt /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/Alipto.debug.dylib -o /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/Alipto
+
+SwiftDriverJobDiscovery normal x86_64 Compiling Account.swift, Adapt.swift, AdminView.swift, AliptoApp.swift, AthletesView.swift, Backend.swift, BuilderView.swift, Config.swift, Core.swift, Dates.swift, DayCards.swift, DayDetail.swift, DayExtras.swift, DemoData.swift, JSON.swift, Kit.swift, LevelsForm.swift (in target 'Alipto' from project 'Alipto')
+
+SwiftDriver\ Compilation Alipto normal x86_64 com.apple.xcode.tools.swift.compiler (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-Swift-Compilation -- /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name Alipto -Onone -enforce-exclusivity\=checked @/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -target x86_64-apple-ios17.0-simulator -g -module-cache-path /Users/runner/work/carnet/carnet/ios/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/runner/work/carnet/carnet/ios/build/Index.noindex/DataStore -swift-version 5 -I /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -F /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -c -j3 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/runner/work/carnet/carnet/ios/build/SDKStatCaches.noindex/iphonesimulator18.5-22F76-96ae0914227b19deccb34b33ba7b5dea.sdkstatcache -output-file-map /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/runner/work/carnet/carnet/ios/build/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto_const_extract_protocols.json -Xcc -iquote -Xcc /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-generated-files.hmap -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-own-target-headers.hmap -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-all-target-headers.hmap -Xcc -iquote -Xcc /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-project-headers.hmap -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/DerivedSources-normal/x86_64 -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/DerivedSources/x86_64 -Xcc -I/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto-Swift.h -working-directory /Users/runner/work/carnet/carnet/ios -experimental-emit-module-separately -disable-cmo
+
+Ld /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/Alipto.debug.dylib normal x86_64 (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target x86_64-apple-ios17.0-simulator -dynamiclib -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -F/Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -filelist /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto.LinkFileList -install_name @rpath/Alipto.debug.dylib -Xlinker -rpath -Xlinker @executable_path/Frameworks -dead_strip -Xlinker -object_path_lto -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto.swiftmodule -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -o /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/Alipto.debug.dylib
+
+ConstructStubExecutorLinkFileList /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-ExecutorLinkFileList-normal-x86_64.txt (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    construct-stub-executor-link-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/Alipto.debug.dylib /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-ExecutorLinkFileList-normal-x86_64.txt
+note: Using stub executor library with Swift entry point. (in target 'Alipto' from project 'Alipto')
+
+CreateUniversalBinary /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Alipto.debug.dylib normal arm64\ x86_64 (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo -create /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/Alipto.debug.dylib /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/Alipto.debug.dylib -output /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Alipto.debug.dylib
+
+Ld /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/Alipto normal x86_64 (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target x86_64-apple-ios17.0-simulator -isysroot /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk -O0 -L/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -F/Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker @executable_path/Frameworks -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-DebugDylibPath-normal-x86_64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-DebugDylibInstallName-normal-x86_64.txt -Xlinker -filelist -Xlinker /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto-ExecutorLinkFileList-normal-x86_64.txt /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/Alipto.debug.dylib -o /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/Alipto
+
+CreateUniversalBinary /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Alipto normal arm64\ x86_64 (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo -create /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Binary/Alipto /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Binary/Alipto -output /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Alipto
+
+Copy /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/PlugIns/AliptoWidgets.appex /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks -remove-static-executable /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/AliptoWidgets.appex /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/PlugIns
+
+ProcessInfoPlistFile /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Info.plist /Users/runner/work/carnet/carnet/ios/Alipto/Info.plist (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-infoPlistUtility /Users/runner/work/carnet/carnet/ios/Alipto/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/PlugIns/AliptoWidgets.appex -o /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Info.plist
+
+ExtractAppIntentsMetadata (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name Alipto --sdk-root /Applications/Xcode_16.4.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator18.5.sdk --xcode-version 16F6 --platform-family iOS --deployment-target 17.0 --bundle-identifier app.alipto.Alipto --output /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app --target-triple arm64-apple-ios17.0-simulator --target-triple x86_64-apple-ios17.0-simulator --binary-file /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Alipto --dependency-file /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto_dependency_info.dat --dependency-file /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto_dependency_info.dat --stringsdata-file /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --stringsdata-file /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto.SwiftFileList --source-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto.SwiftFileList --metadata-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto.DependencyMetadataFileList --static-metadata-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto.DependencyStaticMetadataFileList --swift-const-vals-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/arm64/Alipto.SwiftConstValuesFileList --swift-const-vals-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Objects-normal/x86_64/Alipto.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-10-16 20:34:29.116 appintentsmetadataprocessor[10928:35746] Starting appintentsmetadataprocessor export
+2026-10-16 20:34:29.185 appintentsmetadataprocessor[10928:35746] Extracted no relevant App Intents symbols, skipping writing output
+
+CopySwiftLibs /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Alipto.debug.dylib --scan-folder /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Frameworks --scan-folder /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/PlugIns --scan-folder /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/SystemExtensions --scan-folder /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+ValidateEmbeddedBinary /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/PlugIns/AliptoWidgets.appex (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/usr/bin/embeddedBinaryValidationUtility /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/PlugIns/AliptoWidgets.appex -info-plist-path /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Info.plist
+
+AppIntentsSSUTraining (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /Applications/Xcode_16.4.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Info.plist --temp-dir-path /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/ssu --bundle-id app.alipto.Alipto --product-path /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app --extracted-metadata-path /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app/Metadata.appintents --metadata-file-list /Users/runner/work/carnet/carnet/ios/build/Build/Intermediates.noindex/Alipto.build/Debug-iphonesimulator/Alipto.build/Alipto.DependencyMetadataFileList --archive-ssu-assets
+2026-10-16 20:34:29.206 appintentsnltrainingprocessor[10930:35751] Parsing options for appintentsnltrainingprocessor
+2026-10-16 20:34:29.206 appintentsnltrainingprocessor[10930:35751] No AppShortcuts found - Skipping.
+
+RegisterExecutionPolicyException /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-RegisterExecutionPolicyException /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+Validate /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    builtin-validationUtility /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app -infoplist-subpath Info.plist
+
+Touch /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app (in target 'Alipto' from project 'Alipto')
+    cd /Users/runner/work/carnet/carnet/ios
+    /usr/bin/touch -c /Users/runner/work/carnet/carnet/ios/build/Build/Products/Debug-iphonesimulator/Alipto.app
+
+** BUILD SUCCEEDED **
+

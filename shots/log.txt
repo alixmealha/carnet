@@ -1,0 +1,40 @@
+2026-10-16 20:43:27.608 Df Alipto[27904:13ab4] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:27.609 Df Alipto[27904:13ada] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x60000210c050; token: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aapp.alipto.Alipto-default; status: ancestor> was:target
+2026-10-16 20:43:27.754 Df Alipto[27904:13ab4] [PrototypeTools:domain] Not observing PTDefaults on customer install.
+2026-10-16 20:43:27.956 Df Alipto[27904:13ab4] [com.apple.UIKit:_UIVisualStyleRegistry] Note: no default visual style class registered as fallback for stylable class UIActivityIndicatorView
+2026-10-16 20:43:27.956 Df Alipto[27904:13ab4] [com.apple.UIKit:_UIVisualStyleRegistry] Note: no default visual style class registered as fallback for stylable class UIActivityIndicatorView
+2026-10-16 20:43:28.017 Df Alipto[27904:13ab4] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:1 [1C5466BD-3778-4F42-86CC-A0B2DC178ABC] (reporting strategy default)>
+2026-10-16 20:43:28.018 Df Alipto[27904:13ab4] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:2 [283A45D2-6153-485E-B4F8-CA6406F900D0] (reporting strategy default)>
+2026-10-16 20:43:28.018 Df Alipto[27904:13ab4] [com.apple.network:activity] Set activity <nw_activity 50:1 [1C5466BD-3778-4F42-86CC-A0B2DC178ABC] (reporting strategy default)> as the global parent
+2026-10-16 20:43:28.019 Df Alipto[27904:13ab4] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:28.028 Df Alipto[27904:13ab4] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x10360b5b0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aapp.alipto.Alipto-default
+2026-10-16 20:43:28.030 Df Alipto[27904:13ab4] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:28.077 Df Alipto[27904:13ab4] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:28.078 Df Alipto[27904:13ab4] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:28.267 Df Alipto[27904:13ab4] [com.apple.network:activity] <nw_activity 50:1 [1C5466BD-3778-4F42-86CC-A0B2DC178ABC] (global parent) (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 1356ms
+2026-10-16 20:43:28.267 Df Alipto[27904:13ab4] [com.apple.network:activity] <nw_activity 50:2 [283A45D2-6153-485E-B4F8-CA6406F900D0] (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 1355ms
+2026-10-16 20:43:28.267 Df Alipto[27904:13ab4] [com.apple.network:activity] Unsetting the global parent activity <nw_activity 50:1 [1C5466BD-3778-4F42-86CC-A0B2DC178ABC] (global parent) (reporting strategy default) complete (reason success)>
+2026-10-16 20:43:38.656 Df Alipto[28398:13f85] [com.apple.dt.xctest:Default] Registering for test daemon availability notify post.
+2026-10-16 20:43:38.656 Df Alipto[28398:13f85] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-10-16 20:43:38.657 Df Alipto[28398:13f85] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-10-16 20:43:38.657 Df Alipto[28398:13f85] [com.apple.dt.xctest:Default] notify_get_state check indicated test daemon not ready.
+2026-10-16 20:43:38.678 Df Alipto[28398:13f85] [com.apple.BacklightServices:scenes] 0x600000c00fc0 setDelegate:<0x600000c02d60 _UIBacklightEnvironment> hasDelegate:YES for environment:sceneID:app.alipto.Alipto-default
+2026-10-16 20:43:38.682 Df Alipto[28398:13f85] [com.apple.UIKit:KeyWindow] Setting default evaluation strategy for UIUserInterfaceIdiomPhone to LastOneWins
+2026-10-16 20:43:38.682 Df Alipto[28398:13f85] [com.apple.UIKit:KeyWindow] Scene target of keyboard event deferring environment did change: 1; scene: UIWindowScene: 0x10560fdd0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aapp.alipto.Alipto-default
+2026-10-16 20:43:38.682 Df Alipto[28398:13f85] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x10560fdd0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aapp.alipto.Alipto-default
+2026-10-16 20:43:38.682 Df Alipto[28398:13f85] [com.apple.UIKit:KeyWindow] Setting default evaluation strategy for UIUserInterfaceIdiomPhone to SystemShellManaged
+2026-10-16 20:43:38.705 Df Alipto[28398:13f85] [com.apple.UIKit:KeyWindow] Window did become application key: UIWindow: 0x1056125d0; contextId: 0x4012C8C9; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aapp.alipto.Alipto-default
+2026-10-16 20:43:38.707 Df Alipto[28398:13f85] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:38.707 Df Alipto[28398:13fa2] [com.apple.BackBoard:EventDelivery] policyStatus:<BKSHIDEventDeliveryPolicyObserver: 0x600002110050; token: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aapp.alipto.Alipto-default; status: ancestor> was:target
+2026-10-16 20:43:38.849 Df Alipto[28398:13f85] [PrototypeTools:domain] Not observing PTDefaults on customer install.
+2026-10-16 20:43:39.206 Df Alipto[28398:13f85] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:1 [3A7C874F-86D4-44E0-A7B0-9A81C1D6A011] (reporting strategy default)>
+2026-10-16 20:43:39.206 Df Alipto[28398:13f85] [com.apple.network:activity] Create activity from XPC object <nw_activity 50:2 [5DB7A659-DC70-40A1-B7A8-173B63E42216] (reporting strategy default)>
+2026-10-16 20:43:39.206 Df Alipto[28398:13f85] [com.apple.network:activity] Set activity <nw_activity 50:1 [3A7C874F-86D4-44E0-A7B0-9A81C1D6A011] (reporting strategy default)> as the global parent
+2026-10-16 20:43:39.209 Df Alipto[28398:13f85] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:39.235 Df Alipto[28398:13f85] [com.apple.UIKit:KeyWindow] Scene became target of keyboard event deferring environment: UIWindowScene: 0x10560fdd0; scene identity: com.apple.frontboard.systemappservices/FBSceneManager:sceneID%3Aapp.alipto.Alipto-default
+2026-10-16 20:43:39.236 Df Alipto[28398:13f85] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:39.284 Df Alipto[28398:13f85] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:39.284 Df Alipto[28398:13f85] [com.apple.UIKit:AppLifecycle] sceneOfRecord: sceneID: sceneID:app.alipto.Alipto-default  persistentID: 198AE4BE-A785-4855-ADA6-90E82317CF1D
+2026-10-16 20:43:39.327 Df Alipto[28398:13f85] [com.apple.network:activity] <nw_activity 50:1 [3A7C874F-86D4-44E0-A7B0-9A81C1D6A011] (global parent) (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 1271ms
+2026-10-16 20:43:39.327 Df Alipto[28398:13f85] [com.apple.network:activity] <nw_activity 50:2 [5DB7A659-DC70-40A1-B7A8-173B63E42216] (reporting strategy default) complete (reason success)> complete with reason 2 (success), duration 1270ms
+2026-10-16 20:43:39.327 Df Alipto[28398:13f85] [com.apple.network:activity] Unsetting the global parent activity <nw_activity 50:1 [3A7C874F-86D4-44E0-A7B0-9A81C1D6A011] (global parent) (reporting strategy default) complete (reason success)>
