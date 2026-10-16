@@ -10,6 +10,7 @@ import * as adapt from '../../src/lib/adapt.js';
 import * as stats from '../../src/lib/stats.js';
 import * as tests from '../../src/lib/tests.js';
 import * as levels from '../../src/lib/levels.js';
+import * as force from '../../src/lib/force.js';
 import * as history from '../../src/lib/history.js';
 import * as quantify from '../../src/lib/quantify.js';
 import * as records from '../../src/lib/records.js';
@@ -40,7 +41,7 @@ if (typeof globalThis.fetch !== 'function') {
   });
 }
 
-const mods = { store, dates, plan, rules, insights, adapt, stats, tests, levels, history, quantify, records, week, warmup, activity, grades, library, sports, needs, builder, nutrition, glossary, sources, io, md, whoop, extra };
+const mods = { store, dates, plan, rules, insights, adapt, stats, tests, levels, force, history, quantify, records, week, warmup, activity, grades, library, sports, needs, builder, nutrition, glossary, sources, io, md, whoop, extra };
 
 // Sets et Maps deviennent des listes / objets ; les fonctions disparaissent (comme dans un export JSON)
 function replacer(_k, v) {

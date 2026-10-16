@@ -226,5 +226,22 @@ ok('Whoop : séances déjà remplies non écrasées', call('store.jget', wd).dur
   const hn = call('builder.programNotes', call('builder.generate', Object.assign({}, base, swim, { goal: 'aero', days: [0, 2, 4] })));
   ok('notes : formats et source natation', hn.includes('Wakayoshi'), hn.slice(-160));
 }
+
+// ---- Capteur de force (Tindeq) : analyse des mesures
+{
+  const gen = (f, dur) => { const o = []; for (let t = 0; t < dur; t += 0.0125) o.push([Math.round(t * 10000) / 10000, f(t)]); return o; };
+  // force max : montée en 1 s à 42 kg, plateau, un pic de 1 échantillon à 60 kg (parasite) à 3 s
+  const mx = call('force.maxTest', gen(t => (t === 3 ? 60 : Math.min(42, 42 * t) + 0.2), 10));
+  ok('force max : pic lissé (le parasite d’un échantillon est écarté)', mx && mx.peak > 41 && mx.peak < 44, JSON.stringify(mx));
+  ok('force max : tenue sur 5 s', mx.hold5 > 38 && mx.hold5 <= 43, String(mx.hold5));
+  // force critique : 24 tractions de 7 s / 3 s qui décroissent de 30 à 20 kg, 0,3 kg au repos
+  const cfS = gen(t => { const i = Math.floor(t / 10), r = t - i * 10; return r < 7 ? 30 - i * (10 / 23) : 0.3; }, 240);
+  const cf = call('force.cfTest', cfS);
+  const last6 = [18, 19, 20, 21, 22, 23].map(i => 30 - i * (10 / 23)).reduce((a, b) => a + b, 0) / 6;
+  ok('force critique : moyenne des 6 dernières tractions', cf && Math.abs(cf.cf - last6) < 0.3 && cf.complete && cf.reps.length === 24, JSON.stringify({ cf: cf && cf.cf, attendu: last6.toFixed(1), pic: cf && cf.pic }));
+  ok('force critique : test interrompu trop tôt refusé', call('force.cfTest', cfS.filter(s => s[0] < 40)) === null);
+  ok('force critique : départ décalé de 2 s détecté', Math.abs(call('force.cfTest', cfS.map(s => [s[0] + 2, s[1]])).cf - cf.cf) < 0.2);
+  ok('capteur : tests reliés', call('force.tindeqKind', 'cf') === 'cf' && call('force.tindeqKind', 'fmax-semi') === 'max' && call('force.tindeqKind', 'vma') === null);
+}
 console.log(fails ? fails + ' échec(s)' : 'Tout est bon');
 process.exit(fails ? 1 : 0);

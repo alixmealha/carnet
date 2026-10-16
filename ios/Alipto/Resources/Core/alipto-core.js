@@ -2939,6 +2939,65 @@
     };
   }
 
+  // src/lib/force.js
+  var force_exports = {};
+  __export(force_exports, {
+    TINDEQ_TESTS: () => TINDEQ_TESTS,
+    cfTest: () => cfTest,
+    maxTest: () => maxTest,
+    smooth: () => smooth,
+    startOf: () => startOf,
+    tindeqKind: () => tindeqKind
+  });
+  function smooth(samples, win = 0.25) {
+    const out = [];
+    let j = 0, sum = 0;
+    for (let i = 0; i < samples.length; i++) {
+      sum += samples[i][1];
+      while (samples[i][0] - samples[j][0] > win) {
+        sum -= samples[j][1];
+        j++;
+      }
+      out.push([samples[i][0], sum / (i - j + 1)]);
+    }
+    return out;
+  }
+  var r1 = (x) => Math.round(x * 10) / 10;
+  function startOf(samples) {
+    if (!samples.length) return null;
+    const pk = Math.max(...samples.map((s2) => s2[1])), thr = Math.max(2, pk * 0.08);
+    const s = samples.find((x) => x[1] >= thr);
+    return s ? s[0] : null;
+  }
+  function maxTest(samples) {
+    if (samples.length < 5) return null;
+    const sm = smooth(samples), peak = Math.max(...sm.map((s) => s[1]));
+    if (!(peak > 0)) return null;
+    const sm5 = smooth(samples, 5);
+    let hold = 0;
+    const t0 = startOf(samples) || 0;
+    for (const s of sm5) if (s[0] - t0 >= 4.9 && s[1] > hold) hold = s[1];
+    return { peak: r1(peak), hold5: hold ? r1(hold) : null, n: samples.length };
+  }
+  function cfTest(samples, opts) {
+    const o = Object.assign({ on: 7, off: 3, reps: 24, last: 6, skip: 0.5 }, opts || {});
+    const t0 = startOf(samples);
+    if (t0 == null) return null;
+    const reps = [];
+    for (let i = 0; i < o.reps; i++) {
+      const a = t0 + i * (o.on + o.off) + o.skip, b = t0 + i * (o.on + o.off) + o.on;
+      const w = samples.filter((s) => s[0] >= a && s[0] <= b);
+      if (w.length < 3) break;
+      reps.push(w.reduce((x, s) => x + s[1], 0) / w.length);
+    }
+    if (reps.length < o.last + 2) return null;
+    const sm = smooth(samples), peak = Math.max(...sm.map((s) => s[1])), tail = reps.slice(-o.last);
+    const cf = tail.reduce((x, v) => x + v, 0) / tail.length;
+    return { cf: r1(cf), pic: r1(peak), reps: reps.map(r1), complete: reps.length >= o.reps, ratio: Math.round(cf / peak * 100) };
+  }
+  var TINDEQ_TESTS = { "fmax-semi": "max", "fmax-tendu": "max", pinch: "max", cf: "cf" };
+  var tindeqKind = (tid) => TINDEQ_TESTS[tid] || null;
+
   // src/lib/history.js
   var history_exports = {};
   __export(history_exports, {
@@ -5603,7 +5662,7 @@
       }
     });
   }
-  var mods = { store: store_shim_exports, dates: dates_exports, plan: plan_exports, rules: rules_exports, insights: insights_exports, adapt: adapt_exports, stats: stats_exports, tests: tests_exports, levels: levels_exports, history: history_exports, quantify: quantify_exports, records: records_exports, week: week_exports, warmup: warmup_exports, activity: activity_exports, grades: grades_exports, library: library_exports, sports: sports_exports, needs: needs_exports, builder: builder_exports, nutrition: nutrition_exports, glossary: glossary_exports, sources: sources_exports, io: io_exports, md: md_exports, whoop: whoop_exports, extra: extra_exports };
+  var mods = { store: store_shim_exports, dates: dates_exports, plan: plan_exports, rules: rules_exports, insights: insights_exports, adapt: adapt_exports, stats: stats_exports, tests: tests_exports, levels: levels_exports, force: force_exports, history: history_exports, quantify: quantify_exports, records: records_exports, week: week_exports, warmup: warmup_exports, activity: activity_exports, grades: grades_exports, library: library_exports, sports: sports_exports, needs: needs_exports, builder: builder_exports, nutrition: nutrition_exports, glossary: glossary_exports, sources: sources_exports, io: io_exports, md: md_exports, whoop: whoop_exports, extra: extra_exports };
   function replacer(_k, v) {
     if (v instanceof Set) return [...v];
     if (v instanceof Map) return Object.fromEntries(v);

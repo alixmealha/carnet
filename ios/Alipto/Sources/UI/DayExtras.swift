@@ -601,6 +601,7 @@ struct TestEntry: View {
     @State private var loaded = false
     @State private var protocolOf: String?
     @State private var incl: String?
+    @State private var tindeq: String?
     var body: some View {
         let C = Core.shared
         VStack(alignment: .leading, spacing: 14) {
@@ -613,6 +614,10 @@ struct TestEntry: View {
                             Text(t["name"]?.string ?? tid).font(Typo.sans(15.5, .semibold)).foregroundStyle(Palette.ink)
                             Spacer()
                             Button("Protocole") { protocolOf = tid }.font(Typo.sans(13, .semibold)).foregroundStyle(Palette.accent)
+                        }
+                        if C.call("force.tindeqKind", .str(tid))?.string != nil {
+                            Button { tindeq = tid } label: { Label("Mesurer avec le Tindeq", systemImage: "dot.radiowaves.left.and.right").font(Typo.sans(14, .semibold)) }
+                                .buttonStyle(.bordered).tint(Palette.accent)
                         }
                         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                             ForEach(vks.indices, id: \.self) { i in
@@ -648,6 +653,14 @@ struct TestEntry: View {
         }
         .onAppear(perform: load)
         .sheet(item: Binding(get: { protocolOf.map { TermRef(id: $0) } }, set: { protocolOf = $0?.id })) { r in TestProtocolSheet(tid: r.id) }
+        .sheet(item: Binding(get: { tindeq.map { TermRef(id: $0) } }, set: { tindeq = $0?.id })) { r in
+            let t = Core.shared.call("tests.testById", .str(r.id))
+            TindeqSheet(title: t?["name"]?.string ?? "Tindeq", kind: Core.shared.call("force.tindeqKind", .str(r.id))?.string ?? "max",
+                        keys: t.flatMap { Core.shared.call("tests.valueKeys", $0)?.array } ?? []) { vals in
+                for (key, v) in vals { draft[r.id + "|" + key] = v }
+                commit()
+            }
+        }
         .sheet(item: Binding(get: { incl.map { TermRef(id: $0) } }, set: { incl = $0?.id })) { r in
             InclinometerView { deg in
                 draft[r.id] = Double(deg); commit(); incl = nil

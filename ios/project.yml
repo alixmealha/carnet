@@ -56,6 +56,7 @@ targets:
         NSSupportsLiveActivities: true
         NSHealthShareUsageDescription: "Alipto lit ta nuit (durée et phases), ta VFC, ta fréquence cardiaque de repos et tes séances (durée, distance, fréquence cardiaque) pour remplir la carte Sommeil, la lecture du jour et « Après la séance »."
         NSHealthUpdateUsageDescription: "Alipto n’écrit rien dans Apple Santé."
+        NSBluetoothAlwaysUsageDescription: "Alipto se connecte à ton capteur de force Tindeq Progressor pour mesurer ta force des doigts (tests de force max et de force critique). Le Bluetooth ne sert qu’à lire la mesure."
         NSMotionUsageDescription: "Le téléphone sert d’inclinomètre pour mesurer les angles des tests de mobilité."
         UIAppFonts:
           - BigShouldersDisplay-ExtraBold.ttf
