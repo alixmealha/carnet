@@ -520,14 +520,38 @@ struct AfterCard: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    if Health.shared.available && !ro && k <= t { healthImport }
                     ActFieldsView(k: k)
                     JournalTextField(k: k, name: "note", label: "Note du jour", placeholder: "Ce que tu as vraiment fait, les sensations…", multiline: true)
                 }
                 .disabled(ro)
                 .card()
-                .onAppear { dur = e["duree"]?.int.map { String($0) } ?? "" }
+                .onAppear {
+                    dur = e["duree"]?.int.map { String($0) } ?? ""
+                    // préremplissage : la séance enregistrée par la montre (sans écraser ce qui est déjà noté)
+                    if Health.shared.auto && !ro && k <= t && e["duree"] == nil { Task { await fromHealth(overwrite: false, quiet: true) } }
+                }
             }
         }
+    }
+
+    /// Durée, distance et FC moyenne depuis Apple Santé (montre, Whoop, Garmin…)
+    private var healthImport: some View {
+        Button { Task { await fromHealth(overwrite: true, quiet: false) } } label: {
+            HStack(spacing: 8) {
+                if Health.shared.busy { ProgressView() } else { Image(systemName: "heart.fill").foregroundStyle(Color(hex: 0xff375f)) }
+                Text("Importer la séance depuis Apple Santé")
+            }
+            .font(Typo.sans(15, .semibold))
+        }
+        .buttonStyle(BigButton(kind: .plain))
+    }
+
+    private func fromHealth(overwrite: Bool, quiet: Bool) async {
+        let r = await Health.shared.importWorkouts(k, overwrite: overwrite)
+        dur = store.journal(k)["duree"]?.int.map { String($0) } ?? ""
+        if quiet { return }
+        if let r { Haptics.success(); toast("Séance importée : " + r) } else { toast("Aucune séance trouvée dans Apple Santé ce jour-là") }
     }
 }
 

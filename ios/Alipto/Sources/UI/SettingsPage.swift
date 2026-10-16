@@ -115,7 +115,7 @@ private struct HealthSection: View {
         } header: {
             Label("Apple Santé", systemImage: "heart.fill")
         } footer: {
-            Text("Ta nuit (durée et phases), ta VFC et ta fréquence cardiaque de repos remplissent la carte Sommeil et la lecture du jour. Rien n’est écrit dans Santé.")
+            Text("Ta nuit (durée et phases), ta VFC et ta fréquence cardiaque de repos remplissent la carte Sommeil et la lecture du jour ; tes séances (durée, distance, FC moyenne) préremplissent « Après la séance ». Rien n’est écrit dans Santé.")
         }
     }
 }

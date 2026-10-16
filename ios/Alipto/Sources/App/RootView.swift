@@ -62,12 +62,14 @@ extension RootView {
         guard !s.demo, s.lastSync != nil, !s.profiles.isEmpty else { return "" }
         if s.myRow == nil || s.myRow?["onboarded"]?.truthy != true { return "profile" }
         if s.hasCarnet, s.get("profile", owner: Store.SELF)?["sports"] == nil { return "sports" }
+        if s.hasCarnet, Health.shared.available, !Health.shared.offered { return "health" }
         return ""
     }
     @ViewBuilder var gate: some View {
         switch setup {
         case "profile": ProfileSetupView()
         case "sports": SportsSetupView()
+        case "health": HealthSetupView()
         default: MainTabs()
         }
     }

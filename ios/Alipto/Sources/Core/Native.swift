@@ -80,7 +80,12 @@ final class Health {
     static let shared = Health()
     private let store = HKHealthStore()
     var available: Bool { HKHealthStore.isHealthDataAvailable() }
-    var asked: Bool { UserDefaults.standard.bool(forKey: "health-asked") }
+    // « 2 » : les séances ont été ajoutées aux données lues, iOS redemande une fois pour les nouveaux types
+    var asked: Bool { UserDefaults.standard.bool(forKey: "health-asked2") }
+    /// L'écran du premier lancement a été vu (autorisé ou « plus tard »)
+    var offered: Bool = UserDefaults.standard.bool(forKey: "health-offered") {
+        didSet { UserDefaults.standard.set(offered, forKey: "health-offered") }
+    }
     var auto: Bool {
         get { UserDefaults.standard.bool(forKey: "health-auto") }
         set { UserDefaults.standard.set(newValue, forKey: "health-auto") }
@@ -92,6 +97,10 @@ final class Health {
         if let s = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { t.insert(s) }
         if let h = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) { t.insert(h) }
         if let r = HKObjectType.quantityType(forIdentifier: .restingHeartRate) { t.insert(r) }
+        t.insert(HKObjectType.workoutType())
+        for id in [HKQuantityTypeIdentifier.heartRate, .distanceWalkingRunning, .distanceCycling, .distanceSwimming] {
+            if let q = HKObjectType.quantityType(forIdentifier: id) { t.insert(q) }
+        }
         return t
     }
 
@@ -99,7 +108,7 @@ final class Health {
         guard available else { return false }
         do {
             try await store.requestAuthorization(toShare: [], read: types)
-            UserDefaults.standard.set(true, forKey: "health-asked")
+            UserDefaults.standard.set(true, forKey: "health-asked2")
             return true
         } catch { return false }
     }
@@ -171,5 +180,75 @@ final class Health {
         cur["src"] = "sante"
         s.jset(k, ["nuit": .obj(cur)])
         return true
+    }
+
+    // MARK: séances
+
+    struct Workout { var minutes: Int; var km: Double?; var hr: Int? }
+
+    /// Les séances enregistrées ce jour-là (montre, Whoop, Garmin… via Santé) : durée totale, distance, FC moyenne
+    func workout(for k: String) async -> Workout? {
+        guard available else { return nil }
+        let cal = Calendar.current
+        guard let day = cal.date(from: DateComponents(year: Int(k.prefix(4)), month: Int(k.dropFirst(5).prefix(2)), day: Int(k.suffix(2)))) else { return nil }
+        let end = day.addingTimeInterval(86400)
+        let list: [HKWorkout] = await withCheckedContinuation { cont in
+            let pred = HKQuery.predicateForSamples(withStart: day, end: end, options: .strictStartDate)
+            let q = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: pred, limit: HKObjectQueryNoLimit, sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]) { _, s, _ in
+                cont.resume(returning: (s as? [HKWorkout]) ?? [])
+            }
+            store.execute(q)
+        }
+        guard !list.isEmpty else { return nil }
+        let kilo = HKUnit.meterUnit(with: .kilo)
+        let bpm = HKUnit.count().unitDivided(by: .minute())
+        var secs = 0.0, km = 0.0, hrSum = 0.0, hrSecs = 0.0
+        for w in list {
+            secs += w.duration
+            for id in [HKQuantityTypeIdentifier.distanceWalkingRunning, .distanceCycling, .distanceSwimming] {
+                if let v = w.statistics(for: HKQuantityType(id))?.sumQuantity()?.doubleValue(for: kilo) { km += v }
+            }
+            if let h = w.statistics(for: HKQuantityType(.heartRate))?.averageQuantity()?.doubleValue(for: bpm) {
+                hrSum += h * w.duration; hrSecs += w.duration
+            }
+        }
+        let minutes = Int((secs / 60).rounded())
+        guard minutes > 0 else { return nil }
+        return Workout(minutes: minutes, km: km > 0 ? km : nil, hr: hrSecs > 0 ? Int((hrSum / hrSecs).rounded()) : nil)
+    }
+
+    /// Remplit « Après la séance » du jour k : durée, et distance + FC moyenne pour le cardio (sans écraser ce qui a été noté à la main, sauf demande)
+    /// Renvoie un résumé (« 52 min · 8,4 km · FC 148 ») ou nil s'il n'y a rien dans Santé ce jour-là.
+    @MainActor
+    func importWorkouts(_ k: String, overwrite: Bool = false) async -> String? {
+        guard available else { return nil }
+        if !asked { _ = await requestAccess() }
+        busy = true; defer { busy = false }
+        guard let w = await workout(for: k) else { return nil }
+        let s = Store.shared
+        let cur = s.journal(k)
+        var patch: [String: JSON] = [:]
+        var parts: [String] = []
+        if w.minutes > 0 {
+            parts.append(String(w.minutes) + " min")
+            if overwrite || cur["duree"]?.int == nil { patch["duree"] = .num(Double(w.minutes)) }
+        }
+        if let km = w.km {
+            var c = cur["cardio"]?.object ?? [:]
+            let r = (km * 10).rounded() / 10
+            if overwrite || c["km"] == nil { c["km"] = .num(r) }
+            let kmText: String = String(format: "%.1f", r).replacingOccurrences(of: ".", with: ",")
+            parts.append(kmText + " km")
+            if let hr = w.hr {
+                if overwrite || c["fc"] == nil { c["fc"] = .num(Double(hr)) }
+                parts.append("FC " + String(hr))
+            }
+            c["src"] = "sante"
+            patch["cardio"] = .obj(c)
+        } else if let hr = w.hr {
+            parts.append("FC " + String(hr))
+        }
+        if !patch.isEmpty { s.jset(k, patch) }
+        return parts.joined(separator: " · ")
     }
 }

@@ -154,6 +154,63 @@ struct SportsSetupView: View {
     }
 }
 
+/// Premier lancement, dernière étape : proposer Apple Santé (on ne pense pas à le chercher dans les réglages)
+struct HealthSetupView: View {
+    @State private var busy = false
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                LogoMark().frame(width: 52, height: 52).padding(.top, 30)
+                Eyebrow("Apple Santé")
+                DisplayTitle("Ton iPhone remplit le carnet", size: 44)
+                Text("Si tu portes une montre ou un bracelet (Apple Watch, Whoop, Garmin, Polar…), ses données arrivent dans Apple Santé. Alipto peut les lire pour t’éviter de tout saisir.")
+                    .font(Typo.sans(17)).foregroundStyle(Palette.muted)
+                VStack(spacing: 12) {
+                    HealthPoint(icon: "moon.zzz.fill", title: "Ta nuit", text: "Durée, phases, VFC et fréquence cardiaque de repos : la forme du matin se remplit, la séance du jour s’y adapte.")
+                    HealthPoint(icon: "figure.run", title: "Tes séances", text: "Durée, distance et fréquence cardiaque moyenne préremplissent « Après la séance ».")
+                    HealthPoint(icon: "lock.fill", title: "Tu gardes la main", text: "Alipto ne fait que lire, n’écrit rien dans Santé et n’écrase jamais ce que tu as noté toi-même.")
+                }
+                Text("iOS va te demander quelles données partager : tu peux tout accepter ou choisir. Tu pourras changer d’avis dans Plus → Réglages, et dans Réglages iOS → Santé → Accès aux données.")
+                    .font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
+                Button { Task { await allow() } } label: {
+                    HStack { if busy { ProgressView().tint(Palette.accentInk) }; Text("Autoriser Apple Santé") }
+                }
+                .buttonStyle(BigButton()).disabled(busy).padding(.top, 6)
+                Button("Plus tard") { Health.shared.offered = true }
+                    .buttonStyle(BigButton(kind: .plain)).disabled(busy)
+            }
+            .padding(.horizontal, 24).padding(.bottom, 40)
+            .frame(maxWidth: 560).frame(maxWidth: .infinity)
+        }
+        .background(Palette.bg)
+    }
+    private func allow() async {
+        busy = true
+        let h = Health.shared
+        _ = await h.requestAccess()
+        h.auto = true
+        _ = await h.importNight(D.today)
+        busy = false
+        Haptics.success()
+        h.offered = true
+    }
+}
+
+private struct HealthPoint: View {
+    let icon: String, title: String, text: String
+    var body: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon).font(.system(size: 20)).foregroundStyle(Color(hex: 0xff375f)).frame(width: 28)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(Typo.sans(16, .semibold)).foregroundStyle(Palette.ink)
+                Text(text).font(Typo.sans(14.5)).foregroundStyle(Palette.muted)
+            }
+            Spacer(minLength: 0)
+        }
+        .card()
+    }
+}
+
 /// Mot de passe oublié : un e-mail avec un lien pour en choisir un nouveau
 struct ForgotSheet: View {
     @Environment(\.dismiss) private var dismiss

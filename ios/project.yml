@@ -53,7 +53,7 @@ targets:
         UIApplicationSupportsIndirectInputEvents: true
         ITSAppUsesNonExemptEncryption: false
         NSSupportsLiveActivities: true
-        NSHealthShareUsageDescription: "Alipto lit ta nuit (durée et phases), ta VFC et ta fréquence cardiaque de repos pour remplir la carte Sommeil et la lecture du jour."
+        NSHealthShareUsageDescription: "Alipto lit ta nuit (durée et phases), ta VFC, ta fréquence cardiaque de repos et tes séances (durée, distance, fréquence cardiaque) pour remplir la carte Sommeil, la lecture du jour et « Après la séance »."
         NSHealthUpdateUsageDescription: "Alipto n’écrit rien dans Apple Santé."
         NSMotionUsageDescription: "Le téléphone sert d’inclinomètre pour mesurer les angles des tests de mobilité."
         UIAppFonts:

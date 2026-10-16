@@ -136,7 +136,7 @@ struct HealthCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             CardHeader("Apple Santé") { Image(systemName: "heart.fill").foregroundStyle(Color(hex: 0xff375f)) }
-            Text("Ta nuit (durée et phases), ta VFC et ta fréquence cardiaque de repos remplissent la carte Sommeil et la lecture du jour. Rien n’est écrit dans Santé.")
+            Text("Ta nuit (durée et phases), ta VFC et ta fréquence cardiaque de repos remplissent la carte Sommeil et la lecture du jour ; tes séances (durée, distance, FC moyenne) préremplissent « Après la séance ». Rien n’est écrit dans Santé.")
                 .font(Typo.sans(14)).foregroundStyle(Palette.muted)
             Toggle(isOn: $auto) {
                 VStack(alignment: .leading, spacing: 2) {
