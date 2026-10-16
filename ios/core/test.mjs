@@ -243,5 +243,28 @@ ok('Whoop : séances déjà remplies non écrasées', call('store.jget', wd).dur
   ok('force critique : départ décalé de 2 s détecté', Math.abs(call('force.cfTest', cfS.map(s => [s[0] + 2, s[1]])).cf - cf.cf) < 0.2);
   ok('capteur : tests reliés', call('force.tindeqKind', 'cf') === 'cf' && call('force.tindeqKind', 'fmax-semi') === 'max' && call('force.tindeqKind', 'vma') === null);
 }
+
+// ---- Balayage : tous les objectifs × niveaux × sports génèrent un programme sans erreur
+{
+  const sp = { escalade: ['salle-esc', 'salle'], hyrox: ['exterieur', 'salle', 'bfr'], natation: ['piscine'], velo: ['velo'], course: ['exterieur'] };
+  let bad = [], n = 0;
+  for (const g of call('library.GOALS')) for (const lvl of [1, 2, 3]) for (const [s, eq] of Object.entries(sp)) {
+    if (g.sp && g.sp !== s && !(g.sp === 'escalade' && s === 'escalade')) continue;
+    for (const days of [[0, 2], [0, 1, 3, 4, 5]]) {
+      try { const p = call('builder.generate', { goal: g.id, goal2: null, days, fixed: [], dur: lvl === 1 ? 45 : 75, lvl, equip: eq, weeks: 4, start: call('dates.mondayOf', t), sports: [s], sex: 'F', u18: lvl === 1, swap: {}, fmt: {} }); n++; if (!p.weeks.length || !p.weeks[0].days || !Object.keys(p.weeks[0].days).length) bad.push(g.id + '/' + s + '/' + lvl + ': vide'); call('builder.programNotes', p); }
+      catch (e) { bad.push(g.id + '/' + s + '/' + lvl + ': ' + String(e.message || e).slice(0, 80)); }
+    }
+  }
+  ok('balayage de ' + n + ' programmes', bad.length === 0, bad.slice(0, 5).join(' | '));
+  // tous les formats proposés se construisent
+  let badF = [];
+  for (const [fam, list] of Object.entries(call('builder.FORMATS'))) for (const [id] of list) {
+    const type = { int: 'int', intV: 'int', intN: 'int', conti: 'conti', resist: 'resist', bloc: 'bloc', doigts: 'doigts', compet: 'compet', force: 'fbA', hyper: 'fbA', puiss: 'puiss' }[fam];
+    const over = { int: { sports: ['course'], equip: ['exterieur'] }, intV: { sports: ['velo'], equip: ['velo'] }, intN: { sports: ['natation'], equip: ['piscine'] } }[fam] || { sports: ['escalade'], equip: ['salle-esc', 'salle', 'bfr'] };
+    try { const x = call('builder.buildSession', type, Object.assign({ goal: fam === 'hyper' ? 'hyper' : 'force', goal2: null, days: [0, 2, 4], fixed: [], dur: 60, lvl: 2, weeks: 4, sex: 'M', u18: false, swap: {}, fmt: { [fam]: id } }, over), { step: 1, meso: 0, phase: 'volume' }, null, {}); if (!x.blocks.length) badF.push(fam + ':' + id); }
+    catch (e) { badF.push(fam + ':' + id + ' ' + String(e.message || e).slice(0, 60)); }
+  }
+  ok('chaque format se construit (' + Object.values(call('builder.FORMATS')).flat().length + ')', badF.length === 0, badF.join(' | '));
+}
 console.log(fails ? fails + ' échec(s)' : 'Tout est bon');
 process.exit(fails ? 1 : 0);
