@@ -27,6 +27,8 @@ final class Store {
     private(set) var coaches: [String] = []
     private(set) var profiles: [String: JSON] = [:]
     private(set) var myLock = false
+    /// Coach : plans verrouillés, par athlète
+    private(set) var locks: [String: Bool] = [:]
     // état de la synchro
     private(set) var phase: SyncPhase = .idle
     private(set) var lastSync: Date?
@@ -55,17 +57,17 @@ final class Store {
     }
 
     // MARK: chargement et sauvegarde sur le téléphone
-    private struct Saved: Codable { var docs: [String: Rec]; var me: String?; var athletes: [String]; var coaches: [String]; var profiles: [String: JSON]; var myLock: Bool }
+    private struct Saved: Codable { var docs: [String: Rec]; var me: String?; var athletes: [String]; var coaches: [String]; var profiles: [String: JSON]; var myLock: Bool; var locks: [String: Bool]? }
     func load() {
         guard !demo, let data = try? Data(contentsOf: fileURL), let s = try? JSONDecoder().decode(Saved.self, from: data) else { return }
-        docs = s.docs; me = s.me; athletes = s.athletes; coaches = s.coaches; profiles = s.profiles; myLock = s.myLock
+        docs = s.docs; me = s.me; athletes = s.athletes; coaches = s.coaches; profiles = s.profiles; myLock = s.myLock; locks = s.locks ?? [:]
         coreReset = true
         version += 1
     }
     private func saveSoon() {
         guard !demo else { return }
         saveTask?.cancel()
-        let snapshot = Saved(docs: docs, me: me, athletes: athletes, coaches: coaches, profiles: profiles, myLock: myLock)
+        let snapshot = Saved(docs: docs, me: me, athletes: athletes, coaches: coaches, profiles: profiles, myLock: myLock, locks: locks)
         let url = fileURL
         saveTask = Task.detached(priority: .utility) {
             try? await Task.sleep(nanoseconds: 400_000_000)
@@ -74,7 +76,7 @@ final class Store {
         }
     }
     func wipe() {
-        docs = [:]; me = nil; athletes = []; coaches = []; profiles = [:]; myLock = false; subject = Store.SELF
+        docs = [:]; me = nil; athletes = []; coaches = []; profiles = [:]; myLock = false; locks = [:]; subject = Store.SELF
         try? FileManager.default.removeItem(at: fileURL)
         coreReset = true
         UserDefaults.standard.dictionaryRepresentation().keys.filter { $0.hasPrefix("cursor:") }.forEach { UserDefaults.standard.removeObject(forKey: $0) }
@@ -87,6 +89,15 @@ final class Store {
     }
 
     // MARK: lecture / écriture
+    /// Coach : verrouille ou déverrouille le plan d'un athlète (lui ne peut plus le modifier)
+    @MainActor
+    func setLock(_ athlete: String, _ v: Bool) async throws {
+        guard let me else { throw BackendError.signedOut }
+        _ = try await Backend.shared.rest("coach_links", query: [URLQueryItem(name: "coach_id", value: "eq." + me), URLQueryItem(name: "athlete_id", value: "eq." + athlete)],
+                                          method: "PATCH", body: ["plan_locked": .bool(v)], headers: ["Prefer": "return=minimal"])
+        locks[athlete] = v
+        version += 1; saveSoon()
+    }
     var isSelf: Bool { subject == Store.SELF }
     func get(_ id: String, owner: String? = nil) -> JSON? {
         guard let r = docs[Store.K(owner ?? subject, id)], !r.deleted else { return nil }
@@ -199,6 +210,9 @@ final class Store {
                 athletes = lr.array.filter { $0["coach_id"]?.string == uid }.compactMap { $0["athlete_id"]?.string }
                 coaches = lr.array.filter { $0["athlete_id"]?.string == uid }.compactMap { $0["coach_id"]?.string }
                 myLock = lr.array.contains { $0["athlete_id"]?.string == uid && $0["plan_locked"]?.truthy == true }
+                var lk: [String: Bool] = [:]
+                for r in lr.array where r["coach_id"]?.string == uid { if let a = r["athlete_id"]?.string { lk[a] = r["plan_locked"]?.truthy ?? false } }
+                locks = lk
                 fresh = athletes.contains { !before.contains($0) }
                 // athlète retiré : ses données ne restent pas sur ce téléphone
                 for a in before where !athletes.contains(a) {

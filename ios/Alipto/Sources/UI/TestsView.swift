@@ -314,12 +314,22 @@ private struct TestHistRow: View {
         }
         .padding(.vertical, 8)
     }
+    private func line(_ vk: JSON, _ v: Double) -> String {
+        let u: String = vk["unit"]?.string ?? ""
+        let l: String = vkLabel(vk)
+        return l + " " + Fmt.num(v) + " " + u
+    }
+    private func delta(_ v: Double, _ key: String) -> Double? {
+        let ref: Double? = p?["vals"]?[key]?.double
+        guard let d = TestsAPI.pct(v, ref) else { return nil }
+        return d * vkBetter(vks)
+    }
     @ViewBuilder private func cell(_ vk: JSON) -> some View {
         let key = vk["key"]?.string ?? "v"
         if let v = x["vals"]?[key]?.double {
             HStack(spacing: 4) {
-                Text(vkLabel(vk) + " " + Fmt.num(v) + " " + (vk["unit"]?.string ?? "")).font(Typo.sans(13.5)).foregroundStyle(Palette.ink)
-                DeltaText(p: TestsAPI.pct(v, p?["vals"]?[key]?.double).map { $0 * vkBetter(vks) })
+                Text(line(vk, v)).font(Typo.sans(13.5)).foregroundStyle(Palette.ink)
+                DeltaText(p: delta(v, key))
             }
         }
     }

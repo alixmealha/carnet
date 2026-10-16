@@ -135,6 +135,6 @@ extension Store {
         for (k, v) in profiles { prof[k] = v }
         return ["me": me.map { JSON.str($0) } ?? .null, "email": Backend.shared.session.map { JSON.str($0.email) } ?? .null,
                 "athletes": .arr(athletes.map { .str($0) }), "coaches": .arr(coaches.map { .str($0) }),
-                "profiles": .obj(prof), "myLock": .bool(myLock)]
+                "profiles": .obj(prof), "myLock": .bool(myLock), "locks": .obj(locks.mapValues { .bool($0) })]
     }
 }
