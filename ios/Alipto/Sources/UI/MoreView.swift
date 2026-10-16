@@ -1,137 +1,131 @@
 import SwiftUI
 
-/// Plus : compte, synchronisation, son en séance, version web (pour tout ce qui n'est pas encore dans l'appli iPhone)
+/// Plus (comme la version web) : profil en haut, les repères (échelles, lexique, sources), puis les paramètres.
 struct MoreView: View {
     @State private var store = Store.shared
-    @AppStorage("sound") private var sound = true
-    @State private var confirmOut = false
-
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Eyebrow("Compte et réglages")
+                VStack(alignment: .leading, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Eyebrow("Alipto")
                         DisplayTitle("Plus", size: 52)
                     }
                     .padding(.top, 8)
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        CardHeader("Compte")
-                        row("Nom", store.name(Store.SELF))
-                        row("E-mail", Backend.shared.session?.email ?? (store.demo ? "démo" : "—"))
-                        if !store.coaches.isEmpty { row("Coach", store.coaches.map { store.name($0) }.joined(separator: ", ")) }
-                        if !store.athletes.isEmpty { row("Athlètes suivis", String(store.athletes.count)) }
+                    NavigationLink(value: "profile") { ProfileRow() }.buttonStyle(PressStyle())
+                    if !store.athletes.isEmpty { SubjectCard() }
+                    ReperesCard()
+                    NavigationLink(value: "settings") {
+                        MoreRow(icon: "slider.horizontal.3", title: "Paramètres", sub: "Apparence, séance, notifications, compte, données")
                     }
-                    .card()
-
-                    if !store.athletes.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            CardHeader("Carnet affiché")
-                            Text("Regarde la journée d’un athlète que tu suis (en lecture seule).").font(Typo.sans(14)).foregroundStyle(Palette.muted)
-                            Flow(spacing: 6) {
-                                Chip(label: "Moi", on: store.isSelf) { switchTo(Store.SELF) }
-                                ForEach(store.athletes, id: \.self) { a in
-                                    Chip(label: store.name(a), on: store.subject == a) { switchTo(a) }
-                                }
-                            }
-                        }
-                        .card()
+                    .buttonStyle(PressStyle())
+                    if store.isAdmin {
+                        NavigationLink(value: "admin") { MoreRow(icon: "shield.lefthalf.filled", title: "Administration", sub: "Comptes, rôles, accès") }.buttonStyle(PressStyle())
                     }
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        CardHeader("Synchronisation") {
-                            Circle().fill(syncColor).frame(width: 9, height: 9)
-                        }
-                        Text(syncText).font(Typo.sans(15)).foregroundStyle(Palette.muted)
-                        if let e = store.lastError, store.phase == .error { Text(e).font(Typo.sans(13.5)).foregroundStyle(Palette.crit) }
-                        Button { Task { await store.syncNow(); toast(store.phase == .idle ? "À jour" : "Pas de connexion") } } label: {
-                            HStack {
-                                if store.phase == .syncing { ProgressView() }
-                                Text("Synchroniser maintenant")
-                            }
-                        }
-                        .buttonStyle(BigButton(kind: .plain))
-                        .disabled(store.phase == .syncing || store.demo)
-                    }
-                    .card()
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        CardHeader("Séance")
-                        Toggle(isOn: $sound) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Bips et voix").font(Typo.sans(16, .medium)).foregroundStyle(Palette.ink)
-                                Text("Fin du repos, décompte 3-2-1, côté à travailler. Les vibrations restent.").font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
-                            }
-                        }
-                        .tint(Palette.accent)
-                    }
-                    .card()
-
-                    if Health.shared.available {
-                        HealthCard()
-                    }
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        CardHeader("Version web")
-                        Text("Le plan complet, l’assistant, le suivi, les tests et la nutrition restent sur la version web le temps que l’appli iPhone les reprenne. Mêmes données, tout se synchronise.")
-                            .font(Typo.sans(15)).foregroundStyle(Palette.muted)
-                        Link(destination: Config.webURL) {
-                            HStack { Text("Ouvrir la version web"); Image(systemName: "arrow.up.right") }
-                        }
-                        .buttonStyle(BigButton(kind: .soft))
-                    }
-                    .card()
-
-                    if !store.demo {
-                        Button("Se déconnecter", role: .destructive) { confirmOut = true }
-                            .buttonStyle(BigButton(kind: .plain))
-                            .confirmationDialog("Se déconnecter ?", isPresented: $confirmOut, titleVisibility: .visible) {
-                                Button("Se déconnecter", role: .destructive) {
-                                    Backend.shared.signOut(); Store.shared.wipe(); AppState.shared.signedIn = false
-                                }
-                            } message: {
-                                Text(store.pending > 0 ? "\(store.pending) modification(s) pas encore envoyée(s) seront perdues." : "Tes données restent sur ton compte.")
-                            }
-                    }
-                    Text("Alipto pour iPhone · version " + (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"))
-                        .font(Typo.mono(12)).foregroundStyle(Palette.muted).frame(maxWidth: .infinity).padding(.vertical, 8)
+                    MoreFooter()
                 }
                 .padding(.horizontal, 16).padding(.bottom, 30)
             }
+            .scrollIndicators(.hidden)
             .background(Palette.bg)
             .statusBarScrim()
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: String.self) { p in
+                switch p {
+                case "settings": SettingsPage()
+                case "admin": AdminPage()
+                default: ProfilePage()
+                }
+            }
         }
     }
+}
 
+let ROLE_LBL = ["athlete": "Athlète", "coach": "Coach", "admin": "Administrateur"]
+
+struct MoreRow: View {
+    let icon: String
+    let title: String
+    let sub: String
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon).font(.system(size: 19, weight: .semibold)).foregroundStyle(Palette.accent)
+                .frame(width: 44, height: 44).background(Palette.accentSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(Typo.sans(16.5, .semibold)).foregroundStyle(Palette.ink)
+                Text(sub).font(Typo.sans(13.5)).foregroundStyle(Palette.muted).multilineTextAlignment(.leading)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.muted.opacity(0.6))
+        }
+        .card(padding: 14)
+    }
+}
+
+private struct ProfileRow: View {
+    @State private var store = Store.shared
+    var body: some View {
+        let p = store.profile(Store.SELF)
+        let name = p["name"]?.string ?? ""
+        let lbl = Core.shared.constant("sports.SPORT_LBL")
+        let sp = (p["sports"]?.array.compactMap { $0.string } ?? []).compactMap { lbl[$0]?.string }
+        let parts = [name.isEmpty ? nil : name, store.demo ? nil : ROLE_LBL[store.role], sp.isEmpty ? nil : sp.joined(separator: ", ")].compactMap { $0 }
+        HStack(spacing: 14) {
+            Text(String(name.prefix(1)).uppercased().isEmpty ? "?" : String(name.prefix(1)).uppercased())
+                .font(Typo.display(24)).foregroundStyle(Palette.accentInk)
+                .frame(width: 48, height: 48).background(Palette.accent, in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Profil").font(Typo.sans(16.5, .semibold)).foregroundStyle(Palette.ink)
+                Text(parts.isEmpty ? "Toi, ton niveau, ton coach" : parts.joined(separator: " · ")).font(Typo.sans(13.5)).foregroundStyle(Palette.muted).multilineTextAlignment(.leading)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.muted.opacity(0.6))
+        }
+        .card(padding: 14)
+    }
+}
+
+/// Carnet affiché (coach) : le sien ou celui d'un athlète
+struct SubjectCard: View {
+    @State private var store = Store.shared
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            CardHeader("Carnet affiché")
+            Flow(spacing: 6) {
+                if store.hasCarnet { Chip(label: "Moi", on: store.isSelf) { switchTo(Store.SELF) } }
+                ForEach(store.athletes, id: \.self) { a in
+                    Chip(label: store.name(a), on: store.subject == a) { switchTo(a) }
+                }
+            }
+        }
+        .card()
+    }
     private func switchTo(_ who: String) {
-        store.subject = who
+        withAnimation { store.subject = who }
         AppState.shared.tab = "today"
         toast(who == Store.SELF ? "Ton carnet" : "Carnet de " + store.name(who))
     }
-    private func row(_ k: String, _ v: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(k).font(Typo.sans(15)).foregroundStyle(Palette.muted)
-            Spacer()
-            Text(v).font(Typo.sans(15, .medium)).foregroundStyle(Palette.ink).multilineTextAlignment(.trailing)
+}
+
+private struct MoreFooter: View {
+    @State private var store = Store.shared
+    var body: some View {
+        let title = store.get("plan")?["title"]?.string
+        HStack(alignment: .top, spacing: 14) {
+            LogoMark().frame(width: 40, height: 40)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("ALIPTO").font(Typo.display(24)).foregroundStyle(Palette.ink)
+                (Text("Du grec ") + Text("aleiptès").italic() + Text(" : celui qui préparait les athlètes, à la fois entraîneur et soigneur. Ton plan, ta forme, tes tests et ton coach au même endroit."))
+                    .font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
+                Text(version(title)).font(Typo.mono(12)).foregroundStyle(Palette.muted)
+            }
         }
+        .padding(.top, 10)
     }
-    private var syncColor: Color {
-        switch store.phase { case .idle: return Palette.good; case .syncing: return Palette.accent; case .offline, .local: return Palette.warn; default: return Palette.crit }
-    }
-    private var syncText: String {
-        if store.demo { return "Mode démo : rien n’est envoyé." }
-        switch store.phase {
-        case .syncing: return "Synchronisation…"
-        case .offline: return "Hors connexion : tout est gardé sur le téléphone et partira dès le retour du réseau."
-        case .signedout: return "Session expirée : reconnecte-toi."
-        case .error: return "La dernière synchronisation a échoué."
-        default:
-            let p = store.pending
-            let when = store.lastSync.map { "À jour · " + $0.formatted(date: .omitted, time: .shortened) } ?? "Pas encore synchronisé"
-            return p > 0 ? when + " · \(p) en attente" : when
-        }
+    private func version(_ title: String?) -> String {
+        let v: String = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+        guard let title else { return "Version " + v }
+        return "Version " + v + " · " + title
     }
 }
 

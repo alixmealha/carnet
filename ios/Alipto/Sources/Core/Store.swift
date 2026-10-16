@@ -98,6 +98,20 @@ final class Store {
         locks[athlete] = v
         version += 1; saveSoon()
     }
+    /// Ligne « profiles » mise à jour après un enregistrement du profil
+    func setProfileRow(_ uid: String, _ row: JSON) {
+        profiles[uid] = row
+        if me == nil { me = uid }
+        version += 1; saveSoon()
+    }
+    var role: String { me.flatMap { profiles[$0]?["role"]?.string } ?? "athlete" }
+    var isCoach: Bool { role == "coach" }
+    var isAdmin: Bool { role == "admin" }
+    /// Un coach n'a pas de carnet personnel
+    var hasCarnet: Bool { role != "coach" }
+    var myRow: JSON? { me.flatMap { profiles[$0] } }
+    /// Date de dernière modification d'un document (millisecondes)
+    func updatedAt(_ id: String, owner: String) -> Double? { docs[Store.K(owner, id)].flatMap { $0.deleted ? nil : $0.updatedAt } }
     var isSelf: Bool { subject == Store.SELF }
     func get(_ id: String, owner: String? = nil) -> JSON? {
         guard let r = docs[Store.K(owner ?? subject, id)], !r.deleted else { return nil }

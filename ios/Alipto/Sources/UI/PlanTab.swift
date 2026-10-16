@@ -385,9 +385,13 @@ private struct EditedLine: View {
     @State private var store = Store.shared
     var body: some View {
         if let ed = m["edited"], let uid = ed["uid"]?.string, uid != store.me {
-            Text("Plan modifié par " + (ed["name"]?.string.flatMap { $0.isEmpty ? nil : $0 } ?? "ton coach") + " · " + when(ed["at"]?.double))
-                .font(Typo.sans(13)).foregroundStyle(Palette.muted)
+            Text(line(ed)).font(Typo.sans(13)).foregroundStyle(Palette.muted)
         }
+    }
+    private func line(_ ed: JSON) -> String {
+        var who: String = ed["name"]?.string ?? ""
+        if who.isEmpty { who = "ton coach" }
+        return "Plan modifié par " + who + " · " + when(ed["at"]?.double)
     }
     private func when(_ ms: Double?) -> String {
         guard let ms else { return "" }
@@ -424,7 +428,7 @@ private struct TimelineCard: View {
         let ws = PlanReader(store).weeks()
         VStack(alignment: .leading, spacing: 10) {
             CardHeader("Les \(ws.count) semaines") {
-                Text(D.day(m["start"]?.string ?? "") + " → " + D.day(m["end"]?.string ?? "")).font(Typo.mono(12)).foregroundStyle(Palette.muted)
+                Text(span()).font(Typo.mono(12)).foregroundStyle(Palette.muted)
             }
             if !ws.isEmpty {
                 TimelineNames(ws: ws)
@@ -433,6 +437,13 @@ private struct TimelineCard: View {
             }
         }
         .card()
+    }
+}
+
+extension TimelineCard {
+    fileprivate func span() -> String {
+        let a: String = m["start"]?.string ?? "", b: String = m["end"]?.string ?? ""
+        return D.day(a) + " → " + D.day(b)
     }
 }
 
@@ -537,7 +548,8 @@ private struct EventsCard: View {
     }
     private func summary(_ evs: [JSON], _ t: String) -> String {
         if let nx = evs.first(where: { ((($0["end"]?.string ?? $0["date"]?.string) ?? "")) >= t }) {
-            return "Prochaine : " + (nx["label"]?.string ?? "") + " · " + D.day(nx["date"]?.string ?? "")
+            let l: String = nx["label"]?.string ?? "", d: String = nx["date"]?.string ?? ""
+            return "Prochaine : " + l + " · " + D.day(d)
         }
         return "\(evs.count) compétitions"
     }
@@ -591,7 +603,7 @@ private struct BlocCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Eyebrow(D.day(from) + " → " + D.day(to) + (now ? " · en cours" : ""), color: now ? Palette.accent : Palette.muted)
+                    Eyebrow(blocDates(from, to, now), color: now ? Palette.accent : Palette.muted)
                     DisplayTitle(b["name"]?.string ?? "Bloc", size: 24)
                 }
                 Spacer(minLength: 8)
@@ -612,6 +624,11 @@ private struct BlocCard: View {
 }
 
 /// Liste des semaines (phase, contenu)
+private func blocDates(_ from: String, _ to: String, _ now: Bool) -> String {
+    let s: String = D.day(from) + " → " + D.day(to)
+    return now ? s + " · en cours" : s
+}
+
 private struct WeeksCard: View {
     let m: JSON
     let ed: Bool
@@ -742,7 +759,9 @@ private struct ExerciseLine: View {
     }
     private func detail(_ label: String) -> String {
         let n = x["n"]?.int ?? 0
-        var s = Fmt.plural(n, "séance") + " · du " + D.day(x["first"]?.string ?? "") + " au " + D.day(x["last"]?.string ?? "")
+        let a: String = x["first"]?.string ?? "", b: String = x["last"]?.string ?? ""
+        var s: String = Fmt.plural(n, "séance")
+        s += " · du " + D.day(a) + " au " + D.day(b)
         if Core.shared.call("plan.demoOf", ["label": .str(label)])?.string != nil { s += " · vidéo" }
         return s
     }

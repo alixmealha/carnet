@@ -75,16 +75,12 @@ struct TodayView: View {
     }
 }
 
-/// Pas encore de plan sur ce compte
+/// Pas encore de plan sur ce compte : l'assistant, ou un plan vide
 struct EmptyPlanCard: View {
+    @State private var builder = false
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            CardHeader("Pas encore de plan")
-            Text("Ton plan se crée sur la version web (assistant ou import de ton coach). Il apparaît ici tout seul.")
-                .font(Typo.sans(15)).foregroundStyle(Palette.muted)
-            Link(destination: Config.webURL) { Text("Ouvrir la version web") }.buttonStyle(BigButton(kind: .soft))
-        }
-        .card()
+        NoPlanCard { builder = true }
+            .sheet(isPresented: $builder) { BuilderView() }
     }
 }
 

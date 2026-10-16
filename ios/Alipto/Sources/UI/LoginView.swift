@@ -7,6 +7,7 @@ struct LoginView: View {
     @State private var busy = false
     @State private var error: String?
     @State private var appear = false
+    @State private var forgot = false
     @FocusState private var focus: Field?
     enum Field { case email, password }
 
@@ -53,6 +54,8 @@ struct LoginView: View {
                     .buttonStyle(BigButton())
                     .disabled(busy || email.isEmpty || password.isEmpty)
                     .padding(.top, 6)
+                    Button("Mot de passe oublié ?") { forgot = true }
+                        .font(Typo.sans(15, .semibold)).foregroundStyle(Palette.accent)
                     Text("Même compte que sur la version web. Pas de compte ? Demande une invitation à ton coach.")
                         .font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
                 }
@@ -64,6 +67,7 @@ struct LoginView: View {
             .frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
+        .sheet(isPresented: $forgot) { ForgotSheet(email: email) }
         .onAppear { withAnimation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.05)) { appear = true } }
     }
 

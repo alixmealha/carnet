@@ -165,3 +165,21 @@ export function levelsForm(need, lvIn) {
     cardioNote: g.cardio ? (cs ? 'Vitesse critique ' + fmtN(cs.v) + ' km/h · D′ ≈ ' + cs.dp + ' m (test du ' + srcTxt(cs).replace('test le ', '') + '). ' : 'Vitesse critique : passe le test 3 min + 12 min dans Suivi → Tests. ') + (rp ? rp.txt : '') : ''
   };
 }
+
+/* ---------- Import d'un fichier (ImportPicker.jsx) : le texte du fichier, lu par l'appli ---------- */
+import { planPatch, filterImport, applyImport as applyImportDocs } from '../../src/lib/io.js';
+export function readImportText(txt) {
+  let data;
+  try { data = JSON.parse(txt); } catch (_) { throw new Error('Ce fichier n’est pas un fichier JSON lisible.'); }
+  let r;
+  if (data && ['carnet', 'alipto'].includes(data.app) && data.kind === 'patch') r = planPatch(data);
+  else {
+    if (!data || !['carnet', 'alipto'].includes(data.app) || !data.docs || typeof data.docs !== 'object') throw new Error('Ce fichier ne vient pas d’Alipto.');
+    const docs = {};
+    for (const [id, v] of Object.entries(data.docs)) if (['plan', 'settings', 'profile', 'tests', 'nutri', 'models'].includes(id) || /^[pjctn]:\d{4}-\d{2}-\d{2}$/.test(id)) docs[id] = v;
+    r = { docs, n: { plan: !!docs.plan, days: Object.keys(docs).filter(x => x.startsWith('p:')).length, journal: Object.keys(docs).filter(x => x.startsWith('j:')).length, tests: Object.keys(docs).filter(x => x.startsWith('t:')).length } };
+  }
+  r.skipped = filterImport(r.docs).skipped;
+  return r;
+}
+export function applyImport(docs) { applyImportDocs(docs); return true; }

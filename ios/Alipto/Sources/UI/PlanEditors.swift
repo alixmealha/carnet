@@ -83,13 +83,14 @@ struct DayEditorView: View {
     private var dirty: Bool { d != orig }
 
     var body: some View {
+        dialogs(chrome(form))
+            .onAppear(perform: load)
+    }
+
+    private var form: some View {
         Form {
             DayWarnings(k: k, d: d)
-            ForEach(blockIds, id: \.self) { bid in
-                if let i = blocks.firstIndex(where: { $0["id"]?.string == bid }) {
-                    BlockEditorSection(b: $d.at("blocks").at(i), i: i, n: blocks.count, onMove: { moveBlock(i, $0) }, onDelete: { delBlock = i })
-                }
-            }
+            ForEach(blockIds, id: \.self) { bid in blockSection(bid) }
             if blocks.isEmpty {
                 Section { Text("Jour de repos. Ajoute un bloc pour y mettre une séance.").foregroundStyle(Palette.muted) }
             }
@@ -100,29 +101,42 @@ struct DayEditorView: View {
                 Section { Button("Passer ce jour en repos", role: .destructive) { askRest = true } }
             }
         }
-        .scrollContentBackground(.hidden).background(Palette.bg)
-        .scrollDismissesKeyboard(.interactively)
-        .navigationTitle("Séance · " + D.short(k)).navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(pushed)
-        .interactiveDismissDisabled(dirty)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) { Button("Annuler") { if dirty { askClose = true } else { dismiss() } } }
-            ToolbarItem(placement: .topBarTrailing) { Button("OK", action: save).fontWeight(.semibold).disabled(!dirty) }
+    }
+    @ViewBuilder private func blockSection(_ bid: String) -> some View {
+        if let i = blocks.firstIndex(where: { $0["id"]?.string == bid }) {
+            BlockEditorSection(b: $d.at("blocks").at(i), i: i, n: blocks.count, onMove: { dir in moveBlock(i, dir) }, onDelete: { delBlock = i })
         }
-        .confirmationDialog("Abandonner les modifications ?", isPresented: $askClose, titleVisibility: .visible) {
+    }
+    private func chrome<V: View>(_ v: V) -> some View {
+        v.scrollContentBackground(.hidden).background(Palette.bg)
+            .scrollDismissesKeyboard(.interactively)
+            .navigationTitle("Séance · " + D.short(k)).navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(pushed)
+            .interactiveDismissDisabled(dirty)
+            .toolbar { toolbarItems }
+    }
+    @ToolbarContentBuilder private var toolbarItems: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) { Button("Annuler", action: cancel) }
+        ToolbarItem(placement: .topBarTrailing) { Button("OK", action: save).fontWeight(.semibold).disabled(!dirty) }
+    }
+    private func cancel() { if dirty { askClose = true } else { dismiss() } }
+    private var copyTitle: String { "Le " + D.day(D.key(copyTo)) + " a déjà une séance. La remplacer ?" }
+    private var delShown: Binding<Bool> { Binding(get: { delBlock != nil }, set: { if !$0 { delBlock = nil } }) }
+    private func dialogs<V: View>(_ v: V) -> some View {
+        v.confirmationDialog("Abandonner les modifications ?", isPresented: $askClose, titleVisibility: .visible) {
             Button("Abandonner", role: .destructive) { dismiss() }
         }
         .confirmationDialog("Vider ce jour (repos) ?", isPresented: $askRest, titleVisibility: .visible) {
-            Button("Passer en repos", role: .destructive) { withAnimation { d["blocks"] = .arr([]); d["target"] = nil } }
+            Button("Passer en repos", role: .destructive) { toRest() }
         }
-        .confirmationDialog(deleteTitle, isPresented: Binding(get: { delBlock != nil }, set: { if !$0 { delBlock = nil } }), titleVisibility: .visible) {
+        .confirmationDialog(deleteTitle, isPresented: delShown, titleVisibility: .visible) {
             Button("Supprimer", role: .destructive) { if let i = delBlock { removeBlock(i) }; delBlock = nil }
         }
-        .confirmationDialog("Le " + D.day(D.key(copyTo)) + " a déjà une séance. La remplacer ?", isPresented: $askCopy, titleVisibility: .visible) {
+        .confirmationDialog(copyTitle, isPresented: $askCopy, titleVisibility: .visible) {
             Button("Remplacer", role: .destructive) { doCopy() }
         }
-        .onAppear(perform: load)
     }
+    private func toRest() { withAnimation { d["blocks"] = .arr([]); d["target"] = nil } }
 
     private var blockIds: [String] { blocks.map { $0["id"]?.string ?? "" } }
     private var deleteTitle: String {
@@ -242,9 +256,10 @@ private struct DayWarnings: View {
     }
     private func text48(_ w: [JSON]) -> String {
         let parts = w.map { x -> String in
-            let g = Core.shared.call("builder.groupsTxt", x["groups"] ?? .arr([]))?.string ?? ""
-            let when = x["when"]?.string ?? ""
-            return "séance lourde " + when + " (" + D.short(x["k"]?.string ?? "") + ") sur les mêmes muscles : " + g
+            let g: String = Core.shared.call("builder.groupsTxt", x["groups"] ?? .arr([]))?.string ?? ""
+            let when: String = x["when"]?.string ?? ""
+            let k: String = x["k"]?.string ?? ""
+            return "séance lourde " + when + " (" + D.short(k) + ") sur les mêmes muscles : " + g
         }
         return "Règle des 48 h : " + parts.joined(separator: " ; ") + ". Idéalement 48 h entre deux séances lourdes des mêmes muscles : allège l’une des deux ou décale-la."
     }
@@ -620,7 +635,7 @@ struct WeekSheet: View {
                 if let w { content(w, ws) }
             }
             .scrollContentBackground(.hidden).background(Palette.bg)
-            .navigationTitle(w.map { $0.label + " · " + D.rangeTxt($0.start, $0.end) } ?? "Semaine").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle(title(w)).navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Fermer") { commitBloc(); dismiss() }.fontWeight(.semibold) } }
             .onAppear { bloc = w?.bloc ?? "" }
         }
@@ -659,9 +674,14 @@ struct WeekSheet: View {
         }
     }
 
+    private func title(_ w: Week?) -> String {
+        guard let w else { return "Semaine" }
+        return w.label + " · " + D.rangeTxt(w.start, w.end)
+    }
     private func copyTitle(_ w: Week, _ ws: [Week]) -> String {
         let tw = ws.first { $0.raw["id"]?.string == to }
-        return "Remplacer toutes les séances de " + (tw?.label ?? "") + " par celles de " + w.label + " ?"
+        let tl: String = tw?.label ?? ""
+        return "Remplacer toutes les séances de " + tl + " par celles de " + w.label + " ?"
     }
     private func copy(_ w: Week, _ ws: [Week]) {
         guard let tw = ws.first(where: { $0.raw["id"]?.string == to }) else { return }
@@ -905,11 +925,15 @@ struct SectionSheet: View {
                 ToolbarItem(placement: .topBarLeading) { Button("Annuler") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) { Button("OK", action: save).fontWeight(.semibold) }
             }
-            .confirmationDialog("Supprimer la section « " + (s["title"]?.string ?? "") + " » ?", isPresented: $askDelete, titleVisibility: .visible) {
+            .confirmationDialog(deleteTitle, isPresented: $askDelete, titleVisibility: .visible) {
                 Button("Supprimer", role: .destructive) { remove() }
             }
             .onAppear(perform: load)
         }
+    }
+    private var deleteTitle: String {
+        let t: String = s["title"]?.string ?? ""
+        return "Supprimer la section « " + t + " » ?"
     }
     private func load() {
         guard !loaded else { return }

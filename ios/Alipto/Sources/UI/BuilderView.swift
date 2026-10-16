@@ -111,7 +111,10 @@ struct BuilderView: View {
 
     // MARK: réglages
 
-    private var prefKey: String { "alipto-builder:" + (store.me ?? "local") + ":" + store.subject }
+    private var prefKey: String {
+        let me: String = store.me ?? "local"
+        return "alipto-builder:" + me + ":" + store.subject
+    }
     private func load() {
         guard !loaded else { return }
         loaded = true
@@ -335,12 +338,12 @@ private struct QuizStep: View {
         let cl = (cfg["sports"]?.array.compactMap { $0.string } ?? []).contains("escalade")
         let qs = Core.shared.call("library.quiz", .bool(cl))?.array ?? []
         let done = !qs.isEmpty && qs.allSatisfy { ans[$0["id"]?.string ?? ""] != nil }
-        let res = done ? (Core.shared.call("library.quizResult", .obj(ans.mapValues { .str($0) }), .bool(cl))?.array.compactMap { $0.string } ?? []) : []
+        let res = done ? (Core.shared.call("library.quizResult", .obj(ans.mapValues { JSON.str($0) }), .bool(cl))?.array.compactMap { $0.string } ?? []) : []
         VStack(alignment: .leading, spacing: 18) {
             ForEach(qs.indices, id: \.self) { i in
                 let q = qs[i], qid = q["id"]?.string ?? ""
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("\(i + 1). " + (q["q"]?.string ?? "")).font(Typo.sans(16, .semibold)).foregroundStyle(Palette.ink)
+                    Text(question(i, q)).font(Typo.sans(16, .semibold)).foregroundStyle(Palette.ink)
                     ForEach((q["opts"]?.array ?? []).indices, id: \.self) { j in
                         let o = (q["opts"]?.array ?? [])[j], oid = o["id"]?.string ?? ""
                         ChoiceCard(on: ans[qid] == oid, title: o["l"]?.string ?? "") {
@@ -351,6 +354,10 @@ private struct QuizStep: View {
             }
             if done { result(res) }
         }
+    }
+    private func question(_ i: Int, _ q: JSON) -> String {
+        let t: String = q["q"]?.string ?? ""
+        return "\(i + 1). " + t
     }
     private func then(_ g2: JSON?) -> String {
         guard let l = g2?["l"]?.string else { return "" }

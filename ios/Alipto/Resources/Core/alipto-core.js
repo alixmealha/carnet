@@ -4851,6 +4851,7 @@
   // ios/core/extra.js
   var extra_exports = {};
   __export(extra_exports, {
+    applyImport: () => applyImport2,
     builderAlternatives: () => builderAlternatives,
     builderConflicts: () => builderConflicts,
     builderDeleteModel: () => builderDeleteModel,
@@ -4868,6 +4869,7 @@
     libName: () => libName,
     loadFoods: () => loadFoods2,
     moveWarn: () => moveWarn,
+    readImportText: () => readImportText,
     testDerive: () => testDerive
   });
   function glossSplit(s) {
@@ -5053,6 +5055,28 @@
       ] : [],
       cardioNote: g.cardio ? (cs ? "Vitesse critique " + fmtN(cs.v) + " km/h \xB7 D\u2032 \u2248 " + cs.dp + " m (test du " + srcTxt(cs).replace("test le ", "") + "). " : "Vitesse critique : passe le test 3 min + 12 min dans Suivi \u2192 Tests. ") + (rp ? rp.txt : "") : ""
     };
+  }
+  function readImportText(txt) {
+    let data;
+    try {
+      data = JSON.parse(txt);
+    } catch (_) {
+      throw new Error("Ce fichier n\u2019est pas un fichier JSON lisible.");
+    }
+    let r;
+    if (data && ["carnet", "alipto"].includes(data.app) && data.kind === "patch") r = planPatch(data);
+    else {
+      if (!data || !["carnet", "alipto"].includes(data.app) || !data.docs || typeof data.docs !== "object") throw new Error("Ce fichier ne vient pas d\u2019Alipto.");
+      const docs2 = {};
+      for (const [id, v] of Object.entries(data.docs)) if (["plan", "settings", "profile", "tests", "nutri", "models"].includes(id) || /^[pjctn]:\d{4}-\d{2}-\d{2}$/.test(id)) docs2[id] = v;
+      r = { docs: docs2, n: { plan: !!docs2.plan, days: Object.keys(docs2).filter((x) => x.startsWith("p:")).length, journal: Object.keys(docs2).filter((x) => x.startsWith("j:")).length, tests: Object.keys(docs2).filter((x) => x.startsWith("t:")).length } };
+    }
+    r.skipped = filterImport(r.docs).skipped;
+    return r;
+  }
+  function applyImport2(docs2) {
+    applyImport(docs2);
+    return true;
   }
 
   // ios/core/entry.js

@@ -6,12 +6,16 @@ import UserNotifications
 /// Signaux pendant la séance : vibrations, bips, voix, et notification quand le repos se termine en arrière-plan.
 enum Signals {
     private static let voice = AVSpeechSynthesizer()
-    static var soundOn: Bool { UserDefaults.standard.object(forKey: "sound") as? Bool ?? true }
+    /// Réglages du carnet (Plus → Paramètres → Pendant la séance), partagés avec la version web
+    private static func setting(_ k: String) -> Bool { Store.shared.get("settings", owner: Store.SELF)?[k]?.bool ?? true }
+    static var soundOn: Bool { setting("sound") }
+    static var voiceOn: Bool { setting("voice") }
+    static var wakeOn: Bool { setting("wake") }
 
     /// À l'ouverture du mode séance : le son passe par-dessus la musique (sans la couper), l'écran reste allumé
     static func begin() {
         try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers, .duckOthers])
-        UIApplication.shared.isIdleTimerDisabled = true
+        UIApplication.shared.isIdleTimerDisabled = wakeOn
         if !Launch.demo { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in } }
     }
     static func end() {
@@ -25,7 +29,7 @@ enum Signals {
     static func rest() { Haptics.firm(); if soundOn { AudioServicesPlaySystemSound(1114) } }
     static func done() { Haptics.success(); if soundOn { AudioServicesPlaySystemSound(1025) } }
     static func say(_ text: String) {
-        guard soundOn, !text.isEmpty else { return }
+        guard voiceOn, !text.isEmpty else { return }
         try? AVAudioSession.sharedInstance().setActive(true)
         let u = AVSpeechUtterance(string: text)
         u.voice = AVSpeechSynthesisVoice(language: "fr-FR")
