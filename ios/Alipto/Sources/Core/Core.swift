@@ -36,7 +36,7 @@ final class Core {
         }
         let setSubject: @convention(block) (String) -> Void = { o in DispatchQueue.main.async { Store.shared.subject = o } }
         let sync: @convention(block) () -> Void = { DispatchQueue.main.async { Store.shared.schedule(0.2) } }
-        let log: @convention(block) (String) -> Void = { print("Alipto core:", $0) }
+        let log: @convention(block) (String) -> Void = { NSLog("Alipto core: %@", $0) }
         native.setObject(put, forKeyedSubscript: "put" as NSString)
         native.setObject(remove, forKeyedSubscript: "remove" as NSString)
         native.setObject(read, forKeyedSubscript: "readResource" as NSString)
@@ -57,7 +57,7 @@ final class Core {
     }
 
     private static func reportError(_ msg: String) {
-        print("Alipto core erreur:", msg)
+        NSLog("Alipto core erreur: %@", msg)
         Core.shared_lastError = msg
     }
     static var shared_lastError: String?
@@ -118,7 +118,9 @@ final class Core {
     }
     private func finish(_ id: String, _ json: String?, _ err: String?) {
         guard let f = waiting.removeValue(forKey: id) else { return }
-        f(json.flatMap { JSON.decode(Data($0.utf8)) }, err)
+        let e = err.flatMap { ["", "null", "undefined"].contains($0) ? nil : $0 }
+        if let e { NSLog("Alipto core: %@", e) }
+        f(json.flatMap { $0.isEmpty ? nil : JSON.decode(Data($0.utf8)) }, e)
     }
 }
 

@@ -278,8 +278,11 @@ private struct CalCell: View {
     private func dayNumber(_ today: Bool) -> some View {
         let showMonth = D.dom(k) == 1 || k == planStart
         return HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Text("\(D.dom(k))").font(Typo.mono(12.5, .semibold)).foregroundStyle(today ? Palette.accent : Palette.ink)
-            if showMonth { Text(D.monS[D.mon(k)].replacingOccurrences(of: ".", with: "")).font(Typo.sans(8.5, .medium)).foregroundStyle(Palette.muted).lineLimit(1) }
+            Text("\(D.dom(k))").font(Typo.mono(12.5, .semibold)).foregroundStyle(today ? Palette.accent : Palette.ink).fixedSize()
+            if showMonth {
+                Text(D.monS[D.mon(k)].replacingOccurrences(of: ".", with: "")).font(Typo.sans(8.5, .medium)).foregroundStyle(Palette.muted)
+                    .lineLimit(1).minimumScaleFactor(0.6).layoutPriority(-1)
+            }
         }
     }
     private func border(_ today: Bool, _ ev: Bool) -> Color { today ? Palette.accent : ev ? Palette.kind("compet") : .clear }

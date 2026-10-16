@@ -64,7 +64,7 @@ ok('nutrition : repères', call('nutrition.NUT').length > 5);
 // base d'aliments (promesse)
 C.callAsync('a1', 'extra.loadFoods', '[]');
 await new Promise(r => setTimeout(r, 300));
-ok('nutrition : base d’aliments', ctx.__done && ctx.__done.id === 'a1' && !ctx.__done.err && +ctx.__done.json > 1000, ctx.__done && (ctx.__done.err || ctx.__done.json + ' aliments'));
+ok('nutrition : base d’aliments', ctx.__done && ctx.__done.id === 'a1' && ctx.__done.err === '' && +ctx.__done.json > 1000, ctx.__done && (ctx.__done.err || ctx.__done.json + ' aliments'));
 ok('nutrition : recherche', call('nutrition.searchFoods', 'riz', [], 5).length > 0, call('nutrition.searchFoods', 'pomme', [], 3).map(f => f.n).join(' / '));
 
 // assistant (étapes de l'appli iPhone)

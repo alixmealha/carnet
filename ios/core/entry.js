@@ -66,9 +66,11 @@ globalThis.__core = Object.assign({}, core, {
   callAsync(id, path, argsJson) {
     const { o, parent } = resolve(path);
     const args = argsJson ? JSON.parse(argsJson) : [];
-    Promise.resolve(typeof o === 'function' ? o.apply(parent, args) : o)
-      .then(r => globalThis.__native.done(id, JSON.stringify(r === undefined ? null : r, replacer), null))
-      .catch(e => globalThis.__native.done(id, null, String(e && e.message || e)));
+    // le pont ne reçoit que des textes : '' = pas d'erreur (un null deviendrait « null »)
+    let p;
+    try { p = Promise.resolve(typeof o === 'function' ? o.apply(parent, args) : o); } catch (e) { p = Promise.reject(e); }
+    p.then(r => globalThis.__native.done(id, JSON.stringify(r === undefined ? null : r, replacer), ''))
+      .catch(e => globalThis.__native.done(id, '', String((e && e.message) || e || 'Erreur')));
   },
   loadJSON(json) { core.load(JSON.parse(json)); },
   setJSON(key, json) { core.set(key, json == null ? null : JSON.parse(json)); },

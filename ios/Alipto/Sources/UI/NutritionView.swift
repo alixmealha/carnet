@@ -19,6 +19,24 @@ final class Foods {
     }
 }
 
+/// Base d'aliments en cours de chargement (ou l'erreur, avec un nouvel essai)
+struct FoodsLoading: View {
+    let foods: Foods
+    var body: some View {
+        if let e = foods.error {
+            VStack(spacing: 8) {
+                Text("Base d’aliments indisponible : " + e).font(Typo.sans(13.5)).foregroundStyle(Palette.crit).multilineTextAlignment(.center)
+                Button("Réessayer") { foods.error = nil; foods.load() }.buttonStyle(SmallButton())
+            }
+        } else {
+            HStack {
+                ProgressView()
+                Text("Chargement de la base d’aliments…").font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
+            }
+        }
+    }
+}
+
 private func R(_ x: Double) -> String {
     let f = NumberFormatter(); f.locale = Locale(identifier: "fr_FR"); f.numberStyle = .decimal; f.maximumFractionDigits = 0
     return f.string(from: NSNumber(value: x.rounded())) ?? "\(Int(x))"
@@ -319,12 +337,7 @@ struct FoodSheet: View {
                 TextField("Rechercher un aliment (riz, pomme, yaourt…)", text: $q).focused($focus).autocorrectionDisabled()
             }
             .font(Typo.sans(16)).padding(.horizontal, 14).frame(minHeight: 48).background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            if !foods.ready {
-                HStack {
-                    ProgressView()
-                    Text("Chargement de la base d’aliments…").font(Typo.sans(13.5)).foregroundStyle(Palette.muted)
-                }
-            }
+            if !foods.ready { FoodsLoading(foods: foods) }
         }
     }
 
@@ -487,11 +500,7 @@ struct NutriWeekView: View {
             if C.call("nutrition.nutriVisible")?.truthy != true {
                 EmptyNote(store.name(store.subject) + " n’a pas partagé son alimentation.")
             } else if !foods.ready {
-                HStack {
-                    ProgressView()
-                    Text("Chargement de la base d’aliments…").font(Typo.sans(14)).foregroundStyle(Palette.muted)
-                }
-                .frame(maxWidth: .infinity).padding(.vertical, 30)
+                FoodsLoading(foods: foods).frame(maxWidth: .infinity).padding(.vertical, 30)
             } else {
                 let ws = C.call("nutrition.weekSummary") ?? .emptyObject, adv = C.call("nutrition.weekAdvice", ws)?.array ?? []
                 let nb = Nutri.numbers, n = ws["n"]?.int ?? 0

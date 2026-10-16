@@ -5119,7 +5119,13 @@
     callAsync(id, path, argsJson) {
       const { o, parent } = resolve(path);
       const args = argsJson ? JSON.parse(argsJson) : [];
-      Promise.resolve(typeof o === "function" ? o.apply(parent, args) : o).then((r) => globalThis.__native.done(id, JSON.stringify(r === void 0 ? null : r, replacer), null)).catch((e) => globalThis.__native.done(id, null, String(e && e.message || e)));
+      let p;
+      try {
+        p = Promise.resolve(typeof o === "function" ? o.apply(parent, args) : o);
+      } catch (e) {
+        p = Promise.reject(e);
+      }
+      p.then((r) => globalThis.__native.done(id, JSON.stringify(r === void 0 ? null : r, replacer), "")).catch((e) => globalThis.__native.done(id, "", String(e && e.message || e || "Erreur")));
     },
     loadJSON(json) {
       core.load(JSON.parse(json));
