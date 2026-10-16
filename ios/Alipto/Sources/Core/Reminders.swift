@@ -22,12 +22,11 @@ enum Reminders {
     static func reschedule() {
         let s = Store.shared
         guard !Launch.demo, !s.demo else { return }
-        let center = UNUserNotificationCenter.current()
         let morningOn = self.morningOn, at = morningAt, weeklyOn = self.weeklyOn
         let athlete = s.hasCarnet
-        var filled: Set<String> = []
-        for i in 0..<8 { let k = D.add(D.today, i); if s.get("j:" + k, owner: Store.SELF)?["well"] != nil { filled.insert(k) } }
-        center.getPendingNotificationRequests { reqs in
+        let filled = Set((0..<8).map { D.add(D.today, $0) }.filter { s.get("j:" + $0, owner: Store.SELF)?["well"] != nil })
+        UNUserNotificationCenter.current().getPendingNotificationRequests { reqs in
+            let center = UNUserNotificationCenter.current()
             let old = reqs.map(\.identifier).filter { $0.hasPrefix("remind-") || $0 == "weekly" }
             center.removePendingNotificationRequests(withIdentifiers: old)
             let parts = at.split(separator: ":").compactMap { Int($0) }
