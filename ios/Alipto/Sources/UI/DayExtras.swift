@@ -228,7 +228,7 @@ struct BlockMenuSheet: View {
     @State private var mode: String?
     var body: some View {
         let s = Store.shared, e = s.journal(k), st = PlanReader.blockState(e, b), t = D.today, name = plain(b.title)
-        let from = k < t ? t : D.add(k, 1), apart = e["apart"]?[b.id]
+        let days = Core.shared.call("plan.moveTargets", .str(k))?.array.compactMap { $0.string } ?? [], apart = e["apart"]?[b.id]
         let coach = s.isSelf && !s.coaches.isEmpty
         NavigationStack {
             ScrollView {
@@ -248,14 +248,14 @@ struct BlockMenuSheet: View {
                     if st != "moved" {
                         OptionRow(title: "Un autre jour", text: s.planLocked ? "Ton plan est verrouillé par ton coach : demande-lui, ou fais-le à part aujourd’hui." : "Le bloc est ajouté au plan du jour choisi.", icon: "calendar", on: mode == "day") { mode = mode == "day" ? nil : "day" }
                         if mode == "day" && !s.planLocked {
-                            ForEach(0..<7, id: \.self) { i in
-                                let d = D.add(from, i), warn = Core.shared.call("extra.moveWarn", .str(k), .str(b.id), .str(d))?.string
+                            ForEach(days, id: \.self) { d in
+                                let warn = Core.shared.call("extra.moveWarn", .str(k), .str(b.id), .str(d))?.string
                                 Button {
                                     Core.shared.call("plan.moveBlock", .str(k), b.raw, .str(d)); done(name + " déplacé au " + D.short(d).lowercased())
                                 } label: {
                                     VStack(alignment: .leading, spacing: 2) {
                                         HStack {
-                                            Text(D.short(d)).font(Typo.sans(15, .semibold)).foregroundStyle(Palette.ink).frame(width: 110, alignment: .leading)
+                                            Text(d == t ? "Aujourd’hui" : D.short(d)).font(Typo.sans(15, .semibold)).foregroundStyle(Palette.ink).frame(width: 110, alignment: .leading)
                                             Text(plain(PlanReader(s).sessionName(d))).font(Typo.sans(14)).foregroundStyle(Palette.muted).lineLimit(1)
                                             Spacer()
                                         }

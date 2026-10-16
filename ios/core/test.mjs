@@ -96,5 +96,25 @@ ok('plan : jour enregistré', call('plan.sessionName', kx) === 'Muscu', call('pl
 ok('plan : exercices', call('plan.exerciseNames').some(x => x.label === 'Tractions lestées'));
 ok('plan : renommer', call('plan.renameExercise', 'Tractions lestées', 'Tractions', true) >= 1);
 ok('règle des 48 h', Array.isArray(call('builder.check48', kx, call('plan.day', kx))));
+
+// déplacer une séance vers un jour plus tôt, échanger deux séances
+const ka = call('dates.addDays', t, 1), kb = call('dates.addDays', t, 2);
+call('plan.saveDay', ka, { blocks: [{ id: 'ba', kind: 'grimpe', title: 'Bloc A', items: [{ id: 'i1', label: 'A', n: 1 }] }] });
+call('plan.saveDay', kb, { blocks: [{ id: 'bb', kind: 'muscu', title: 'Muscu B', items: [{ id: 'i1', label: 'B', n: 1 }] }] });
+const tg = call('plan.moveTargets', kb);
+ok('déplacer : jours plus tôt proposés', tg.includes(t) && tg.includes(ka) && !tg.includes(kb), tg.slice(0, 4).join(' '));
+call('plan.swapSessions', ka, kb);
+const na = call('plan.blocks', ka).filter(b => !call('plan.blockState', call('store.jget', ka), b)).map(b => b.title);
+const nb = call('plan.blocks', kb).filter(b => !call('plan.blockState', call('store.jget', kb), b)).map(b => b.title);
+ok('échanger deux séances', na.join() === 'Muscu B' && nb.join() === 'Bloc A', na + ' / ' + nb);
+// le cas d'Alix : séance du jour 1 décalée au jour 2, puis celle du jour 2 ramenée au jour 1
+const kc = call('dates.addDays', t, 3), kd = call('dates.addDays', t, 4);
+call('plan.saveDay', kc, { blocks: [{ id: 'bc', kind: 'grimpe', title: 'C', items: [{ id: 'i1', label: 'C', n: 1 }] }] });
+call('plan.saveDay', kd, { blocks: [{ id: 'bd', kind: 'muscu', title: 'D', items: [{ id: 'i1', label: 'D', n: 1 }] }] });
+call('plan.moveSession', kc, kd);
+call('plan.moveSession', kd, kc);
+const vc = call('plan.blocks', kc).filter(b => !call('plan.blockState', call('store.jget', kc), b)).map(b => b.title);
+const vd = call('plan.blocks', kd).filter(b => !call('plan.blockState', call('store.jget', kd), b)).map(b => b.title);
+ok('décaler puis ramener l’autre séance = échange', vc.join() === 'D' && vd.join() === 'C', vc + ' / ' + vd);
 console.log(fails ? fails + ' échec(s)' : 'Tout est bon');
 process.exit(fails ? 1 : 0);

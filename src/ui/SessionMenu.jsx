@@ -2,7 +2,7 @@
 // Tout passe par le journal du jour (sauf le déplacement, qui modifie le plan) et se défait d'un appui.
 import { useState } from 'preact/hooks';
 import { jget, planLocked, links, isSelf } from '../lib/store.js';
-import { rawBlocks, blockState, moveBlock, sessionName, SKIP, skipLabel, cancelSession, restoreSession, progress } from '../lib/plan.js';
+import { rawBlocks, blockState, moveBlock, sessionName, SKIP, skipLabel, cancelSession, restoreSession, progress, moveTargets, ownBlocks, moveSession, swapSessions } from '../lib/plan.js';
 import { unitsOf, plannedMin, fitToTime, lighten, applyAdjust, clearAdjust, adjSummary } from '../lib/adapt.js';
 import { dayInsights } from '../lib/insights.js';
 import { moveWarn } from './BlockMenu.jsx';
@@ -56,7 +56,7 @@ export function SessionMenu({ k, onClose }) {
         </>}
         {!cancel && !started && units.length > 0 && <>
           <button type="button" class={'bm-opt' + (mode === 'move' ? ' on' : '')} aria-expanded={mode === 'move' ? 'true' : 'false'} onClick={() => toggle('move')}>
-            <b>Déplacer à un autre jour</b><span>{locked ? 'Ton plan est verrouillé par ton coach : demande-lui.' : 'Toute la séance passe au jour choisi.'}</span>
+            <b>Déplacer à un autre jour</b><span>{locked ? 'Ton plan est verrouillé par ton coach : demande-lui.' : 'Plus tôt ou plus tard : toute la séance passe au jour choisi, ou s’échange avec celle de ce jour.'}</span>
           </button>
           {mode === 'move' && !locked && <MoveDays k={k} onDone={done} />}
         </>}
@@ -109,14 +109,16 @@ function Lighten({ k, reco, onDone }) {
 }
 
 function MoveDays({ k, onDone }) {
-  const e = jget(k), today = todayKey(), from = k < today ? today : addDays(k, 1);
-  const bl = rawBlocks(k).filter(b => b.kind !== 'rest' && !blockState(e, b));
-  const days = Array.from({ length: 7 }, (_, i) => addDays(from, i));
-  return <div class="bm-days">{days.map(d => {
-    const w = [...new Set(bl.map(b => moveWarn(k, b, d)).filter(Boolean))].join(' · ');
-    return <button type="button" onClick={() => { for (const b of bl) moveBlock(k, b, d); onDone('Séance déplacée au ' + fmtShort(d).toLowerCase()); }}>
-      <b>{fmtShort(d)}</b><span>{sessionName(d) || 'Repos'}</span>{w && <em>{w}</em>}
-    </button>;
+  const today = todayKey(), bl = ownBlocks(k);
+  return <div class="bm-days">{moveTargets(k).map(d => {
+    const w = [...new Set(bl.map(b => moveWarn(k, b, d)).filter(Boolean))].join(' · '), other = rawBlocks(d).some(b => b.kind !== 'rest');
+    const lbl = d === today ? 'Aujourd’hui' : fmtShort(d);
+    return <div class="bm-day">
+      <button type="button" onClick={() => { moveSession(k, d); onDone('Séance déplacée ' + (d === today ? 'à aujourd’hui' : 'au ' + fmtShort(d).toLowerCase())); }}>
+        <b>{lbl}</b><span>{sessionName(d) || 'Repos'}</span>{w && <em>{w}</em>}
+      </button>
+      {other && <button type="button" class="bm-swap" aria-label={'Échanger avec ' + lbl} onClick={() => { swapSessions(k, d); onDone('Séances échangées avec ' + (d === today ? 'aujourd’hui' : 'le ' + fmtShort(d).toLowerCase())); }}>Échanger</button>}
+    </div>;
   })}</div>;
 }
 

@@ -1,7 +1,7 @@
 // « Pas possible maintenant ? » : faire un bloc à un autre moment de la journée, un autre jour, ou pas du tout (avec la raison)
 import { useState } from 'preact/hooks';
 import { jget, planLocked, links, isSelf } from '../lib/store.js';
-import { SKIP, skipLabel, blockState, setBlockState, moveBlock, unmoveBlock, day, sessionName, apartOf } from '../lib/plan.js';
+import { SKIP, skipLabel, blockState, setBlockState, moveBlock, unmoveBlock, day, sessionName, apartOf, moveTargets } from '../lib/plan.js';
 import { heavyOf, groupsTxt } from '../lib/builder.js';
 import { addDays, todayKey, fmtShort } from '../lib/dates.js';
 import { Sheet, toast } from './kit.jsx';
@@ -20,8 +20,7 @@ export function moveWarn(k, b, to) {
 export function BlockMenu({ k, b, onClose, top }) {
   const e = jget(k), st = blockState(e, b), locked = planLocked(), today = todayKey(), name = plain(b.title);
   const [mode, setMode] = useState(null);
-  const from = k < today ? today : addDays(k, 1);
-  const days = Array.from({ length: 7 }, (_, i) => addDays(from, i));
+  const days = moveTargets(k);
   const done = msg => { toast(msg); onClose(); };
   const apart = apartOf(e, b.id);
   return (
@@ -41,7 +40,7 @@ export function BlockMenu({ k, b, onClose, top }) {
           </button>
           {mode === 'day' && !locked && <div class="bm-days">{days.map(d => { const w = moveWarn(k, b, d); return (
             <button type="button" onClick={() => { moveBlock(k, b, d); done(name + ' déplacé au ' + fmtShort(d).toLowerCase()); }}>
-              <b>{fmtShort(d)}</b><span>{sessionName(d)}</span>{w && <em>{w}</em>}
+              <b>{d === today ? 'Aujourd’hui' : fmtShort(d)}</b><span>{sessionName(d)}</span>{w && <em>{w}</em>}
             </button>); })}</div>}
         </>}
         {st !== 'skip' && <>

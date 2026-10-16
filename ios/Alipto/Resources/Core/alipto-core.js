@@ -284,9 +284,12 @@
     latestTest: () => latestTest,
     meta: () => meta,
     moveBlock: () => moveBlock,
+    moveSession: () => moveSession,
+    moveTargets: () => moveTargets,
     newPlan: () => newPlan,
     nextEvent: () => nextEvent,
     okUrl: () => okUrl,
+    ownBlocks: () => ownBlocks,
     phaseOf: () => phaseOf,
     progress: () => progress,
     rawBlocks: () => rawBlocks,
@@ -306,6 +309,7 @@
     setsText: () => setsText,
     skipLabel: () => skipLabel,
     stamp: () => stamp,
+    swapSessions: () => swapSessions,
     target: () => target,
     testIdsOf: () => testIdsOf,
     uid: () => uid,
@@ -1048,6 +1052,36 @@
     put("p:" + to, nd);
     const e = jget(k);
     jset(k, { moved: Object.assign({}, e.moved, { [b.id]: { to, id } }), apart: without(e.apart, b.id), skip: without(e.skip, b.id) });
+  }
+  function moveTargets(k) {
+    const t = todayKey(), out = [];
+    if (k > t) for (let d = k > addDays(t, 7) ? addDays(k, -7) : t; d < k; d = addDays(d, 1)) out.push(d);
+    const from = k < t ? t : addDays(k, 1);
+    for (let i = 0; i < 7; i++) out.push(addDays(from, i));
+    return out;
+  }
+  function ownBlocks(k) {
+    const e = jget(k), all = rawBlocks(k).filter((b) => b.kind !== "rest" && !blockState(e, b));
+    const own = all.filter((b) => !b.movedFrom);
+    return own.length ? own : all;
+  }
+  function sendTo(k, b, to) {
+    if (b.movedFrom === to) {
+      const e = jget(to), orig = rawBlocks(to).find((x) => e.moved && e.moved[x.id] && e.moved[x.id].id === b.id && e.moved[x.id].to === k);
+      if (orig) {
+        unmoveBlock(to, orig);
+        return;
+      }
+    }
+    moveBlock(k, b, to);
+  }
+  function moveSession(k, to) {
+    for (const b of ownBlocks(k)) sendTo(k, b, to);
+  }
+  function swapSessions(a, b) {
+    const A2 = ownBlocks(a), B = ownBlocks(b);
+    for (const x of A2) sendTo(a, x, b);
+    for (const y of B) sendTo(b, y, a);
   }
   function unmoveBlock(k, b) {
     const e = jget(k), m = e.moved && e.moved[b.id];

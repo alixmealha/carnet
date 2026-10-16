@@ -148,6 +148,36 @@ export function moveBlock(k, b, to) {
   const e = jget(k);
   jset(k, { moved: Object.assign({}, e.moved, { [b.id]: { to, id } }), apart: without(e.apart, b.id), skip: without(e.skip, b.id) });
 }
+// Jours proposés pour déplacer une séance ou un bloc : à partir d'aujourd'hui, avant (jusqu'à 7 jours) et après le jour d'origine
+export function moveTargets(k) {
+  const t = todayKey(), out = [];
+  if (k > t) for (let d = k > addDays(t, 7) ? addDays(k, -7) : t; d < k; d = addDays(d, 1)) out.push(d);
+  const from = k < t ? t : addDays(k, 1);
+  for (let i = 0; i < 7; i++) out.push(addDays(from, i));
+  return out;
+}
+// Blocs propres à un jour (sans ceux déjà déplacés, faits à part ou pas faits) ; ceux venus d'un autre jour seulement s'il n'y a rien d'autre
+export function ownBlocks(k) {
+  const e = jget(k), all = rawBlocks(k).filter(b => b.kind !== 'rest' && !blockState(e, b));
+  const own = all.filter(b => !b.movedFrom);
+  return own.length ? own : all;
+}
+// Un bloc venu du jour « to » qui y retourne : on annule le déplacement plutôt que d'en faire une copie
+function sendTo(k, b, to) {
+  if (b.movedFrom === to) {
+    const e = jget(to), orig = rawBlocks(to).find(x => e.moved && e.moved[x.id] && e.moved[x.id].id === b.id && e.moved[x.id].to === k);
+    if (orig) { unmoveBlock(to, orig); return; }
+  }
+  moveBlock(k, b, to);
+}
+// Toute la séance d'un jour passe à un autre jour (avant ou après)
+export function moveSession(k, to) { for (const b of ownBlocks(k)) sendTo(k, b, to); }
+// Échanger les séances de deux jours
+export function swapSessions(a, b) {
+  const A = ownBlocks(a), B = ownBlocks(b);
+  for (const x of A) sendTo(a, x, b);
+  for (const y of B) sendTo(b, y, a);
+}
 export function unmoveBlock(k, b) {
   const e = jget(k), m = e.moved && e.moved[b.id]; if (!m) return;
   const dst = day(m.to);

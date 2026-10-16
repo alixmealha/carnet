@@ -32,7 +32,7 @@ struct SessionMenuSheet: View {
                         if mode == "light" { LightenView(k: k, reco: lvl == "crit" ? 0.5 : 1.0 / 3) { done($0) }.transition(.opacity.combined(with: .move(edge: .top))) }
                     }
                     if cancel == nil && !started && !units.isEmpty {
-                        option("move", "Déplacer à un autre jour", store.planLocked ? "Ton plan est verrouillé par ton coach : demande-lui." : "Toute la séance passe au jour choisi.", icon: "calendar")
+                        option("move", "Déplacer à un autre jour", store.planLocked ? "Ton plan est verrouillé par ton coach : demande-lui." : "Plus tôt ou plus tard : toute la séance passe au jour choisi, ou s’échange avec celle de ce jour.", icon: "calendar")
                         if mode == "move" && !store.planLocked { MoveDays(k: k) { done($0) }.transition(.opacity) }
                     }
                     if cancel == nil {
@@ -161,25 +161,48 @@ private struct MoveDays: View {
     let k: String
     let onDone: (String) -> Void
     var body: some View {
-        let s = Store.shared, e = s.journal(k), t = D.today, from = k < t ? t : D.add(k, 1)
-        let bl = PlanReader(s).rawBlocks(k).filter { b in b["kind"]?.string != "rest" && PlanReader.blockState(e, Block(raw: b)) == nil }
+        let days = Core.shared.call("plan.moveTargets", .str(k))?.array.compactMap { $0.string } ?? []
         VStack(spacing: 6) {
-            ForEach(0..<7, id: \.self) { i in
-                let d = D.add(from, i), name = PlanReader(s).sessionName(d)
+            ForEach(days, id: \.self) { d in MoveDayRow(k: k, d: d, onDone: onDone) }
+            Text("« Échanger » : ta séance passe ce jour-là et la sienne vient ici.").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 2)
+        }
+    }
+}
+
+private struct MoveDayRow: View {
+    let k: String
+    let d: String
+    let onDone: (String) -> Void
+    var body: some View {
+        let pr = PlanReader(Store.shared), name = pr.sessionName(d), busy = pr.hasSession(d)
+        let lbl = d == D.today ? "Aujourd’hui" : D.short(d)
+        HStack(spacing: 6) {
+            Button {
+                Core.shared.call("plan.moveSession", .str(k), .str(d))
+                onDone("Séance déplacée " + (d == D.today ? "à aujourd’hui" : "au " + D.short(d).lowercased()))
+            } label: {
+                HStack {
+                    Text(lbl).font(Typo.sans(15, .semibold)).foregroundStyle(d < k ? Palette.accent : Palette.ink).frame(width: 110, alignment: .leading)
+                    Text(plain(name)).font(Typo.sans(14)).foregroundStyle(busy ? Palette.ink : Palette.muted).lineLimit(1)
+                    Spacer(minLength: 4)
+                    Image(systemName: d < k ? "arrow.left" : "arrow.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.accent)
+                }
+                .padding(.horizontal, 14).frame(minHeight: 46)
+                .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(PressStyle())
+            if busy {
                 Button {
-                    for b in bl { JournalWriter(s).moveBlock(k, b, to: d) }
-                    onDone("Séance déplacée au " + D.short(d).lowercased())
+                    Core.shared.call("plan.swapSessions", .str(k), .str(d))
+                    onDone("Séances échangées avec " + (d == D.today ? "aujourd’hui" : "le " + D.short(d).lowercased()))
                 } label: {
-                    HStack {
-                        Text(D.short(d)).font(Typo.sans(15, .semibold)).foregroundStyle(Palette.ink).frame(width: 110, alignment: .leading)
-                        Text(plain(name)).font(Typo.sans(14)).foregroundStyle(name == "Repos" ? Palette.muted : Palette.ink).lineLimit(1)
-                        Spacer()
-                        Image(systemName: "arrow.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(Palette.accent)
-                    }
-                    .padding(.horizontal, 14).frame(minHeight: 46)
-                    .background(Palette.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 15, weight: .semibold)).foregroundStyle(Palette.accent)
+                        .frame(width: 46, height: 46)
+                        .background(Palette.accentSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(PressStyle())
+                .accessibilityLabel("Échanger avec " + lbl)
             }
         }
     }
