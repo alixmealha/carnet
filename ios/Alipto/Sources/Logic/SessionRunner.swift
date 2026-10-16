@@ -148,7 +148,7 @@ final class SessionRunner {
         timer = t
     }
     func skipPhase() { guard var t = timer else { return }; t.skip += t.left(Date()) + 0.01; timer = t }
-    func closeTimer() { timer = nil; LiveRest.finish("Minuteur terminé") }
+    func closeTimer() { timer = nil; LiveRest.finish(label: "Minuteur terminé") }
 
     // MARK: mode blocs
     func openClimb(_ b: Block, _ it: Item) {
@@ -261,7 +261,7 @@ final class SessionRunner {
                 if ph.dur > 0 {
                     let nx = t.phases[(idx + 1)...].first { $0.dur > 0 }
                     LiveRest.show(title: t.title, until: n.addingTimeInterval(t.left(n)), label: Self.phaseLabel(ph, t.sets), next: nx.map { Self.nextLabel($0) }, phase: ph.isWork ? "work" : "rest", paused: t.pausedAt != nil)
-                } else if ph.type == "done" { LiveRest.finish("Minuteur terminé") }
+                } else if ph.type == "done" { LiveRest.finish(label: "Minuteur terminé") }
                 // notification si l'iPhone se verrouille pendant un repos
                 if ["setrest", "sw", "prep", "rest"].contains(ph.type), ph.dur >= 15 {
                     let nx = t.phases[(idx + 1)...].first { $0.dur > 0 }

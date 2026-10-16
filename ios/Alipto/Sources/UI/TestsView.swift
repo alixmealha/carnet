@@ -40,81 +40,145 @@ struct TestsView: View {
             switch self { case .test(let t): return "t" + t; case .entry(let k, let p): return "e" + (k ?? "") + p.joined(); case .custom(let j): return "c" + (j?["id"]?.string ?? "") }
         }
     }
-    var body: some View {
+    private struct Model {
+        var tests: [JSON] = [], cats: [(String, String)] = [], days: [String] = []
+        var done = Set<String>(), rel: [String]? = nil
+    }
+    private func model() -> Model {
         let C = Core.shared
-        let tests = C.call("tests.allTests")?.array ?? []
-        let cats = C.constant("tests.CATS").array.map { ($0[0]?.string ?? "", $0[1]?.string ?? "") }
-        let days = (C.call("tests.testDays")?.array.compactMap { $0.string } ?? []).reversed().map { $0 }
-        var done = Set<String>()
-        for d in days { for id in (C.call("tests.resultsOn", .str(d))?["res"]?.object ?? [:]).keys { done.insert(id) } }
-        let rel = C.call("sports.relevantTestCats")?.array.compactMap { $0.string }
-        let visible: (String) -> Bool = { c in rel == nil || all || rel!.contains(c) || tests.contains { $0["cat"]?.string == c && done.contains($0["id"]?.string ?? "") } }
-        let hiddenN = cats.filter { c in !visible(c.0) && tests.contains { $0["cat"]?.string == c.0 } }.count
-        return VStack(alignment: .leading, spacing: 14) {
+        var m = Model()
+        m.tests = C.call("tests.allTests")?.array ?? []
+        m.cats = C.constant("tests.CATS").array.map { ($0[0]?.string ?? "", $0[1]?.string ?? "") }
+        m.days = Array((C.call("tests.testDays")?.array.compactMap { $0.string } ?? []).reversed())
+        for d in m.days {
+            let res = C.call("tests.resultsOn", .str(d))?["res"]?.object ?? [:]
+            for id in res.keys { m.done.insert(id) }
+        }
+        m.rel = C.call("sports.relevantTestCats")?.array.compactMap { $0.string }
+        return m
+    }
+    private func visible(_ c: String, _ m: Model) -> Bool {
+        if all { return true }
+        guard let rel = m.rel else { return true }
+        if rel.contains(c) { return true }
+        return m.tests.contains { $0["cat"]?.string == c && m.done.contains($0["id"]?.string ?? "") }
+    }
+    private func hiddenCount(_ m: Model) -> Int {
+        m.cats.filter { c in !visible(c.0, m) && m.tests.contains { $0["cat"]?.string == c.0 } }.count
+    }
+    private func plural(_ n: Int, _ w: String) -> String { "\(n) " + w + (n > 1 ? "s" : "") }
+
+    var body: some View {
+        let _ = store.version
+        let m = model()
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 10) {
                 Button { sheet = .entry(nil, []) } label: { Label("Nouvelle passation", systemImage: "plus") }.buttonStyle(BigButton())
                 Button("Créer un test") { sheet = .custom(nil) }.buttonStyle(BigButton(kind: .plain)).frame(maxWidth: 140)
             }
-            if !days.isEmpty {
-                FoldCard(id: "tests-days", title: "Passations", summary: "\(days.count) passation\(days.count > 1 ? "s" : "") · dernière le " + D.day(days[0]), open: true) {
-                    ForEach(days.prefix(12), id: \.self) { d in
-                        let res = C.call("tests.resultsOn", .str(d))?["res"]?.object ?? [:]
-                        Button { sheet = .entry(d, []) } label: {
-                            HStack(alignment: .top) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(D.short(d)).font(Typo.sans(15, .semibold)).foregroundStyle(Palette.ink)
-                                    Text("\(res.count) test\(res.count > 1 ? "s" : "")").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
-                                }
-                                .frame(width: 110, alignment: .leading)
-                                Text(res.keys.sorted().map { id in tests.first { $0["id"]?.string == id }?["name"]?.string ?? id }.joined(separator: " · "))
-                                    .font(Typo.sans(13.5)).foregroundStyle(Palette.muted).multilineTextAlignment(.leading)
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.vertical, 8).contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-            ForEach(cats.map { $0.0 }, id: \.self) { c in
-                let list = tests.filter { $0["cat"]?.string == c }
-                if !list.isEmpty && visible(c) {
-                    let n = list.filter { done.contains($0["id"]?.string ?? "") }.count
-                    FoldCard(id: "tests-cat-" + c, title: cats.first { $0.0 == c }?.1 ?? c, summary: "\(list.count) test\(list.count > 1 ? "s" : "")" + (n > 0 ? " · \(n) avec résultats" : ""), open: n > 0) {
-                        ForEach(list.indices, id: \.self) { i in
-                            let t = list[i], tid = t["id"]?.string ?? ""
-                            let h = TestsAPI.history(tid), last = h.last, prev = h.count > 1 ? h[h.count - 2] : nil
-                            let vk = TestsAPI.valueKeys(t).first, better: Double = vk?["better"]?.string == "down" ? -1 : 1, key = vk?["key"]?.string ?? "v"
-                            Button { sheet = .test(tid) } label: {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(t["name"]?.string ?? tid).font(Typo.sans(15, .medium)).foregroundStyle(Palette.ink).multilineTextAlignment(.leading)
-                                        Text(last.map { D.short($0["k"]?.string ?? "") + " · " + TestsAPI.fmtVals(t, $0["vals"] ?? .emptyObject) } ?? "Pas encore testé")
-                                            .font(Typo.sans(12.5)).foregroundStyle(Palette.muted).multilineTextAlignment(.leading)
-                                    }
-                                    Spacer()
-                                    DeltaText(p: TestsAPI.pct(last?["vals"]?[key]?.double, prev?["vals"]?[key]?.double).map { $0 * better })
-                                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.muted.opacity(0.6))
-                                }
-                                .padding(.vertical, 8).contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-            }
-            if hiddenN > 0 {
-                Button("Voir les autres tests (\(hiddenN) catégorie\(hiddenN > 1 ? "s" : ""))") { withAnimation { all = true } }.buttonStyle(SmallButton()).frame(maxWidth: .infinity)
+            if !m.days.isEmpty { daysCard(m) }
+            ForEach(m.cats.map { $0.0 }, id: \.self) { c in catCard(c, m) }
+            let hn = hiddenCount(m)
+            if hn > 0 {
+                Button("Voir les autres tests (" + plural(hn, "catégorie") + ")") { withAnimation { all = true } }.buttonStyle(SmallButton()).frame(maxWidth: .infinity)
             }
             Text("Les pourcentages comparent au résultat précédent (côté droit ou première mesure).").font(Typo.sans(12.5)).foregroundStyle(Palette.muted).frame(maxWidth: .infinity)
         }
-        .sheet(item: $sheet) { s in
-            switch s {
-            case .test(let tid): TestSheet(tid: tid) { sheet = .entry(nil, [tid]) }
-            case .entry(let k, let pre): EntrySheet(k0: k, pre: pre)
-            case .custom(let t): CustomTestSheet(t: t)
+        .sheet(item: $sheet) { s in sheetView(s) }
+    }
+    private func daysCard(_ m: Model) -> some View {
+        FoldCard(id: "tests-days", title: "Passations", summary: plural(m.days.count, "passation") + " · dernière le " + D.day(m.days[0]), open: true) {
+            ForEach(m.days.prefix(12), id: \.self) { d in
+                TestDayRow(d: d, tests: m.tests) { sheet = .entry(d, []) }
             }
         }
+    }
+    @ViewBuilder private func catCard(_ c: String, _ m: Model) -> some View {
+        let list = m.tests.filter { $0["cat"]?.string == c }
+        if !list.isEmpty && visible(c, m) {
+            TestCatCard(cat: c, title: m.cats.first { $0.0 == c }?.1 ?? c, list: list, done: m.done) { tid in sheet = .test(tid) }
+        }
+    }
+    @ViewBuilder private func sheetView(_ s: TestsSheet) -> some View {
+        switch s {
+        case .test(let tid): TestSheet(tid: tid) { sheet = .entry(nil, [tid]) }
+        case .entry(let k, let pre): EntrySheet(k0: k, pre: pre)
+        case .custom(let t): CustomTestSheet(t: t)
+        }
+    }
+}
+
+private struct TestDayRow: View {
+    let d: String, tests: [JSON]
+    let open: () -> Void
+    var body: some View {
+        let res = Core.shared.call("tests.resultsOn", .str(d))?["res"]?.object ?? [:]
+        let names = res.keys.sorted().map { id in name(id) }.joined(separator: " · ")
+        Button(action: open) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(D.short(d)).font(Typo.sans(15, .semibold)).foregroundStyle(Palette.ink)
+                    Text(count(res.count)).font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                }
+                .frame(width: 110, alignment: .leading)
+                Text(names).font(Typo.sans(13.5)).foregroundStyle(Palette.muted).multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 8).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    private func name(_ id: String) -> String { tests.first { $0["id"]?.string == id }?["name"]?.string ?? id }
+    private func count(_ n: Int) -> String { "\(n) test" + (n > 1 ? "s" : "") }
+}
+
+private struct TestCatCard: View {
+    let cat: String, title: String, list: [JSON], done: Set<String>
+    let open: (String) -> Void
+    var body: some View {
+        let n = list.filter { done.contains($0["id"]?.string ?? "") }.count
+        FoldCard(id: "tests-cat-" + cat, title: title, summary: summary(n), open: n > 0) {
+            ForEach(list.indices, id: \.self) { i in
+                TestRow(t: list[i]) { open(list[i]["id"]?.string ?? "") }
+            }
+        }
+    }
+    private func summary(_ n: Int) -> String {
+        "\(list.count) test" + (list.count > 1 ? "s" : "") + (n > 0 ? " · \(n) avec résultats" : "")
+    }
+}
+
+private struct TestRow: View {
+    let t: JSON
+    let open: () -> Void
+    var body: some View {
+        let tid = t["id"]?.string ?? ""
+        let h = TestsAPI.history(tid)
+        Button(action: open) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(t["name"]?.string ?? tid).font(Typo.sans(15, .medium)).foregroundStyle(Palette.ink).multilineTextAlignment(.leading)
+                    Text(lastLine(h.last)).font(Typo.sans(12.5)).foregroundStyle(Palette.muted).multilineTextAlignment(.leading)
+                }
+                Spacer()
+                DeltaText(p: delta(h))
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.muted.opacity(0.6))
+            }
+            .padding(.vertical, 8).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    private func lastLine(_ last: JSON?) -> String {
+        guard let last else { return "Pas encore testé" }
+        return D.short(last["k"]?.string ?? "") + " · " + TestsAPI.fmtVals(t, last["vals"] ?? .emptyObject)
+    }
+    private func delta(_ h: [JSON]) -> Double? {
+        guard h.count > 1 else { return nil }
+        let vk = TestsAPI.valueKeys(t).first
+        let better: Double = vk?["better"]?.string == "down" ? -1 : 1
+        let key = vk?["key"]?.string ?? "v"
+        let p = TestsAPI.pct(h[h.count - 1]["vals"]?[key]?.double, h[h.count - 2]["vals"]?[key]?.double)
+        return p.map { $0 * better }
     }
 }
 
@@ -126,99 +190,136 @@ struct TestSheet: View {
     @State private var edit = false
     @State private var confirmDelete = false
     var body: some View {
-        let C = Core.shared
+        let t = Core.shared.call("tests.testById", .str(tid))
         NavigationStack {
             ScrollView {
-                if let t = C.call("tests.testById", .str(tid)) {
-                    let h = TestsAPI.history(tid), vks = TestsAPI.valueKeys(t)
-                    let first = h.first, last = h.last, prev = h.count > 1 ? h[h.count - 2] : nil
-                    let better: Double = vks.first?["better"]?.string == "down" ? -1 : 1
-                    VStack(alignment: .leading, spacing: 14) {
-                        if let last {
-                            VStack(alignment: .leading, spacing: 12) {
-                                CardHeader("Dernier résultat") { Text(D.short(last["k"]?.string ?? "")).font(Typo.mono(12.5)).foregroundStyle(Palette.muted) }
-                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 12) {
-                                    ForEach(vks.indices, id: \.self) { i in
-                                        let vk = vks[i], key = vk["key"]?.string ?? "v"
-                                        if let v = last["vals"]?[key]?.double {
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text((vk["label"]?.string).flatMap { $0.isEmpty ? nil : $0 } ?? "Résultat").font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
-                                                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                                                    Text(Fmt.num(v)).font(Typo.display(32)).foregroundStyle(Palette.ink)
-                                                    Text(vk["unit"]?.string ?? "").font(Typo.mono(12)).foregroundStyle(Palette.muted)
-                                                }
-                                                if let rel = C.call("tests.relValue", t, .num(v), last["bw"] ?? .null)?.double {
-                                                    Text(f1(rel) + " % du poids de corps").font(Typo.sans(12)).foregroundStyle(Palette.muted)
-                                                }
-                                                if let pv = prev?["vals"]?[key]?.double {
-                                                    HStack(spacing: 4) { Text("vs précédent").font(Typo.sans(12)).foregroundStyle(Palette.muted); DeltaText(p: TestsAPI.pct(v, pv).map { $0 * better }) }
-                                                }
-                                                if h.count > 2, let fv = first?["vals"]?[key]?.double {
-                                                    HStack(spacing: 4) { Text("vs premier").font(Typo.sans(12)).foregroundStyle(Palette.muted); DeltaText(p: TestsAPI.pct(v, fv).map { $0 * better }) }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                if tid == "er-90" || tid == "ir-90" { RatioNote(k: last["k"]?.string ?? "") }
-                                TestChart(t: t, h: h)
-                            }
-                            .card()
-                        } else {
-                            Text("Pas encore de résultat. Touche « Ajouter » après une passation.").font(Typo.sans(15)).foregroundStyle(Palette.muted).frame(maxWidth: .infinity).padding(.vertical, 20)
-                        }
-                        if !h.isEmpty {
-                            VStack(alignment: .leading, spacing: 0) {
-                                CardHeader("Historique").padding(.bottom, 6)
-                                ForEach(Array(h.indices.reversed()), id: \.self) { i in
-                                    let x = h[i], p = i > 0 ? h[i - 1] : nil
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack {
-                                            Text(D.short(x["k"]?.string ?? "")).font(Typo.sans(14.5, .semibold)).foregroundStyle(Palette.ink)
-                                            Spacer()
-                                            if let bw = x["bw"]?.double { Text("poids " + Fmt.num(bw) + " kg").font(Typo.sans(12)).foregroundStyle(Palette.muted) }
-                                        }
-                                        Flow(spacing: 10) {
-                                            ForEach(vks.indices, id: \.self) { j in
-                                                let key = vks[j]["key"]?.string ?? "v"
-                                                if let v = x["vals"]?[key]?.double {
-                                                    HStack(spacing: 4) {
-                                                        Text(((vks[j]["label"]?.string).flatMap { $0.isEmpty ? nil : $0 } ?? "Résultat") + " " + Fmt.num(v) + " " + (vks[j]["unit"]?.string ?? ""))
-                                                            .font(Typo.sans(13.5)).foregroundStyle(Palette.ink)
-                                                        DeltaText(p: TestsAPI.pct(v, p?["vals"]?[key]?.double).map { $0 * better })
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        if let n = x["note"]?.string { Text(n).font(Typo.sans(12.5)).foregroundStyle(Palette.muted) }
-                                    }
-                                    .padding(.vertical, 8)
-                                    Divider().overlay(Palette.rule.opacity(0.5))
-                                }
-                            }
-                            .card()
-                        }
-                        TestProtocolCard(t: t)
-                        if t["custom"]?.truthy == true {
-                            HStack(spacing: 10) {
-                                Button("Modifier ce test") { edit = true }.buttonStyle(BigButton(kind: .plain))
-                                Button("Supprimer") { confirmDelete = true }.buttonStyle(BigButton(kind: .danger))
-                            }
-                            .confirmationDialog("Supprimer ce test ?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                                Button("Supprimer", role: .destructive) { C.call("tests.deleteCustomTest", .str(tid)); dismiss() }
-                            } message: { Text("Les résultats déjà notés restent dans l’historique.") }
-                        }
-                    }
-                    .padding(16)
-                    .sheet(isPresented: $edit) { CustomTestSheet(t: t) }
-                }
+                if let t { content(t) }
             }
             .background(Palette.bg)
-            .navigationTitle(C.call("tests.testById", .str(tid))?["name"]?.string ?? "Test")
+            .navigationTitle(t?["name"]?.string ?? "Test")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("Fermer") { dismiss() } }
-                ToolbarItem(placement: .topBarTrailing) { Button("Ajouter") { dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { onAdd() } }.fontWeight(.semibold) }
+                ToolbarItem(placement: .topBarTrailing) { Button("Ajouter") { add() }.fontWeight(.semibold) }
+            }
+        }
+    }
+    private func add() { dismiss(); DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { onAdd() } }
+    @ViewBuilder private func content(_ t: JSON) -> some View {
+        let h = TestsAPI.history(tid)
+        VStack(alignment: .leading, spacing: 14) {
+            if h.isEmpty {
+                Text("Pas encore de résultat. Touche « Ajouter » après une passation.").font(Typo.sans(15)).foregroundStyle(Palette.muted).frame(maxWidth: .infinity).padding(.vertical, 20)
+            } else {
+                TestLastCard(tid: tid, t: t, h: h)
+                TestHistoryCard(t: t, h: h)
+            }
+            TestProtocolCard(t: t)
+            if t["custom"]?.truthy == true { customButtons }
+        }
+        .padding(16)
+        .sheet(isPresented: $edit) { CustomTestSheet(t: t) }
+    }
+    private var customButtons: some View {
+        HStack(spacing: 10) {
+            Button("Modifier ce test") { edit = true }.buttonStyle(BigButton(kind: .plain))
+            Button("Supprimer") { confirmDelete = true }.buttonStyle(BigButton(kind: .danger))
+        }
+        .confirmationDialog("Supprimer ce test ?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Supprimer", role: .destructive) { Core.shared.call("tests.deleteCustomTest", .str(tid)); dismiss() }
+        } message: { Text("Les résultats déjà notés restent dans l’historique.") }
+    }
+}
+
+private func vkLabel(_ vk: JSON) -> String { (vk["label"]?.string).flatMap { $0.isEmpty ? nil : $0 } ?? "Résultat" }
+private func vkBetter(_ vks: [JSON]) -> Double { vks.first?["better"]?.string == "down" ? -1 : 1 }
+
+private struct TestLastCard: View {
+    let tid: String, t: JSON, h: [JSON]
+    var body: some View {
+        let vks = TestsAPI.valueKeys(t), last = h[h.count - 1]
+        VStack(alignment: .leading, spacing: 12) {
+            CardHeader("Dernier résultat") { Text(D.short(last["k"]?.string ?? "")).font(Typo.mono(12.5)).foregroundStyle(Palette.muted) }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 12) {
+                ForEach(vks.indices, id: \.self) { i in
+                    TestValueCell(t: t, vk: vks[i], h: h, better: vkBetter(vks))
+                }
+            }
+            if tid == "er-90" || tid == "ir-90" { RatioNote(k: last["k"]?.string ?? "") }
+            TestChart(t: t, h: h)
+        }
+        .card()
+    }
+}
+
+private struct TestValueCell: View {
+    let t: JSON, vk: JSON, h: [JSON], better: Double
+    var body: some View {
+        let key = vk["key"]?.string ?? "v", last = h[h.count - 1]
+        if let v = last["vals"]?[key]?.double {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(vkLabel(vk)).font(Typo.sans(12.5)).foregroundStyle(Palette.muted)
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text(Fmt.num(v)).font(Typo.display(32)).foregroundStyle(Palette.ink)
+                    Text(vk["unit"]?.string ?? "").font(Typo.mono(12)).foregroundStyle(Palette.muted)
+                }
+                if let rel = Core.shared.call("tests.relValue", t, .num(v), last["bw"] ?? .null)?.double {
+                    Text(f1(rel) + " % du poids de corps").font(Typo.sans(12)).foregroundStyle(Palette.muted)
+                }
+                if h.count > 1, let pv = h[h.count - 2]["vals"]?[key]?.double {
+                    compare("vs précédent", v, pv)
+                }
+                if h.count > 2, let fv = h[0]["vals"]?[key]?.double {
+                    compare("vs premier", v, fv)
+                }
+            }
+        }
+    }
+    private func compare(_ l: String, _ v: Double, _ ref: Double) -> some View {
+        HStack(spacing: 4) {
+            Text(l).font(Typo.sans(12)).foregroundStyle(Palette.muted)
+            DeltaText(p: TestsAPI.pct(v, ref).map { $0 * better })
+        }
+    }
+}
+
+private struct TestHistoryCard: View {
+    let t: JSON, h: [JSON]
+    var body: some View {
+        let vks = TestsAPI.valueKeys(t)
+        VStack(alignment: .leading, spacing: 0) {
+            CardHeader("Historique").padding(.bottom, 6)
+            ForEach(Array(h.indices.reversed()), id: \.self) { i in
+                TestHistRow(x: h[i], p: i > 0 ? h[i - 1] : nil, vks: vks)
+                Divider().overlay(Palette.rule.opacity(0.5))
+            }
+        }
+        .card()
+    }
+}
+
+private struct TestHistRow: View {
+    let x: JSON, p: JSON?, vks: [JSON]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(D.short(x["k"]?.string ?? "")).font(Typo.sans(14.5, .semibold)).foregroundStyle(Palette.ink)
+                Spacer()
+                if let bw = x["bw"]?.double { Text("poids " + Fmt.num(bw) + " kg").font(Typo.sans(12)).foregroundStyle(Palette.muted) }
+            }
+            Flow(spacing: 10) {
+                ForEach(vks.indices, id: \.self) { j in cell(vks[j]) }
+            }
+            if let n = x["note"]?.string { Text(n).font(Typo.sans(12.5)).foregroundStyle(Palette.muted) }
+        }
+        .padding(.vertical, 8)
+    }
+    @ViewBuilder private func cell(_ vk: JSON) -> some View {
+        let key = vk["key"]?.string ?? "v"
+        if let v = x["vals"]?[key]?.double {
+            HStack(spacing: 4) {
+                Text(vkLabel(vk) + " " + Fmt.num(v) + " " + (vk["unit"]?.string ?? "")).font(Typo.sans(13.5)).foregroundStyle(Palette.ink)
+                DeltaText(p: TestsAPI.pct(v, p?["vals"]?[key]?.double).map { $0 * vkBetter(vks) })
             }
         }
     }

@@ -90,3 +90,8 @@ extension JSON: ExpressibleByStringLiteral, ExpressibleByIntegerLiteral, Express
     init(arrayLiteral elements: JSON...) { self = .arr(elements) }
     init(nilLiteral: ()) { self = .null }
 }
+
+extension Array {
+    /// Élément à l'indice i, ou nil hors limites
+    func at(_ i: Int) -> Element? { i >= 0 && i < count ? self[i] : nil }
+}

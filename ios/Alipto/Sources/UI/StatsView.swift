@@ -217,7 +217,7 @@ private struct PlanVsRealCard: View {
     @State private var sel: String?
     var body: some View {
         let has = ws.contains { $0["real"]?.double != nil }
-        let cw = ci >= 0 && ci < ws.count ? ws[ci] : nil
+        let cw: JSON? = ws.at(ci)
         FoldCard(id: "stats-pvr", title: "Prévu ou réalisé", summary: !has ? "Pas encore de données" : cw.map { "Cette semaine : prévu \($0["plan"]?.int ?? 0)" + (($0["real"]?.int).map { " · réalisé \($0)" } ?? "") } ?? "") {
             Text("Intensité + volume de chaque séance (sur 10), cumulés sur la semaine.").font(Typo.sans(13)).foregroundStyle(Palette.muted)
             if !has {
@@ -232,7 +232,7 @@ private struct PlanVsRealCard: View {
                 Chart(bars) { b in
                     BarMark(x: .value("Semaine", b.label), y: .value("Charge", b.v), width: .ratio(0.8))
                         .foregroundStyle(by: .value("Série", b.serie))
-                        .position(by: .value("Série", b.serie), spacing: 2)
+                        .position(by: .value("Série", b.serie))
                         .clipShape(UnevenRoundedRectangle(topLeadingRadius: 3, topTrailingRadius: 3))
                     if let sel, sel == b.label, b.serie == "Prévu" {
                         RuleMark(x: .value("Semaine", sel)).foregroundStyle(Palette.muted.opacity(0.25))
@@ -257,7 +257,7 @@ private struct LoadCard: View {
     @State private var sel: String?
     var body: some View {
         let has = ws.contains { ($0["ua"]?.double ?? 0) > 0 }
-        let cw = ci >= 0 && ci < ws.count ? ws[ci] : nil, pw = ci - 1 >= 0 && ci - 1 < ws.count ? ws[ci - 1] : nil
+        let cw: JSON? = ws.at(ci), pw: JSON? = ws.at(ci - 1)
         let sum: String = {
             guard let ua = cw?["ua"]?.double, ua > 0 else { return "Rien cette semaine pour l’instant" }
             var s = "Cette semaine : " + fmtInt(ua) + " UA"
@@ -305,7 +305,7 @@ private struct ZonesCard: View {
         let cl = Core.shared.call("sports.climber")?.truthy ?? true
         let tot: (JSON) -> Double = { w in (w["tz"]?.array ?? []).reduce(0) { $0 + ($1.double ?? 0) } }
         let has = ws.contains { tot($0) > 0 }
-        let cw = ci >= 0 && ci < ws.count ? ws[ci] : nil
+        let cw: JSON? = ws.at(ci)
         let sum: String = {
             guard let cw, tot(cw) > 0 else { return "Rien cette semaine pour l’instant" }
             let t = tot(cw)
