@@ -26,6 +26,7 @@ import * as glossary from '../../src/lib/glossary.js';
 import * as sources from '../../src/lib/sources.js';
 import * as io from '../../src/lib/io.js';
 import * as md from '../../src/lib/md.js';
+import * as whoop from '../../src/lib/whoop.js';
 import * as extra from './extra.js';
 
 // La base d'aliments (et tout fichier demandé par fetch) est lue dans les ressources de l'appli
@@ -39,7 +40,7 @@ if (typeof globalThis.fetch !== 'function') {
   });
 }
 
-const mods = { store, dates, plan, rules, insights, adapt, stats, tests, levels, history, quantify, records, week, warmup, activity, grades, library, sports, needs, builder, nutrition, glossary, sources, io, md, extra };
+const mods = { store, dates, plan, rules, insights, adapt, stats, tests, levels, history, quantify, records, week, warmup, activity, grades, library, sports, needs, builder, nutrition, glossary, sources, io, md, whoop, extra };
 
 // Sets et Maps deviennent des listes / objets ; les fonctions disparaissent (comme dans un export JSON)
 function replacer(_k, v) {

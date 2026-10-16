@@ -8,6 +8,7 @@ import { applyUpdateIfIdle } from './lib/update.js';
 import { Brand, Mark, Wordmark } from './ui/Logo.jsx';
 import { ImportPicker } from './ui/ImportPicker.jsx';
 import { todayKey } from './lib/dates.js';
+import { WHOOP_RETURN, whoopWanted, whoopSync } from './lib/whoopApi.js';
 import { Icon, Sheet, toast } from './ui/kit.jsx';
 import { Today } from './screens/Today.jsx';
 import { DayView } from './screens/DayView.jsx';
@@ -190,6 +191,13 @@ export function App() {
   useEffect(() => {
     if (!session || session.local) return;
     if (!started.current) { started.current = true; startAutoSync(); } else { syncNow(); setTab('today'); setDay(null); setEdit(null); setSes(null); }
+  }, [session && session.user && session.user.id]);
+  // Whoop : au retour de l'autorisation, puis à chaque ouverture si le bracelet est connecté (3 derniers jours, en silence)
+  const whoopDone = useRef(false);
+  useEffect(() => {
+    if (!session || session.local || whoopDone.current || !cloud || role() === 'coach') return;
+    if (WHOOP_RETURN) { whoopDone.current = true; if (WHOOP_RETURN === 'ok') whoopSync(14).then(n => toast('Whoop connecté' + (n ? ' · ' + n + ' jour' + (n > 1 ? 's' : '') + ' importé' + (n > 1 ? 's' : '') : '')), e => toast(e.message)); else toast('La connexion Whoop n’a pas abouti : réessaie dans Paramètres → Connexions.'); }
+    else if (whoopWanted()) { whoopDone.current = true; whoopSync(3).catch(() => {}); }
   }, [session && session.user && session.user.id]);
   useEffect(() => { ls.set('carnet-tab', tab); window.scrollTo(0, 0); }, [tab]);
   useEffect(() => { ls.set('carnet-ses', ses); if (!ses) applyUpdateIfIdle(); }, [ses]);

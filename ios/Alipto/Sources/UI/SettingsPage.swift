@@ -12,6 +12,7 @@ struct SettingsPage: View {
             AppearanceSection()
             if athleteSide { SessionPrefsSection(); TrackingSection() }
             if athleteSide && Health.shared.available { HealthSection() }
+            if athleteSide { WhoopSection() }
             RemindersSection()
             AccountSection()
             DataSection()
@@ -117,6 +118,39 @@ private struct HealthSection: View {
         } footer: {
             Text("Ta nuit (durée et phases), ta VFC et ta fréquence cardiaque de repos remplissent la carte Sommeil et la lecture du jour ; tes séances (durée, distance, FC moyenne) préremplissent « Après la séance ». Rien n’est écrit dans Santé.")
         }
+    }
+}
+
+/// Whoop : récupération, VFC, FC de repos, sommeil et séances (lus par la fonction Supabase « whoop »)
+private struct WhoopSection: View {
+    @State private var whoop = Whoop.shared
+    @State private var confirm = false
+    var body: some View {
+        Section {
+            if whoop.connected {
+                LabeledContent("Dernière synchro") { Text(whoop.lastSync.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "jamais").foregroundStyle(Palette.muted) }
+                Button {
+                    Task {
+                        let n = await whoop.sync(days: 7, quiet: false)
+                        if whoop.error == nil { toast(n > 0 ? "Whoop : \(n) jour" + (n > 1 ? "s" : "") + " mis à jour" : "Whoop : rien de nouveau") }
+                    }
+                } label: { HStack { if whoop.busy { ProgressView() }; Text("Synchroniser maintenant") } }
+                Button("Déconnecter Whoop", role: .destructive) { confirm = true }
+            } else {
+                Button { Task { await whoop.connect() } } label: { HStack { if whoop.busy { ProgressView() }; Text("Connecter Whoop") } }
+                    .disabled(whoop.busy || !whoop.configured)
+                if !whoop.configured && whoop.error == nil { Text("Whoop n’est pas encore activé sur le serveur.").font(.footnote).foregroundStyle(Palette.muted) }
+            }
+            if let e = whoop.error { Text(e).font(.footnote).foregroundStyle(Palette.crit) }
+        } header: {
+            Label("Whoop", systemImage: "waveform.path.ecg")
+        } footer: {
+            Text("Ta récupération, ta VFC, ta FC de repos, ton sommeil et tes séances remplissent la forme du matin et « Après la séance ». Ce que tu as noté à la main n’est jamais écrasé, et tu peux couper l’accès à tout moment. Si Apple Santé et Whoop donnent la même nuit, Whoop passe devant.")
+        }
+        .task { await whoop.refresh() }
+        .confirmationDialog("Déconnecter Whoop ?", isPresented: $confirm, titleVisibility: .visible) {
+            Button("Déconnecter", role: .destructive) { Task { await whoop.disconnect() } }
+        } message: { Text("Les données déjà importées restent dans ton carnet.") }
     }
 }
 

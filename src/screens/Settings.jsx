@@ -12,6 +12,7 @@ import { ImportPicker } from '../ui/ImportPicker.jsx';
 import { ProfileForm, ROLE_LBL } from './Setup.jsx';
 import { LevelsForm } from '../ui/Levels.jsx';
 import { NutriSettings } from './Nutrition.jsx';
+import { whoopStatus, whoopConnect, whoopDisconnect, whoopSync } from '../lib/whoopApi.js';
 
 const SYNC_LBL = { local: 'Sur cet appareil seulement', idle: 'À jour', syncing: 'Synchronisation…', error: 'Erreur de synchronisation', offline: 'Hors ligne : ça repartira tout seul', signedout: 'Déconnecté' };
 const ago = t => { if (!t) return 'jamais'; const s = Math.round((Date.now() - t) / 1000); return s < 60 ? 'à l’instant' : s < 3600 ? 'il y a ' + Math.round(s / 60) + ' min' : 'il y a ' + Math.round(s / 3600) + ' h'; };
@@ -217,6 +218,29 @@ export function ProfilePage({ onBack }) {
   </Page>;
 }
 
+// Bracelet Whoop : récupération (VFC, FC de repos), sommeil et séances, lus par la fonction Supabase « whoop »
+function Connexions() {
+  const [st, setSt] = useState(null), [busy, setBusy] = useState(false), [err, setErr] = useState('');
+  useEffect(() => { whoopStatus().then(setSt).catch(e => { setSt({ configured: false }); setErr(e.message); }); }, []);
+  if (!cloud) return null;
+  const run = async (f, ok) => { setBusy(true); setErr(''); try { const r = await f(); if (ok) toast(typeof ok === 'function' ? ok(r) : ok); setSt(await whoopStatus()); } catch (e) { setErr(e.message); } setBusy(false); };
+  const when = st && st.lastSync ? new Date(st.lastSync).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : null;
+  return (
+    <Sec title="Connexions" right={st && st.connected ? 'Whoop connecté' : ''}>
+      <p class="small" style="margin:0">Whoop : ta récupération, ta VFC, ta FC de repos, ton sommeil et tes séances remplissent la forme du matin et « Après la séance ». Ce que tu as noté à la main n’est jamais écrasé. Ton bracelet reste à toi : tu peux couper l’accès à tout moment.</p>
+      {st && !st.configured && !err && <p class="small" style="margin-top:8px">Whoop n’est pas encore activé sur ce serveur.</p>}
+      {st && st.connected && <p class="small" style="margin-top:8px">Dernière synchro : {when || 'jamais'}.</p>}
+      {err && <p class="err" style="margin-top:8px">{err}</p>}
+      <div class="row-btns" style="margin-top:12px">
+        {st && st.connected
+          ? <><button class="btn primary" disabled={busy} onClick={() => run(() => whoopSync(7), n => n ? 'Whoop : ' + n + ' jour' + (n > 1 ? 's' : '') + ' mis à jour' : 'Whoop : rien de nouveau')}>Synchroniser</button>
+            <button class="btn" disabled={busy} onClick={() => { if (ask('Déconnecter Whoop ? Les données déjà importées restent dans ton carnet.')) run(whoopDisconnect, 'Whoop déconnecté'); }}>Déconnecter</button></>
+          : <button class="btn primary" disabled={busy || !st || !st.configured} onClick={() => run(whoopConnect)}>Connecter Whoop</button>}
+      </div>
+    </Sec>
+  );
+}
+
 export function SettingsPage({ session, onBack, onAdmin }) {
   const r = role(), athleteSide = r !== 'coach';
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -225,6 +249,7 @@ export function SettingsPage({ session, onBack, onAdmin }) {
     {athleteSide && <SessionPrefs />}
     {athleteSide && <Tracking />}
     <Notifications />
+    {athleteSide && <Connexions />}
     <Account session={session} />
     <Data />
     {isAdmin() && <button class="card li-card" onClick={onAdmin}><Icon name="shield" /><span><b>Administration</b><small>Comptes, rôles, accès</small></span><span class="chev r" aria-hidden="true" /></button>}

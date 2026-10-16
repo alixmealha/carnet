@@ -41,6 +41,7 @@ struct RootView: View {
                 Store.shared.schedule(0.2)
                 Reminders.reschedule()
                 if Health.shared.auto { Task { _ = await Health.shared.importNight(D.today) } }
+                if Whoop.shared.wanted { Task { await Whoop.shared.sync(days: 3) } }
             }
             if p == .background { WidgetSync.write(); Reminders.reschedule() }
         }

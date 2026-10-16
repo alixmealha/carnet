@@ -116,5 +116,22 @@ call('plan.moveSession', kd, kc);
 const vc = call('plan.blocks', kc).filter(b => !call('plan.blockState', call('store.jget', kc), b)).map(b => b.title);
 const vd = call('plan.blocks', kd).filter(b => !call('plan.blockState', call('store.jget', kd), b)).map(b => b.title);
 ok('décaler puis ramener l’autre séance = échange', vc.join() === 'D' && vd.join() === 'C', vc + ' / ' + vd);
+// Whoop : fusion dans le journal (cases vides seulement pour une saisie manuelle, Whoop avant Apple Santé)
+const wd = call('dates.addDays', t, -20), we = call('dates.addDays', t, -21), wf = call('dates.addDays', t, -22);
+call('store.jset', wd, { nuit: { total: 400, src: 'sante', vfc: 55, fcr: 50 } });
+call('store.jset', we, { nuit: { total: 300, fcr: 60 } });
+const wn = call('whoop.mergeDays', {
+  [wd]: { nuit: { total: 450, profond: 80, leger: 250, rem: 100, eveil: 30, vfc: 70, fcr: 48, rec: 72 }, workouts: [{ min: 62, km: 8.4, hr: 150 }, { min: 30, km: 0, hr: 120 }] },
+  [we]: { nuit: { total: 480, profond: 90, leger: 270, rem: 100, eveil: 20, vfc: 65, fcr: 52, rec: 80 } },
+  [wf]: { nuit: { total: 420, profond: 70, leger: 250, rem: 100, eveil: 25, vfc: 60, fcr: 49, rec: 66 } }
+});
+const jd = call('store.jget', wd), je = call('store.jget', we), jf = call('store.jget', wf);
+ok('Whoop remplace Apple Santé', jd.nuit.src === 'whoop' && jd.nuit.vfc === 70 && jd.nuit.profond === 80 && jd.nuit.total === undefined, JSON.stringify(jd.nuit));
+ok('Whoop n’écrase pas la saisie manuelle', je.nuit.total === 300 && je.nuit.fcr === 60 && je.nuit.vfc === 65 && je.nuit.src === undefined && je.nuit.profond === undefined, JSON.stringify(je.nuit));
+ok('Whoop : nuit vide remplie', jf.nuit.src === 'whoop' && jf.nuit.rec === 66, JSON.stringify(jf.nuit));
+ok('Whoop : séances (durée, km, FC pondérée = 140)', jd.duree === 92 && jd.cardio && jd.cardio.km === 8.4 && jd.cardio.fc === 140, JSON.stringify([jd.duree, jd.cardio]));
+ok('Whoop : 3 jours modifiés', wn === 3, String(wn));
+call('whoop.mergeDays', { [wd]: { workouts: [{ min: 50, km: 5, hr: 140 }] } });
+ok('Whoop : séances déjà remplies non écrasées', call('store.jget', wd).duree === 92);
 console.log(fails ? fails + ' échec(s)' : 'Tout est bon');
 process.exit(fails ? 1 : 0);

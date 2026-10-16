@@ -4882,6 +4882,76 @@
     return out;
   }
 
+  // src/lib/whoop.js
+  var whoop_exports = {};
+  __export(whoop_exports, {
+    mergeDays: () => mergeDays
+  });
+  var SLEEP_KEYS = ["profond", "leger", "rem", "eveil"];
+  var isNum = (v) => typeof v === "number" && isFinite(v);
+  function mergeNight(cur, w) {
+    const n = Object.assign({}, cur || {});
+    const mine = !n.src || n.src === "whoop" || n.src === "sante";
+    const manual = !n.src && Object.keys(n).length > 0;
+    const before = JSON.stringify(n);
+    const take = (key, v) => {
+      if (isNum(v) && (!manual ? true : !isNum(n[key]))) n[key] = v;
+    };
+    const hasSleep = SLEEP_KEYS.some((k) => isNum(n[k])) || isNum(n.total);
+    if (isNum(w.total) && w.total > 0 && (!manual || !hasSleep)) {
+      for (const k of SLEEP_KEYS) take(k, w[k]);
+      delete n.total;
+    }
+    take("vfc", w.vfc);
+    take("fcr", w.fcr);
+    take("rec", w.rec);
+    if (JSON.stringify(n) === before) return null;
+    if (!manual && mine) n.src = "whoop";
+    return n;
+  }
+  function mergeWorkouts(cur, list) {
+    const patch = {};
+    const min = list.reduce((a, x) => a + (x.min || 0), 0);
+    if (min >= 10 && !isNum(cur.duree)) patch.duree = min;
+    const km = list.reduce((a, x) => a + (x.km || 0), 0);
+    if (km > 0) {
+      const c = Object.assign({}, cur.cardio || {});
+      let ch = false;
+      if (!isNum(c.km)) {
+        c.km = Math.round(km * 10) / 10;
+        ch = true;
+      }
+      const hrs = list.filter((x) => x.hr && x.min);
+      const hrMin = hrs.reduce((a, x) => a + x.min, 0);
+      if (!isNum(c.fc) && hrMin > 0) {
+        c.fc = Math.round(hrs.reduce((a, x) => a + x.hr * x.min, 0) / hrMin);
+        ch = true;
+      }
+      if (ch) {
+        c.src = "whoop";
+        patch.cardio = c;
+      }
+    }
+    return patch;
+  }
+  function mergeDays(days) {
+    let changed = 0;
+    for (const [k, w] of Object.entries(days || {})) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !w) continue;
+      const cur = jget(k), patch = {};
+      if (w.nuit) {
+        const n = mergeNight(cur.nuit, w.nuit);
+        if (n) patch.nuit = n;
+      }
+      if (w.workouts && w.workouts.length) Object.assign(patch, mergeWorkouts(cur, w.workouts));
+      if (Object.keys(patch).length) {
+        jset(k, patch);
+        changed++;
+      }
+    }
+    return changed;
+  }
+
   // ios/core/extra.js
   var extra_exports = {};
   __export(extra_exports, {
@@ -5125,7 +5195,7 @@
       }
     });
   }
-  var mods = { store: store_shim_exports, dates: dates_exports, plan: plan_exports, rules: rules_exports, insights: insights_exports, adapt: adapt_exports, stats: stats_exports, tests: tests_exports, levels: levels_exports, history: history_exports, quantify: quantify_exports, records: records_exports, week: week_exports, warmup: warmup_exports, activity: activity_exports, grades: grades_exports, library: library_exports, sports: sports_exports, needs: needs_exports, builder: builder_exports, nutrition: nutrition_exports, glossary: glossary_exports, sources: sources_exports, io: io_exports, md: md_exports, extra: extra_exports };
+  var mods = { store: store_shim_exports, dates: dates_exports, plan: plan_exports, rules: rules_exports, insights: insights_exports, adapt: adapt_exports, stats: stats_exports, tests: tests_exports, levels: levels_exports, history: history_exports, quantify: quantify_exports, records: records_exports, week: week_exports, warmup: warmup_exports, activity: activity_exports, grades: grades_exports, library: library_exports, sports: sports_exports, needs: needs_exports, builder: builder_exports, nutrition: nutrition_exports, glossary: glossary_exports, sources: sources_exports, io: io_exports, md: md_exports, whoop: whoop_exports, extra: extra_exports };
   function replacer(_k, v) {
     if (v instanceof Set) return [...v];
     if (v instanceof Map) return Object.fromEntries(v);
